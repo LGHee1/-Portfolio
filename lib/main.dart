@@ -7,8 +7,13 @@ import 'Auth/signup_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Firebase 초기화
-  await Firebase.initializeApp();
+  try {
+    // Firebase 초기화
+    await Firebase.initializeApp();
+    print('Firebase 초기화 성공');
+  } catch (e) {
+    print('Firebase 초기화 실패: $e');
+  }
   
   // 시스템 UI 설정
   SystemChrome.setSystemUIOverlayStyle(

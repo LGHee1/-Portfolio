@@ -293,7 +293,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       await _firestore
           .collection('users')
           .doc(user.uid)
-          .collection('workouts')
+          .collection('Running_Data')
           .add(workoutData);
 
       debugPrint('운동 기록 저장 완료');
