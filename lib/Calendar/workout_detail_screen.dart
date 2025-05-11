@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/workout_record.dart';
 import '../../utils/theme.dart';
 import 'package:intl/intl.dart';
+import '../post/post_create.dart';
 
 class WorkoutDetailScreen extends StatelessWidget {
   final WorkoutRecord record;
@@ -17,6 +18,34 @@ class WorkoutDetailScreen extends StatelessWidget {
           style: TextStyle(fontSize: 18),
         ),
         centerTitle: true,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const PostCreatePage()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF9800),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                '게시글 작성',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [
