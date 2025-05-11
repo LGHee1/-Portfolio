@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import 'user_provider.dart';
 import 'Widgets/running_card_swiper.dart';
 import 'profile_screen.dart';
+import 'post/post_list.dart';
 
 class ScreenHome extends StatefulWidget {
   const ScreenHome({super.key});
@@ -299,6 +300,10 @@ class _ScreenHomeState extends State<ScreenHome> {
                 ),
                 onPressed: () {
                   setState(() => _selectedIndex = 2);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const PostListPage()),
+                  );
                 },
               ),
             ],
