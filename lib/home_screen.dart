@@ -131,7 +131,7 @@ class _ScreenHomeState extends State<ScreenHome> {
                   Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const RankingScreen()),
+                    MaterialPageRoute(builder: (context) => RankingScreen()),
                   );
                 },
                 child: const Text(
@@ -149,7 +149,7 @@ class _ScreenHomeState extends State<ScreenHome> {
                   Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const CalendarScreen()),
+                    MaterialPageRoute(builder: (context) => CalendarScreen()),
                   );
                 },
                 child: const Text(
