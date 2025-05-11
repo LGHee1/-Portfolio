@@ -29,6 +29,10 @@ class _RunningScreenState extends State<RunningScreen> {
   int _calories = 0;
   int _cadence = 0;
   String _pace = '0\'00"';
+  bool _isTracking = true; // 위치 추적 상태
+
+  // 현재 위치 마커
+  Marker? _currentLocationMarker;
 
   String get formattedTime {
     final duration = Duration(seconds: _seconds);
@@ -52,12 +56,23 @@ class _RunningScreenState extends State<RunningScreen> {
       
       setState(() {
         _currentPosition = position;
+        _updateCurrentLocationMarker(position);
       });
 
       _startLocationUpdates();
     } catch (e) {
       debugPrint('위치 가져오기 오류: $e');
     }
+  }
+
+  void _updateCurrentLocationMarker(Position position) {
+    _currentLocationMarker = Marker(
+      markerId: const MarkerId('currentLocation'),
+      position: LatLng(position.latitude, position.longitude),
+      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+      infoWindow: const InfoWindow(title: '현재 위치'),
+      rotation: position.heading, // 방향 표시
+    );
   }
 
   void _startLocationUpdates() {
@@ -70,20 +85,40 @@ class _RunningScreenState extends State<RunningScreen> {
         .listen((Position position) {
       setState(() {
         if (_currentPosition != null) {
-          // 거리 계산
           double newDistance = Geolocator.distanceBetween(
             _currentPosition!.latitude,
             _currentPosition!.longitude,
             position.latitude,
             position.longitude,
           );
-          _distance += newDistance / 1000; // 미터를 킬로미터로 변환
+          _distance += newDistance / 1000;
         }
         _currentPosition = position;
         _routePoints.add(LatLng(position.latitude, position.longitude));
+        _updateCurrentLocationMarker(position);
         _updatePace();
       });
+
+      // 카메라 이동
+      if (_isTracking && _controller.isCompleted) {
+        _moveCamera();
+      }
     });
+  }
+
+  Future<void> _moveCamera() async {
+    if (_currentPosition == null || !_controller.isCompleted) return;
+
+    final GoogleMapController controller = await _controller.future;
+    controller.animateCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(
+          target: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+          zoom: 17,
+          bearing: _currentPosition!.heading, // 카메라 방향도 현재 방향으로
+        ),
+      ),
+    );
   }
 
   void _updatePace() {
@@ -175,6 +210,12 @@ class _RunningScreenState extends State<RunningScreen> {
     _holdTimer?.cancel();
   }
 
+  void _toggleTracking() {
+    setState(() {
+      _isTracking = !_isTracking;
+    });
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
@@ -259,27 +300,48 @@ class _RunningScreenState extends State<RunningScreen> {
       body: Column(
         children: [
           Expanded(
-            child: GoogleMap(
-              mapType: MapType.normal,
-              initialCameraPosition: CameraPosition(
-                target: _currentPosition != null
-                    ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
-                    : const LatLng(37.5665, 126.9780),
-                zoom: 17,
-              ),
-              onMapCreated: (GoogleMapController controller) {
-                _controller.complete(controller);
-              },
-              myLocationEnabled: true,
-              myLocationButtonEnabled: false,
-              polylines: {
-                Polyline(
-                  polylineId: const PolylineId('route'),
-                  points: _routePoints,
-                  color: Colors.blue,
-                  width: 5,
+            child: Stack(
+              children: [
+                GoogleMap(
+                  mapType: MapType.normal,
+                  initialCameraPosition: CameraPosition(
+                    target: _currentPosition != null
+                        ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
+                        : const LatLng(37.5665, 126.9780),
+                    zoom: 17,
+                  ),
+                  onMapCreated: (GoogleMapController controller) {
+                    _controller.complete(controller);
+                  },
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: false,
+                  compassEnabled: true, // 나침반 표시
+                  rotateGesturesEnabled: true, // 회전 제스처 활성화
+                  tiltGesturesEnabled: true, // 기울기 제스처 활성화
+                  markers: _currentLocationMarker != null ? {_currentLocationMarker!} : {},
+                  polylines: {
+                    Polyline(
+                      polylineId: const PolylineId('route'),
+                      points: _routePoints,
+                      color: Colors.blue,
+                      width: 5,
+                    ),
+                  },
                 ),
-              },
+                Positioned(
+                  top: 16,
+                  right: 16,
+                  child: FloatingActionButton(
+                    heroTag: 'tracking',
+                    onPressed: _toggleTracking,
+                    backgroundColor: Colors.white,
+                    child: Icon(
+                      _isTracking ? Icons.gps_fixed : Icons.gps_not_fixed,
+                      color: _isTracking ? Colors.blue : Colors.grey,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           Container(
