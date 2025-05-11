@@ -1,0 +1,344 @@
+import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
+
+class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({Key? key}) : super(key: key);
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool isEditing = false;
+  bool isEditingMessage = false;
+  bool isEditingPhoto = false;
+  bool isUploading = false;
+  String nickname = '';
+  String name = '';
+  String email = '';
+  String message = '';
+  String? photoUrl;
+  File? _imageFile;
+  List<String> postUids = [];
+
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _messageController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    
+    try {
+      // 먼저 MyProfile 서브컬렉션에서 데이터 로드
+      final myProfileDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('MyProfile')
+          .doc('profile')
+          .get();
+
+      if (myProfileDoc.exists) {
+        // MyProfile이 있으면 해당 데이터 사용
+        final data = myProfileDoc.data()!;
+        setState(() {
+          nickname = data['nickname'] ?? '';
+          name = data['name'] ?? '';
+          email = data['email'] ?? '';
+          message = data['message'] ?? '';
+          photoUrl = data['photoUrl'];
+          postUids = List<String>.from(data['postUids'] ?? []);
+          _nameController.text = name;
+          _messageController.text = message;
+        });
+        print('MyProfile 데이터 로드 성공: $nickname, $name, $email');
+      } else {
+        // MyProfile이 없으면 users 컬렉션에서 데이터 로드
+        final userData = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        if (userData.exists) {
+          final data = userData.data()!;
+          // MyProfile 서브컬렉션 생성
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('MyProfile')
+              .doc('profile')
+              .set({
+            'nickname': data['nickname'] ?? '',
+            'name': data['name'] ?? '',
+            'email': data['email'] ?? '',
+            'message': '',
+            'photoUrl': null,
+            'postUids': [],
+            'createdAt': FieldValue.serverTimestamp(),
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+
+          setState(() {
+            nickname = data['nickname'] ?? '';
+            name = data['name'] ?? '';
+            email = data['email'] ?? '';
+            message = '';
+            _nameController.text = name;
+            _messageController.text = message;
+          });
+          print('users 데이터로 MyProfile 생성 성공: $nickname, $name, $email');
+        } else {
+          print('사용자 데이터가 존재하지 않음');
+        }
+      }
+    } catch (e) {
+      print('사용자 데이터 로드 중 오류 발생: $e');
+    }
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 800,
+      maxHeight: 800,
+      imageQuality: 85,
+    );
+    
+    if (pickedFile != null) {
+      setState(() {
+        _imageFile = File(pickedFile.path);
+        isEditingPhoto = true;
+      });
+    }
+  }
+
+  Future<String?> _uploadImage() async {
+    if (_imageFile == null) return null;
+
+    try {
+      setState(() {
+        isUploading = true;
+      });
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return null;
+
+      // Firebase Storage에 이미지 업로드
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('profile_images')
+          .child('${user.uid}.jpg');
+
+      final uploadTask = await storageRef.putFile(_imageFile!);
+      final downloadUrl = await uploadTask.ref.getDownloadURL();
+
+      return downloadUrl;
+    } catch (e) {
+      print('이미지 업로드 중 오류 발생: $e');
+      return null;
+    } finally {
+      setState(() {
+        isUploading = false;
+      });
+    }
+  }
+
+  Future<void> _saveProfile() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    
+    String? uploadedUrl = photoUrl;
+    
+    // 이미지가 선택되었다면 업로드
+    if (_imageFile != null) {
+      uploadedUrl = await _uploadImage();
+      if (uploadedUrl == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('이미지 업로드에 실패했습니다.')),
+        );
+        return;
+      }
+    }
+
+    try {
+      // MyProfile 서브컬렉션에 데이터 저장
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('MyProfile')
+          .doc('profile')
+          .update({
+        'name': _nameController.text,
+        'message': _messageController.text,
+        'photoUrl': uploadedUrl,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      setState(() {
+        name = _nameController.text;
+        message = _messageController.text;
+        photoUrl = uploadedUrl;
+        isEditing = false;
+        isEditingMessage = false;
+        isEditingPhoto = false;
+        _imageFile = null;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('프로필이 업데이트되었습니다.')),
+      );
+    } catch (e) {
+      print('프로필 업데이트 중 오류 발생: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('프로필 업데이트에 실패했습니다.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFD8F9FF),
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text('$nickname님의 프로필', style: const TextStyle(color: Colors.black)),
+      ),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            child: Column(
+              children: [
+                Container(
+                  color: const Color(0xFFD8F9FF),
+                  width: double.infinity,
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 16),
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          CircleAvatar(
+                            radius: 48,
+                            backgroundColor: Colors.grey.shade300,
+                            backgroundImage: _imageFile != null
+                                ? FileImage(_imageFile!)
+                                : (photoUrl != null ? NetworkImage(photoUrl!) : null) as ImageProvider?,
+                            child: (photoUrl == null && _imageFile == null)
+                                ? IconButton(
+                                    icon: const Icon(Icons.add, size: 36, color: Colors.grey),
+                                    onPressed: isEditing ? _pickImage : null,
+                                  )
+                                : null,
+                          ),
+                          if (isEditing)
+                            Positioned(
+                              right: 0,
+                              bottom: 0,
+                              child: IconButton(
+                                icon: const Icon(Icons.edit, color: Colors.black),
+                                onPressed: _pickImage,
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        nickname,
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 8),
+                      const Text('Name'),
+                      TextField(
+                        controller: _nameController,
+                        enabled: isEditing,
+                        decoration: const InputDecoration(border: OutlineInputBorder()),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text('Email'),
+                      TextField(
+                        controller: TextEditingController(text: email),
+                        enabled: false,
+                        decoration: const InputDecoration(border: OutlineInputBorder()),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          const Text('Message'),
+                          if (isEditing)
+                            IconButton(
+                              icon: const Icon(Icons.edit, size: 18),
+                              onPressed: () {
+                                setState(() {
+                                  isEditingMessage = true;
+                                });
+                              },
+                            ),
+                        ],
+                      ),
+                      TextField(
+                        controller: _messageController,
+                        enabled: isEditing,
+                        maxLines: 2,
+                        decoration: const InputDecoration(border: OutlineInputBorder()),
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isEditing ? Colors.black : const Color(0xFFD8F9FF),
+                            foregroundColor: isEditing ? Colors.white : Colors.black,
+                          ),
+                          onPressed: isUploading ? null : () {
+                            if (isEditing) {
+                              _saveProfile();
+                            } else {
+                              setState(() {
+                                isEditing = true;
+                              });
+                            }
+                          },
+                          child: Text(isEditing ? '수정완료' : '수정하기'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (isUploading)
+            Container(
+              color: Colors.black.withOpacity(0.5),
+              child: const Center(
+                child: CircularProgressIndicator(),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+} 

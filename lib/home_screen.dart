@@ -9,7 +9,7 @@ import 'friends_screen.dart';
 import 'package:provider/provider.dart';
 import 'user_provider.dart';
 import 'Widgets/running_card_swiper.dart';
-
+import 'profile_screen.dart';
 
 class ScreenHome extends StatefulWidget {
   const ScreenHome({super.key});
@@ -31,35 +31,68 @@ class _ScreenHomeState extends State<ScreenHome> {
   Future<void> _loadUserData() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      final userData = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-      
-      if (mounted && userData.exists) {
-        final nickname = userData.data()?['nickname'] ?? '';
-        setState(() {
-          _userName = nickname;
-        });
-        // Provider에도 저장
-        Provider.of<UserProvider>(context, listen: false).setNickname(nickname);
+      try {
+        // users 컬렉션에서 직접 데이터 가져오기
+        final userData = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        
+        if (mounted && userData.exists) {
+          final nickname = userData.data()?['nickname'] ?? '';
+          setState(() {
+            _userName = nickname;
+          });
+          // Provider에도 저장
+          Provider.of<UserProvider>(context, listen: false).setNickname(nickname);
+          print('사용자 데이터 로드 성공: $nickname');
+        } else {
+          print('사용자 데이터가 존재하지 않음');
+        }
+      } catch (e) {
+        print('사용자 데이터 로드 중 오류 발생: $e');
       }
     }
   }
 
   Future<void> _signOut() async {
-    try {
-      await FirebaseAuth.instance.signOut();
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('로그아웃 중 오류가 발생했습니다.')),
-      );
+    // 로그아웃 확인 대화상자 표시
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('로그아웃'),
+          content: const Text('정말 로그아웃 하시겠습니까?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('취소'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text(
+                '확인',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    // 사용자가 확인을 선택한 경우에만 로그아웃 실행
+    if (shouldLogout == true) {
+      try {
+        await FirebaseAuth.instance.signOut();
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const LoginScreen()),
+            (route) => false,
+          );
+        }
+      } catch (e) {
+        print('로그아웃 중 오류 발생: $e');
+      }
     }
   }
 
@@ -123,6 +156,24 @@ class _ScreenHomeState extends State<ScreenHome> {
 
             const SizedBox(height: 20),
 
+            // 내정보 버튼
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 20),
+              child: InkWell(
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => ProfileScreen()),
+                  );
+                },
+                child: const Text(
+                  '내정보',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+
             // 랭킹 버튼
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 20),
@@ -181,9 +232,22 @@ class _ScreenHomeState extends State<ScreenHome> {
             const Spacer(),
             Padding(
               padding: const EdgeInsets.only(left: 16.0, bottom: 12),
-              child: IconButton(
-                icon: const Icon(Icons.logout),
-                onPressed: _signOut,
+              child: InkWell(
+                onTap: _signOut,
+                child: Row(
+                  children: [
+                    const Icon(Icons.logout, color: Colors.red),
+                    const SizedBox(width: 8),
+                    Text(
+                      '로그아웃',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
