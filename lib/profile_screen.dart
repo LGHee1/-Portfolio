@@ -39,66 +39,65 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (user == null) return;
     
     try {
-      // 먼저 MyProfile 서브컬렉션에서 데이터 로드
-      final myProfileDoc = await FirebaseFirestore.instance
+      // users 컬렉션에서 기본 데이터 로드
+      final userData = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
-          .collection('MyProfile')
-          .doc('profile')
           .get();
 
-      if (myProfileDoc.exists) {
-        // MyProfile이 있으면 해당 데이터 사용
-        final data = myProfileDoc.data()!;
+      if (userData.exists) {
+        final data = userData.data()!;
         setState(() {
           nickname = data['nickname'] ?? '';
           name = data['name'] ?? '';
           email = data['email'] ?? '';
-          message = data['message'] ?? '';
-          photoUrl = data['photoUrl'];
-          postUids = List<String>.from(data['postUids'] ?? []);
           _nameController.text = name;
-          _messageController.text = message;
         });
-        print('MyProfile 데이터 로드 성공: $nickname, $name, $email');
-      } else {
-        // MyProfile이 없으면 users 컬렉션에서 데이터 로드
-        final userData = await FirebaseFirestore.instance
+        print('기본 사용자 데이터 로드 성공: $nickname, $name, $email');
+
+        // MyProfile 서브컬렉션에서 추가 데이터 로드
+        final myProfileDoc = await FirebaseFirestore.instance
             .collection('users')
+            .doc(user.uid)
+            .collection('MyProfile')
             .doc(user.uid)
             .get();
 
-        if (userData.exists) {
-          final data = userData.data()!;
-          // MyProfile 서브컬렉션 생성
+        if (myProfileDoc.exists) {
+          final profileData = myProfileDoc.data()!;
+          setState(() {
+            message = profileData['message'] ?? '';
+            photoUrl = profileData['photoUrl'];
+            postUids = List<String>.from(profileData['postUids'] ?? []);
+            // MyProfile에 name, nickname, email이 있으면 불러오기
+            name = profileData['name'] ?? name;
+            nickname = profileData['nickname'] ?? nickname;
+            email = profileData['email'] ?? email;
+            _nameController.text = name;
+            _messageController.text = message;
+          });
+          print('MyProfile 데이터 로드 성공');
+        } else {
+          // MyProfile이 없으면 생성
           await FirebaseFirestore.instance
               .collection('users')
               .doc(user.uid)
               .collection('MyProfile')
-              .doc('profile')
+              .doc(user.uid)
               .set({
-            'nickname': data['nickname'] ?? '',
-            'name': data['name'] ?? '',
-            'email': data['email'] ?? '',
+            'name': _nameController.text,
+            'nickname': nickname,
+            'email': email,
             'message': '',
             'photoUrl': null,
             'postUids': [],
             'createdAt': FieldValue.serverTimestamp(),
             'updatedAt': FieldValue.serverTimestamp(),
           });
-
-          setState(() {
-            nickname = data['nickname'] ?? '';
-            name = data['name'] ?? '';
-            email = data['email'] ?? '';
-            message = '';
-            _nameController.text = name;
-            _messageController.text = message;
-          });
-          print('users 데이터로 MyProfile 생성 성공: $nickname, $name, $email');
-        } else {
-          print('사용자 데이터가 존재하지 않음');
+          print('MyProfile 생성 완료');
         }
+      } else {
+        print('사용자 데이터가 존재하지 않음');
       }
     } catch (e) {
       print('사용자 데이터 로드 중 오류 발생: $e');
@@ -176,16 +175,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .collection('users')
           .doc(user.uid)
           .collection('MyProfile')
-          .doc('profile')
-          .update({
+          .doc(user.uid)
+          .set({
         'name': _nameController.text,
+        'nickname': nickname,
+        'email': email,
         'message': _messageController.text,
         'photoUrl': uploadedUrl,
+        'postUids': postUids,
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      }, SetOptions(merge: true));
 
       setState(() {
-        name = _nameController.text;
         message = _messageController.text;
         photoUrl = uploadedUrl;
         isEditing = false;
