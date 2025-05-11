@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'package:app_project/screen_running.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'home_screen.dart';
 import 'workout_summary_screen.dart';
 
 class WorkoutScreen extends StatefulWidget {
@@ -20,14 +22,14 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   Position? _currentPosition;
   StreamSubscription<Position>? _positionStream;
-  
+
   // 운동 데이터
   double _distance = 0.0; // km
   Duration _duration = Duration.zero;
   int _cadence = 0;
   String _pace = '0\'00"';
   int _calories = 0;
-  
+
   // 운동 상태
   bool _isWorkoutStarted = false;
   Timer? _timer;
@@ -43,7 +45,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   Future<void> _requestLocationPermission() async {
     final status = await Permission.location.request();
     debugPrint('위치 권한 상태: $status');
-    
+
     if (status.isGranted) {
       debugPrint('위치 권한이 허용됨');
       await _getCurrentLocation();
@@ -62,7 +64,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       debugPrint('위치 서비스 활성화 상태: $serviceEnabled');
-      
+
       if (!serviceEnabled) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -74,11 +76,11 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
 
       LocationPermission permission = await Geolocator.checkPermission();
       debugPrint('현재 위치 권한 상태: $permission');
-      
+
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         debugPrint('새로 요청한 위치 권한 상태: $permission');
-        
+
         if (permission == LocationPermission.denied) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -93,7 +95,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
         desiredAccuracy: LocationAccuracy.high,
         timeLimit: const Duration(seconds: 10),
       );
-      
+
       debugPrint('현재 위치: ${position.latitude}, ${position.longitude}');
 
       setState(() {
@@ -145,7 +147,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
         }
         _currentPosition = position;
       });
-      
+
       if (_controller.isCompleted) {
         _moveCamera();
       }
@@ -199,7 +201,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
               onPressed: () {
                 // 다이얼로그 닫기
                 Navigator.of(context).pop();
-                
+
                 // 상태 초기화
                 setState(() {
                   _isWorkoutStarted = false;
@@ -210,7 +212,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                 // 데이터 저장 및 화면 전환
                 _saveWorkoutData().then((_) {
                   if (!mounted) return;
-                  
+
                   Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
@@ -261,7 +263,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       int minutes = paceInMinutes.floor();
       int seconds = ((paceInMinutes - minutes) * 60).floor();
       _pace = '$minutes\'${seconds.toString().padLeft(2, '0')}"';
-      
+
       // 칼로리 계산 (매우 간단한 추정)
       _calories = (_distance * 60).floor(); // 1km당 약 60kcal로 가정
     }
@@ -293,7 +295,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       await _firestore
           .collection('users')
           .doc(user.uid)
-          .collection('Running_Data')
+          .collection('workouts')
           .add(workoutData);
 
       debugPrint('운동 기록 저장 완료');
@@ -315,100 +317,186 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          // 지도 영역
-          SizedBox(
-            height: MediaQuery.of(context).size.height * 0.4,
-            child: _currentPosition == null
-                ? const Center(child: CircularProgressIndicator())
-                : GoogleMap(
-                    initialCameraPosition: CameraPosition(
-                      target: LatLng(
-                        _currentPosition!.latitude,
-                        _currentPosition!.longitude,
-                      ),
-                      zoom: 17,
-                    ),
-                    myLocationEnabled: true,
-                    myLocationButtonEnabled: true,
-                    mapType: MapType.normal,
-                    zoomControlsEnabled: true,
-                    zoomGesturesEnabled: true,
-                    compassEnabled: false,
-                    onMapCreated: (GoogleMapController controller) {
-                      _controller.complete(controller);
-                    },
-                    onTap: (LatLng position) {
-                      _getCurrentLocation(); // 지도 탭 시 위치 갱신
-                    },
-                    polylines: {
-                      Polyline(
-                        polylineId: const PolylineId('route'),
-                        points: _routePoints,
-                        color: Colors.blue,
-                        width: 5,
-                      ),
-                    },
-                  ),
-          ),
-          // 운동 정보 영역
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  // 첫 번째 줄: 거리, 시간, 케이던스
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildStatBox('거리(km)', _distance.toStringAsFixed(2)),
-                      _buildStatBox('시간', _formatDuration(_duration)),
-                      _buildStatBox('케이던스', _cadence.toString()),
-                    ],
-                  ),
-                  // 두 번째 줄: 평균 페이스, 칼로리
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildStatBox('평균 페이스', _pace),
-                      _buildStatBox('칼로리(kcal)', _calories.toString()),
-                    ],
-                  ),
-                  // 운동 제어 버튼
-                  Column(
-                    children: [
-                      ElevatedButton(
-                        onPressed: _toggleWorkout,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _isWorkoutStarted ? Colors.red : Colors.green,
-                          minimumSize: const Size(200, 50),
-                        ),
-                        child: Text(
-                          _isWorkoutStarted ? '일시정지' : '운동시작',
-                          style: const TextStyle(fontSize: 18),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      ElevatedButton(
-                        onPressed: _endWorkout,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          minimumSize: const Size(200, 50),
-                        ),
-                        child: const Text(
-                          '운동 종료',
-                          style: TextStyle(fontSize: 18),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFE5FBFF),
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        titleSpacing: 0,
+        title: Row(
+          children: [
+            Builder(
+              builder: (context) => IconButton(
+                icon: const Icon(Icons.menu, color: Colors.black),
+                onPressed: () => Scaffold.of(context).openDrawer(),
               ),
+            ),
+            Expanded(
+              child: Container(
+                height: 36,
+                margin: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const TextField(
+                  decoration: InputDecoration(
+                    hintText: '검색',
+                    border: InputBorder.none,
+                    icon: Icon(Icons.search, size: 25),
+                    contentPadding: EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  style: TextStyle(fontSize: 14),
+                ),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.location_pin, color: Colors.red),
+              onPressed: () {},
+            ),
+          ],
+        ),
+      ),
+
+      drawer: Drawer(
+        width: 240,
+        backgroundColor: const Color(0xFFE5FBFF),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.only(left: 16.0),
+              child: IconButton(
+                icon: const Icon(Icons.menu, color: Colors.black),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.black26),
+                ),
+                child: const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.account_circle, size: 36, color: Colors.grey),
+                      SizedBox(height: 4),
+                      Text('임덕현', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            ...['랭킹', '기록', '친구관리', '문의', '환경 설정'].map((item) =>
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 20),
+                  child: Text(item, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
+            ).toList(),
+            const Spacer(),
+            const Padding(
+              padding: EdgeInsets.only(left: 16.0, bottom: 12),
+              child: Icon(Icons.logout),
+            ),
+          ],
+        ),
+      ),
+
+      body: Stack(
+        children: [
+          GoogleMap(
+            mapType: MapType.normal,
+            initialCameraPosition: CameraPosition(
+              target: _currentPosition != null
+                  ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
+                  : const LatLng(37.5665, 126.9780),
+              zoom: 17,
+            ),
+            onMapCreated: (GoogleMapController controller) {
+              _controller.complete(controller);
+            },
+            myLocationEnabled: true,
+            myLocationButtonEnabled: false,
+            polylines: {
+              Polyline(
+                polylineId: const PolylineId('route'),
+                points: _routePoints,
+                color: Colors.blue,
+                width: 5,
+              ),
+            },
+          ),
+
+          Positioned(
+            bottom: 32,
+            left: 140,
+            right: 140,
+            child: ElevatedButton(
+              onPressed: () {
+                print("운동 시작 버튼 클릭됨");
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const RunningScreen()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.lightBlueAccent,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text("운동 시작"),
             ),
           ),
         ],
+      ),
+
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.amber.shade100,
+        onPressed: () {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const ScreenHome()),
+          );
+        },
+        child: const Icon(
+          Icons.home,
+          color: Colors.grey,
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+
+      bottomNavigationBar: BottomAppBar(
+        shape: const CircularNotchedRectangle(),
+        notchMargin: 8.0,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                icon: const Icon(
+                  Icons.directions_run,
+                  color: Colors.amber,
+                ),
+                onPressed: () {},
+              ),
+              IconButton(
+                icon: const Icon(
+                  Icons.star_border,
+                  color: Colors.black,
+                ),
+                onPressed: () {},
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -443,4 +531,4 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     String seconds = twoDigits(duration.inSeconds.remainder(60));
     return '$hours:$minutes:$seconds';
   }
-} 
+}

@@ -71,14 +71,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
       final UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
-      ).timeout(
-        const Duration(seconds: 30),
-        onTimeout: () {
-          throw FirebaseAuthException(
-            code: 'timeout',
-            message: '회원가입 시간이 초과되었습니다. 인터넷 연결을 확인해주세요.',
-          );
-        },
       );
 
       debugPrint('Firebase Auth 사용자 생성 성공: ${userCredential.user?.uid}');
@@ -92,16 +84,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         'totalDistance': 0.0,
         'totalWorkouts': 0,
         'locationAgreed': _isChecked,
-      }).timeout(
-        const Duration(seconds: 30),
-        onTimeout: () {
-          throw FirebaseException(
-            plugin: 'cloud_firestore',
-            code: 'timeout',
-            message: '데이터 저장 시간이 초과되었습니다. 인터넷 연결을 확인해주세요.',
-          );
-        },
-      );
+      });
 
       debugPrint('Firestore 사용자 정보 저장 성공');
 
@@ -120,7 +103,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     } on FirebaseAuthException catch (e) {
       debugPrint('Firebase Auth 오류 발생: ${e.code} - ${e.message}');
       String message = '회원가입 중 오류가 발생했습니다.';
-      
+
       if (e.code == 'weak-password') {
         message = '비밀번호가 너무 약합니다. (6자 이상)';
       } else if (e.code == 'email-already-in-use') {
@@ -130,54 +113,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
       } else if (e.code == 'operation-not-allowed') {
         message = '이메일/비밀번호 로그인이 비활성화되어 있습니다.';
       } else if (e.code == 'network-request-failed') {
-        message = '네트워크 연결을 확인해주세요. 인터넷 연결이 불안정합니다. 잠시 후 다시 시도해주세요.';
-        // 네트워크 오류 발생 시 3초 후 재시도
-        await Future.delayed(const Duration(seconds: 3));
-        if (mounted) {
-          _signUp();
-          return;
-        }
-      } else if (e.code == 'timeout') {
-        message = e.message ?? '회원가입 시간이 초과되었습니다.';
+        message = '네트워크 연결을 확인해주세요.';
       }
 
       if (!mounted) return;
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          duration: const Duration(seconds: 5),
-        ),
-      );
-    } on FirebaseException catch (e) {
-      debugPrint('Firebase 오류 발생: ${e.code} - ${e.message}');
-      String message = '데이터 저장 중 오류가 발생했습니다.';
-      
-      if (e.code == 'permission-denied') {
-        message = '권한이 거부되었습니다.';
-      } else if (e.code == 'unavailable') {
-        message = '서비스가 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해주세요.';
-      } else if (e.code == 'timeout') {
-        message = e.message ?? '데이터 저장 시간이 초과되었습니다.';
-      }
 
-      if (!mounted) return;
-      
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          duration: const Duration(seconds: 5),
-        ),
+        SnackBar(content: Text(message)),
       );
     } catch (e) {
       debugPrint('일반 오류 발생: $e');
       if (!mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('회원가입 중 오류가 발생했습니다: ${e.toString()}'),
-          duration: const Duration(seconds: 5),
-        ),
+        SnackBar(content: Text('회원가입 중 오류가 발생했습니다: ${e.toString()}')),
       );
     } finally {
       if (mounted) {
@@ -240,7 +189,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 24),
 
                     // Password
                     TextFormField(
@@ -262,7 +211,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 24),
 
                     // Name
                     TextFormField(
@@ -280,7 +229,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 24),
 
                     // Nickname
                     TextFormField(

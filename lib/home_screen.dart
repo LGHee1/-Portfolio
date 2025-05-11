@@ -5,6 +5,11 @@ import 'Auth/login_screen.dart';
 import 'workout_screen.dart';
 import 'Calendar/calendar_screen.dart';
 import 'Rank/ranking_screen.dart';
+import 'friends_screen.dart';
+import 'package:provider/provider.dart';
+import 'user_provider.dart';
+import 'Widgets/running_card_swiper.dart';
+
 
 class ScreenHome extends StatefulWidget {
   const ScreenHome({super.key});
@@ -32,9 +37,12 @@ class _ScreenHomeState extends State<ScreenHome> {
           .get();
       
       if (mounted && userData.exists) {
+        final nickname = userData.data()?['nickname'] ?? '';
         setState(() {
-          _userName = userData.data()?['nickname'] ?? '';
+          _userName = nickname;
         });
+        // Provider에도 저장
+        Provider.of<UserProvider>(context, listen: false).setNickname(nickname);
       }
     }
   }
@@ -68,13 +76,6 @@ class _ScreenHomeState extends State<ScreenHome> {
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
-        title: const Text('홈'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _signOut,
-          ),
-        ],
       ),
 
       // ✅ Drawer 설정
@@ -162,7 +163,18 @@ class _ScreenHomeState extends State<ScreenHome> {
             ...['친구관리', '문의', '환경 설정'].map((item) {
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 20),
-                child: Text(item, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                child: InkWell(
+                  onTap: () {
+                    if (item == '친구관리') {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const FriendsScreen()),
+                      );
+                    }
+                  },
+                  child: Text(item, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
               );
             }).toList(),
 
@@ -249,7 +261,7 @@ class _ScreenHomeState extends State<ScreenHome> {
                   children: [
                     const SizedBox(height: 8),
                     Text(
-                      '안녕하세요, ${_userName}님 👋',
+                      '안녕하세요, $_userName님 👋',
                       style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -265,26 +277,7 @@ class _ScreenHomeState extends State<ScreenHome> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const WorkoutScreen()),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF764BA2),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 25),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(55),
-                        ),
-                      ),
-                      child: const Text(
-                        '운동 시작하기',
-                        style: TextStyle(fontSize: 18),
-                      ),
-                    ),
+                    const RunningCardSwiper(),
                     const SizedBox(height: 16),
                   ],
                 ),
