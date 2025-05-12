@@ -1,4 +1,4 @@
-import  'dart:async';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
@@ -7,7 +7,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class RunningScreen extends StatefulWidget {
-  const RunningScreen({super.key});
+  final LatLng initialPosition;
+
+  const RunningScreen({
+    super.key,
+    required this.initialPosition,
+  });
 
   @override
   State<RunningScreen> createState() => _RunningScreenState();
@@ -44,8 +49,19 @@ class _RunningScreenState extends State<RunningScreen> {
   @override
   void initState() {
     super.initState();
-    _getCurrentLocation();
-    _startTimer(); // 화면이 시작되면 자동으로 타이머 시작
+    _currentPosition = Position(
+      latitude: widget.initialPosition.latitude,
+      longitude: widget.initialPosition.longitude,
+      timestamp: DateTime.now(),
+      accuracy: 0,
+      altitude: 0,
+      heading: 0,
+      speed: 0,
+      speedAccuracy: 0,
+      altitudeAccuracy: 0,
+      headingAccuracy: 0,
+    );
+    _startTimer();
   }
 
   Future<void> _getCurrentLocation() async {
@@ -127,6 +143,12 @@ class _RunningScreenState extends State<RunningScreen> {
       int minutes = minutesPerKm.floor();
       int seconds = ((minutesPerKm - minutes) * 60).round();
       _pace = '$minutes\'${seconds.toString().padLeft(2, '0')}"';
+      
+      // 칼로리 계산 (1km당 약 60kcal로 가정)
+      _calories = (_distance * 60).floor();
+      
+      // 케이던스 계산 (임시로 랜덤값 사용, 실제로는 가속도계 데이터 필요)
+      _cadence = 150 + DateTime.now().second % 20;
     }
   }
 
@@ -148,13 +170,24 @@ class _RunningScreenState extends State<RunningScreen> {
   Future<void> saveRunningData() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
+
+    // LatLng 객체들을 Map으로 변환
+    final List<Map<String, dynamic>> routePointsData = _routePoints.map((point) {
+      return {
+        'latitude': point.latitude,
+        'longitude': point.longitude,
+      };
+    }).toList();
+
     final runningData = {
       'date': DateTime.now(),
       'distance': _distance,
       'duration': _seconds,
       'pace': _pace,
       'calories': _calories,
+      'routePoints': routePointsData, // 코스 데이터 추가
     };
+
     await FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
@@ -162,36 +195,28 @@ class _RunningScreenState extends State<RunningScreen> {
         .add(runningData);
   }
 
-  void _completeWorkout() {
+  void _stopWorkout() async {
+    setState(() {
+      _isTracking = false;
+    });
     _timer?.cancel();
-    _positionStream?.cancel();
-    saveRunningData();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('운동 종료'),
-        content: const Text('운동이 종료되었습니다.'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop(); // 다이얼로그 닫기
-              // 운동 요약 화면으로 이동
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => WorkoutSummaryScreen(
-                    distance: _distance,
-                    duration: Duration(seconds: _seconds),
-                    calories: _calories,
-                    pace: _pace,
-                    cadence: _cadence,
-                  ),
-                ),
-              );
-            },
-            child: const Text('확인'),
-          ),
-        ],
+    await saveRunningData();
+
+    if (!mounted) return;
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => WorkoutSummaryScreen(
+          distance: _distance,
+          duration: _seconds,
+          pace: _pace,
+          calories: _calories,
+          routePoints: _routePoints.map((point) => {
+            'latitude': point.latitude,
+            'longitude': point.longitude,
+          }).toList(),
+        ),
       ),
     );
   }
@@ -200,7 +225,7 @@ class _RunningScreenState extends State<RunningScreen> {
     _isHolding = true;
     _holdTimer = Timer(const Duration(seconds: 3), () {
       if (_isHolding) {
-        _completeWorkout();
+        _stopWorkout();
       }
     });
   }
@@ -305,9 +330,7 @@ class _RunningScreenState extends State<RunningScreen> {
                 GoogleMap(
                   mapType: MapType.normal,
                   initialCameraPosition: CameraPosition(
-                    target: _currentPosition != null
-                        ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
-                        : const LatLng(37.5665, 126.9780),
+                    target: widget.initialPosition,
                     zoom: 17,
                   ),
                   onMapCreated: (GoogleMapController controller) {
@@ -315,31 +338,24 @@ class _RunningScreenState extends State<RunningScreen> {
                   },
                   myLocationEnabled: true,
                   myLocationButtonEnabled: false,
-                  compassEnabled: true, // 나침반 표시
-                  rotateGesturesEnabled: true, // 회전 제스처 활성화
-                  tiltGesturesEnabled: true, // 기울기 제스처 활성화
-                  markers: _currentLocationMarker != null ? {_currentLocationMarker!} : {},
+                  compassEnabled: false,
+                  rotateGesturesEnabled: true,
+                  tiltGesturesEnabled: true,
+                  zoomControlsEnabled: true,
+                  mapToolbarEnabled: false,
                   polylines: {
                     Polyline(
                       polylineId: const PolylineId('route'),
                       points: _routePoints,
                       color: Colors.blue,
-                      width: 5,
+                      width: 8,
+                      patterns: [PatternItem.dash(30), PatternItem.gap(10)],
+                      startCap: Cap.roundCap,
+                      endCap: Cap.roundCap,
+                      jointType: JointType.round,
                     ),
                   },
-                ),
-                Positioned(
-                  top: 16,
-                  right: 16,
-                  child: FloatingActionButton(
-                    heroTag: 'tracking',
-                    onPressed: _toggleTracking,
-                    backgroundColor: Colors.white,
-                    child: Icon(
-                      _isTracking ? Icons.gps_fixed : Icons.gps_not_fixed,
-                      color: _isTracking ? Colors.blue : Colors.grey,
-                    ),
-                  ),
+                  markers: _currentLocationMarker != null ? {_currentLocationMarker!} : {},
                 ),
               ],
             ),

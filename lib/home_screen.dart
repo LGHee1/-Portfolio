@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'Auth/login_screen.dart';
-import 'workout_screen.dart';
 import 'Calendar/calendar_screen.dart';
 import 'Rank/ranking_screen.dart';
 import 'friends_screen.dart';
 import 'package:provider/provider.dart';
 import 'user_provider.dart';
 import 'Widgets/running_card_swiper.dart';
-import 'profile_screen.dart';
+import 'Profile/profile_screen.dart';
 import 'post/post_list.dart';
+import 'workout_screen.dart';
 
 class ScreenHome extends StatefulWidget {
   const ScreenHome({super.key});
@@ -348,6 +348,34 @@ class _ScreenHomeState extends State<ScreenHome> {
                     const SizedBox(height: 20),
                     const RunningCardSwiper(),
                     const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      height: 60,
+                      margin: const EdgeInsets.symmetric(horizontal: 20),
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const WorkoutScreen()),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF764BA2),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          elevation: 5,
+                        ),
+                        child: const Text(
+                          '운동 시작하기',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),

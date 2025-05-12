@@ -222,6 +222,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                         calories: _calories,
                         pace: _pace,
                         cadence: _cadence,
+                        routePoints: _routePoints,
                       ),
                     ),
                   );
@@ -444,7 +445,13 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                 print("운동 시작 버튼 클릭됨");
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const RunningScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => RunningScreen(
+                      initialPosition: _currentPosition != null 
+                          ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
+                          : const LatLng(37.5665, 126.9780),
+                    ),
+                  ),
                 );
               },
               style: ElevatedButton.styleFrom(

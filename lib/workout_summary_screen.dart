@@ -1,21 +1,57 @@
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
+import 'utils/theme.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-class WorkoutSummaryScreen extends StatelessWidget {
+class WorkoutSummaryScreen extends StatefulWidget {
   final double distance;
-  final Duration duration;
-  final int calories;
-  final String pace;
-  final int cadence;
+  final int duration;
+  final double pace;
+  final double calories;
+  final List<Map<String, dynamic>> routePoints;
 
   const WorkoutSummaryScreen({
-    super.key,
+    Key? key,
     required this.distance,
     required this.duration,
-    required this.calories,
     required this.pace,
-    required this.cadence,
-  });
+    required this.calories,
+    required this.routePoints,
+  }) : super(key: key);
+
+  @override
+  State<WorkoutSummaryScreen> createState() => _WorkoutSummaryScreenState();
+}
+
+class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
+  bool isLiked = false;
+  late GoogleMapController _mapController;
+  final Set<Polyline> _polylines = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _initializePolylines();
+  }
+
+  void _initializePolylines() {
+    final List<LatLng> points = widget.routePoints.map((point) {
+      return LatLng(point['latitude'], point['longitude']);
+    }).toList();
+
+    _polylines.add(
+      Polyline(
+        polylineId: const PolylineId('route'),
+        points: points,
+        color: Colors.blue,
+        width: 8,
+        patterns: [PatternItem.dash(30), PatternItem.gap(10)],
+        startCap: Cap.roundCap,
+        endCap: Cap.roundCap,
+        jointType: JointType.round,
+      ),
+    );
+  }
 
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
@@ -33,97 +69,119 @@ class WorkoutSummaryScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  // 첫 번째 줄: 거리, 시간, 케이던스
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildStatBox('거리(km)', distance.toStringAsFixed(2)),
-                      _buildStatBox('시간', _formatDuration(duration)),
-                      _buildStatBox('케이던스', cadence.toString()),
-                    ],
-                  ),
-                  // 두 번째 줄: 평균 페이스, 칼로리
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildStatBox('평균 페이스', pace),
-                      _buildStatBox('칼로리(kcal)', calories.toString()),
-                    ],
-                  ),
-                ],
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: GoogleMap(
+                initialCameraPosition: CameraPosition(
+                  target: widget.routePoints.isNotEmpty
+                      ? LatLng(
+                          widget.routePoints.first['latitude'],
+                          widget.routePoints.first['longitude'],
+                        )
+                      : const LatLng(37.5665, 126.9780),
+                  zoom: 15,
+                ),
+                onMapCreated: (GoogleMapController controller) {
+                  _mapController = controller;
+                },
+                polylines: _polylines,
+                myLocationEnabled: true,
+                myLocationButtonEnabled: true,
+                zoomControlsEnabled: true,
+                mapToolbarEnabled: false,
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
+            Stack(
               children: [
-                ElevatedButton(
-                  onPressed: () {
-                    // 추천 코스 좋아요 기능 구현
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF764BA2),
-                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 25),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(55),
+                Positioned(
+                  right: 16,
+                  bottom: 16,
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        isLiked = !isLiked;
+                      });
+                    },
+                    child: Icon(
+                      isLiked ? Icons.favorite : Icons.favorite_border,
+                      color: isLiked ? Colors.red : Colors.grey,
+                      size: 32,
                     ),
                   ),
-                  child: const Text('추천 코스 좋아요'),
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(builder: (context) => const ScreenHome()),
-                      (route) => false,
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF764BA2),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 25),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(55),
-                    ),
-                  ),
-                  child: const Text('홈으로'),
                 ),
               ],
             ),
-          ),
-        ],
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '운동 정보',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF764BA2),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    _buildStatsGrid(),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildStatBox(String label, String value) {
+  Widget _buildStatsGrid() {
+    return GridView.count(
+      shrinkWrap: true,
+      crossAxisCount: 2,
+      childAspectRatio: 2,
+      mainAxisSpacing: 16,
+      crossAxisSpacing: 16,
+      children: [
+        _buildStatItem('거리', '${widget.distance.toStringAsFixed(2)} km'),
+        _buildStatItem('시간', _formatDuration(Duration(seconds: widget.duration))),
+        _buildStatItem('케이던스', '${widget.pace} spm'),
+        _buildStatItem('평균 페이스', '${widget.pace} km/h'),
+        _buildStatItem('칼로리', '${widget.calories} kcal'),
+      ],
+    );
+  }
+
+  Widget _buildStatItem(String label, String value) {
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey),
-        borderRadius: BorderRadius.circular(8),
+        color: const Color(0xFF764BA2).withOpacity(0.2),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
-            style: const TextStyle(fontSize: 12, color: Colors.grey),
+            style: const TextStyle(
+              color: Colors.grey,
+              fontSize: 14,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              color: Color(0xFF764BA2),
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ),
