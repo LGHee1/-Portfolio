@@ -1,20 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'home_screen.dart';
 import 'utils/theme.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class WorkoutSummaryScreen extends StatefulWidget {
   final double distance;
-  final int duration;
-  final double pace;
-  final double calories;
-  final List<Map<String, dynamic>> routePoints;
+  final Duration duration;
+  final String pace;
+  final int cadence;
+  final int calories;
+  final List<LatLng> routePoints;
 
   const WorkoutSummaryScreen({
     Key? key,
     required this.distance,
     required this.duration,
     required this.pace,
+    required this.cadence,
     required this.calories,
     required this.routePoints,
   }) : super(key: key);
@@ -27,30 +30,75 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
   bool isLiked = false;
   late GoogleMapController _mapController;
   final Set<Polyline> _polylines = {};
+  LatLng? _initialPosition;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _initializePolylines();
+    _determinePosition();
   }
 
   void _initializePolylines() {
-    final List<LatLng> points = widget.routePoints.map((point) {
-      return LatLng(point['latitude'], point['longitude']);
-    }).toList();
+    if (widget.routePoints.isNotEmpty) {
+      _polylines.add(
+        Polyline(
+          polylineId: const PolylineId('route'),
+          points: widget.routePoints,
+          color: const Color(0xFF764BA2),
+          width: 8,
+          patterns: [PatternItem.dash(30), PatternItem.gap(10)],
+          startCap: Cap.roundCap,
+          endCap: Cap.roundCap,
+          jointType: JointType.round,
+        ),
+      );
+    }
+  }
 
-    _polylines.add(
-      Polyline(
-        polylineId: const PolylineId('route'),
-        points: points,
-        color: Colors.blue,
-        width: 8,
-        patterns: [PatternItem.dash(30), PatternItem.gap(10)],
-        startCap: Cap.roundCap,
-        endCap: Cap.roundCap,
-        jointType: JointType.round,
-      ),
-    );
+  Future<void> _determinePosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return;
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.deniedForever || permission == LocationPermission.denied) {
+        return;
+      }
+    }
+
+    final position = await Geolocator.getCurrentPosition();
+    setState(() {
+      _initialPosition = LatLng(position.latitude, position.longitude);
+      _isLoading = false;
+    });
+  }
+
+  void _onMapCreated(GoogleMapController controller) {
+    _mapController = controller;
+    if (widget.routePoints.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _mapController.animateCamera(
+          CameraUpdate.newLatLngBounds(
+            _getBoundsFromLatLngList(widget.routePoints),
+            50.0,
+          ),
+        );
+      });
+    }
+  }
+
+  void _moveCamera() {
+    if (_initialPosition != null) {
+      _mapController.animateCamera(
+        CameraUpdate.newLatLngZoom(_initialPosition!, 15),
+      );
+    }
   }
 
   String _formatDuration(Duration duration) {
@@ -70,71 +118,116 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
         elevation: 0,
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: GoogleMap(
-                initialCameraPosition: CameraPosition(
-                  target: widget.routePoints.isNotEmpty
-                      ? LatLng(
-                          widget.routePoints.first['latitude'],
-                          widget.routePoints.first['longitude'],
-                        )
-                      : const LatLng(37.5665, 126.9780),
-                  zoom: 15,
-                ),
-                onMapCreated: (GoogleMapController controller) {
-                  _mapController = controller;
-                },
-                polylines: _polylines,
-                myLocationEnabled: true,
-                myLocationButtonEnabled: true,
-                zoomControlsEnabled: true,
-                mapToolbarEnabled: false,
-              ),
-            ),
-            Stack(
-              children: [
-                Positioned(
-                  right: 16,
-                  bottom: 16,
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        isLiked = !isLiked;
-                      });
-                    },
-                    child: Icon(
-                      isLiked ? Icons.favorite : Icons.favorite_border,
-                      color: isLiked ? Colors.red : Colors.grey,
-                      size: 32,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+                children: [
+                  Expanded(
+                    flex: 1,
+                    child: Stack(
+                      children: [
+                        GoogleMap(
+                          initialCameraPosition: CameraPosition(
+                            target: widget.routePoints.isNotEmpty
+                                ? widget.routePoints.last
+                                : _initialPosition!,
+                            zoom: 15,
+                          ),
+                          onMapCreated: _onMapCreated,
+                          polylines: _polylines,
+                          myLocationEnabled: true,
+                          myLocationButtonEnabled: false,
+                          zoomControlsEnabled: true,
+                          mapToolbarEnabled: false,
+                        ),
+                        // 현재 위치 버튼
+                        Positioned(
+                          top: 16,
+                          right: 16,
+                          child: GestureDetector(
+                            onTap: _moveCamera,
+                            child: Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black26,
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Image.asset('assets/img/now_position.png'),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              ],
-            ),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '운동 정보',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF764BA2),
+                  // 좋아요 버튼을 지도 밖으로 이동
+                  Padding(
+                    padding: const EdgeInsets.only(right: 16.0),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            isLiked = !isLiked;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            isLiked ? Icons.favorite : Icons.favorite_border,
+                            color: isLiked ? Colors.red : Colors.grey,
+                            size: 30,
+                          ),
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    _buildStatsGrid(),
-                  ],
-                ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            '운동 정보',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF764BA2),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Expanded(
+                            child: _buildStatsGrid(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -148,9 +241,9 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
       crossAxisSpacing: 16,
       children: [
         _buildStatItem('거리', '${widget.distance.toStringAsFixed(2)} km'),
-        _buildStatItem('시간', _formatDuration(Duration(seconds: widget.duration))),
-        _buildStatItem('케이던스', '${widget.pace} spm'),
-        _buildStatItem('평균 페이스', '${widget.pace} km/h'),
+        _buildStatItem('시간', _formatDuration(widget.duration)),
+        _buildStatItem('케이던스', '${widget.cadence} spm'),
+        _buildStatItem('평균 페이스', widget.pace),
         _buildStatItem('칼로리', '${widget.calories} kcal'),
       ],
     );
@@ -187,4 +280,20 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
       ),
     );
   }
-} 
+
+  LatLngBounds _getBoundsFromLatLngList(List<LatLng> list) {
+    double? minLat, maxLat, minLng, maxLng;
+
+    for (LatLng latLng in list) {
+      if (minLat == null || latLng.latitude < minLat) minLat = latLng.latitude;
+      if (maxLat == null || latLng.latitude > maxLat) maxLat = latLng.latitude;
+      if (minLng == null || latLng.longitude < minLng) minLng = latLng.longitude;
+      if (maxLng == null || latLng.longitude > maxLng) maxLng = latLng.longitude;
+    }
+
+    return LatLngBounds(
+      southwest: LatLng(minLat!, minLng!),
+      northeast: LatLng(maxLat!, maxLng!),
+    );
+  }
+}

@@ -219,9 +219,9 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                       builder: (context) => WorkoutSummaryScreen(
                         distance: _distance,
                         duration: _duration,
-                        calories: _calories,
                         pace: _pace,
                         cadence: _cadence,
+                        calories: _calories,
                         routePoints: _routePoints,
                       ),
                     ),
@@ -351,10 +351,6 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                 ),
               ),
             ),
-            IconButton(
-              icon: const Icon(Icons.location_pin, color: Colors.red),
-              onPressed: () {},
-            ),
           ],
         ),
       ),
@@ -434,6 +430,34 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                 width: 5,
               ),
             },
+          ),
+
+          // 현재 위치 이동 버튼 (상단 오른쪽으로 이동)
+          Positioned(
+            top: 16,
+            right: 16,
+            child: GestureDetector(
+              onTap: _moveCamera,
+              child: Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Image.asset('assets/img/now_position.png'),
+                ),
+              ),
+            ),
           ),
 
           Positioned(

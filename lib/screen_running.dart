@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'workout_summary_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 
 class RunningScreen extends StatefulWidget {
   final LatLng initialPosition;
@@ -39,6 +41,15 @@ class _RunningScreenState extends State<RunningScreen> {
   // 현재 위치 마커
   Marker? _currentLocationMarker;
 
+  // 가속도계 관련 변수
+  StreamSubscription<AccelerometerEvent>? _accelerometerSubscription;
+  double _lastMagnitude = 0;
+  int _stepCount = 0;
+  bool _isStep = false;
+  static const double _stepThreshold = 12.0; // 걸음 감지 임계값
+  static const int _stepWindow = 3; // 걸음 감지 시간 윈도우 (프레임)
+  List<double> _magnitudeWindow = [];
+
   String get formattedTime {
     final duration = Duration(seconds: _seconds);
     final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
@@ -62,6 +73,8 @@ class _RunningScreenState extends State<RunningScreen> {
       headingAccuracy: 0,
     );
     _startTimer();
+    _getCurrentLocation();
+    _startAccelerometer(); // 가속도계 시작
   }
 
   Future<void> _getCurrentLocation() async {
@@ -115,6 +128,9 @@ class _RunningScreenState extends State<RunningScreen> {
         _updatePace();
       });
 
+      // 경로가 제대로 업데이트 되는지 디버깅용 코드
+      print('Route points count: ${_routePoints.length}');
+      
       // 카메라 이동
       if (_isTracking && _controller.isCompleted) {
         _moveCamera();
@@ -195,6 +211,23 @@ class _RunningScreenState extends State<RunningScreen> {
         .add(runningData);
   }
 
+  Widget _dataBox(String title, String value) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        ),
+        const SizedBox(height: 4),
+        Text(title, style: const TextStyle(fontSize: 12)),
+      ],
+    );
+  }
+
   void _stopWorkout() async {
     setState(() {
       _isTracking = false;
@@ -209,13 +242,11 @@ class _RunningScreenState extends State<RunningScreen> {
       MaterialPageRoute(
         builder: (context) => WorkoutSummaryScreen(
           distance: _distance,
-          duration: _seconds,
+          duration: Duration(seconds: _seconds),
           pace: _pace,
+          cadence: _cadence,
           calories: _calories,
-          routePoints: _routePoints.map((point) => {
-            'latitude': point.latitude,
-            'longitude': point.longitude,
-          }).toList(),
+          routePoints: _routePoints,
         ),
       ),
     );
@@ -241,8 +272,38 @@ class _RunningScreenState extends State<RunningScreen> {
     });
   }
 
+  void _startAccelerometer() {
+    _accelerometerSubscription = accelerometerEvents.listen((AccelerometerEvent event) {
+      // 가속도 벡터의 크기 계산
+      double magnitude = sqrt(event.x * event.x + event.y * event.y + event.z * event.z);
+      
+      // 걸음 감지 알고리즘
+      _magnitudeWindow.add(magnitude);
+      if (_magnitudeWindow.length > _stepWindow) {
+        _magnitudeWindow.removeAt(0);
+      }
+
+      // 걸음 감지 로직
+      if (!_isStep && magnitude > _stepThreshold && _magnitudeWindow.length == _stepWindow) {
+        // 피크 감지
+        if (_magnitudeWindow[1] > _magnitudeWindow[0] && _magnitudeWindow[1] > _magnitudeWindow[2]) {
+          _isStep = true;
+          _stepCount++;
+          setState(() {
+            _cadence = (_stepCount * 60) ~/ (_seconds > 0 ? _seconds : 1); // 분당 걸음 수
+          });
+        }
+      } else if (_isStep && magnitude < _stepThreshold) {
+        _isStep = false;
+      }
+
+      _lastMagnitude = magnitude;
+    });
+  }
+
   @override
   void dispose() {
+    _accelerometerSubscription?.cancel();
     _timer?.cancel();
     _holdTimer?.cancel();
     _positionStream?.cancel();
@@ -322,6 +383,7 @@ class _RunningScreenState extends State<RunningScreen> {
         ),
       ),
 
+
       body: Column(
         children: [
           Expanded(
@@ -347,7 +409,7 @@ class _RunningScreenState extends State<RunningScreen> {
                     Polyline(
                       polylineId: const PolylineId('route'),
                       points: _routePoints,
-                      color: Colors.blue,
+                      color: const Color(0xFF764BA2),
                       width: 8,
                       patterns: [PatternItem.dash(30), PatternItem.gap(10)],
                       startCap: Cap.roundCap,
@@ -356,6 +418,34 @@ class _RunningScreenState extends State<RunningScreen> {
                     ),
                   },
                   markers: _currentLocationMarker != null ? {_currentLocationMarker!} : {},
+                ),
+
+                // 현재 위치 이동 버튼
+                Positioned(
+                  top: 16,
+                  right: 16,
+                  child: GestureDetector(
+                    onTap: _moveCamera,
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Image.asset('assets/img/now_position.png'),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -442,23 +532,6 @@ class _RunningScreenState extends State<RunningScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _dataBox(String title, String value) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        ),
-        const SizedBox(height: 4),
-        Text(title, style: const TextStyle(fontSize: 12)),
-      ],
     );
   }
 } 
