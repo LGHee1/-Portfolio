@@ -3,6 +3,10 @@ import 'tag_list.dart';
 import '../models/tag.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:path/path.dart' as path;
+import 'package:firebase_storage/firebase_storage.dart';
 
 class PostCreatePage extends StatefulWidget {
   const PostCreatePage({super.key});
@@ -14,6 +18,8 @@ class PostCreatePage extends StatefulWidget {
 class _PostCreatePageState extends State<PostCreatePage> {
   List<Tag> selectedTags = [];
   List<File> selectedImages = [];
+  final TextEditingController _contentController = TextEditingController();
+  bool _isLoading = false;
 
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
@@ -23,6 +29,75 @@ class _PostCreatePageState extends State<PostCreatePage> {
       setState(() {
         selectedImages.addAll(images.map((image) => File(image.path)));
       });
+    }
+  }
+
+  Future<List<String>> _uploadImages() async {
+    List<String> imageUrls = [];
+    for (File image in selectedImages) {
+      String fileName = '${DateTime.now().millisecondsSinceEpoch}_${path.basename(image.path)}';
+      Reference ref = FirebaseStorage.instance.ref().child('post_images/$fileName');
+      await ref.putFile(image);
+      String downloadUrl = await ref.getDownloadURL();
+      imageUrls.add(downloadUrl);
+    }
+    return imageUrls;
+  }
+
+  Future<void> _createPost() async {
+    if (_contentController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('내용을 입력해주세요')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      // 사용자 닉네임 가져오기
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      final nickname = userDoc.data()?['nickname'];
+
+      // 이미지 업로드
+      List<String> imageUrls = await _uploadImages();
+
+      // Firestore에 게시글 저장
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).collection('Post_Data').add({
+        'content': _contentController.text,
+        'imageUrls': imageUrls,
+        'createdAt': FieldValue.serverTimestamp(),
+        'userId': user.uid,
+        'nickname': nickname,
+        'likes': 0,
+      });
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('게시글이 작성되었습니다')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('오류가 발생했습니다: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -39,6 +114,19 @@ class _PostCreatePageState extends State<PostCreatePage> {
             Navigator.pop(context);
           },
         ),
+        title: const Text('게시글 작성'),
+        actions: [
+          TextButton(
+            onPressed: _isLoading ? null : _createPost,
+            child: _isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('게시'),
+          ),
+        ],
       ),
       backgroundColor: const Color(0xFFCBF6FF),
       body: SingleChildScrollView(
@@ -67,10 +155,12 @@ class _PostCreatePageState extends State<PostCreatePage> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: TextField(
+                      controller: _contentController,
                       decoration: const InputDecoration(
-                        hintText: '제목을 입력하세요',
+                        hintText: '내용을 입력하세요',
                         border: InputBorder.none,
                       ),
+                      maxLines: 5,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -249,38 +339,6 @@ class _PostCreatePageState extends State<PostCreatePage> {
                       ),
                     ),
                 ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 32, 16, 32),
-              child: SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: () {
-                    // 등록하기 기능
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('게시글이 등록되었습니다.'),
-                        duration: Duration(seconds: 2),
-                        backgroundColor: Color(0xFFFF9800),
-                      ),
-                    );
-                    // 2초 후 메인 화면으로 이동
-                    Future.delayed(const Duration(seconds: 2), () {
-                      Navigator.pop(context);
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF9800),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  child: const Text('등록하기'),
-                ),
               ),
             ),
           ],
