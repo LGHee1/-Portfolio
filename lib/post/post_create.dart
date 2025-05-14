@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:path/path.dart' as path;
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class PostCreatePage extends StatefulWidget {
   const PostCreatePage({super.key});
@@ -18,8 +19,126 @@ class PostCreatePage extends StatefulWidget {
 class _PostCreatePageState extends State<PostCreatePage> {
   List<Tag> selectedTags = [];
   List<File> selectedImages = [];
+  final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
   bool _isLoading = false;
+  late GoogleMapController _mapController;
+  final Set<Polyline> _polylines = {};
+  final Set<Marker> _markers = {};
+  List<LatLng> _routePoints = [];
+  bool _isMapLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLatestWorkoutData();
+  }
+
+  Future<void> _loadLatestWorkoutData() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('Running_Data')
+          .orderBy('date', descending: true)
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        final workoutData = querySnapshot.docs.first.data();
+        final List<dynamic> routePointsData = workoutData['routePoints'] ?? [];
+        
+        setState(() {
+          _routePoints = routePointsData.map((point) => LatLng(
+            point['latitude'] as double,
+            point['longitude'] as double,
+          )).toList();
+          _isMapLoading = false;
+        });
+
+        _initializePolylines();
+        _initializeMarkers();
+      }
+    } catch (e) {
+      print('운동 데이터 로드 중 오류 발생: $e');
+      setState(() {
+        _isMapLoading = false;
+      });
+    }
+  }
+
+  void _initializePolylines() {
+    if (_routePoints.isNotEmpty) {
+      _polylines.add(
+        Polyline(
+          polylineId: const PolylineId('route'),
+          points: _routePoints,
+          color: const Color(0xFF764BA2),
+          width: 8,
+          startCap: Cap.roundCap,
+          endCap: Cap.roundCap,
+          jointType: JointType.round,
+        ),
+      );
+    }
+  }
+
+  void _initializeMarkers() {
+    if (_routePoints.isNotEmpty) {
+      // 시작점 마커
+      _markers.add(
+        Marker(
+          markerId: const MarkerId('startLocation'),
+          position: _routePoints.first,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          infoWindow: const InfoWindow(title: '시작점'),
+        ),
+      );
+
+      // 종료점 마커
+      _markers.add(
+        Marker(
+          markerId: const MarkerId('endLocation'),
+          position: _routePoints.last,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          infoWindow: const InfoWindow(title: '종료점'),
+        ),
+      );
+    }
+  }
+
+  void _onMapCreated(GoogleMapController controller) {
+    _mapController = controller;
+    if (_routePoints.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _mapController.animateCamera(
+          CameraUpdate.newLatLngBounds(
+            _getBoundsFromLatLngList(_routePoints),
+            50.0,
+          ),
+        );
+      });
+    }
+  }
+
+  LatLngBounds _getBoundsFromLatLngList(List<LatLng> list) {
+    double? minLat, maxLat, minLng, maxLng;
+
+    for (LatLng latLng in list) {
+      if (minLat == null || latLng.latitude < minLat) minLat = latLng.latitude;
+      if (maxLat == null || latLng.latitude > maxLat) maxLat = latLng.latitude;
+      if (minLng == null || latLng.longitude < minLng) minLng = latLng.longitude;
+      if (maxLng == null || latLng.longitude > maxLng) maxLng = latLng.longitude;
+    }
+
+    return LatLngBounds(
+      southwest: LatLng(minLat!, minLng!),
+      northeast: LatLng(maxLat!, maxLng!),
+    );
+  }
 
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
@@ -133,37 +252,89 @@ class _PostCreatePageState extends State<PostCreatePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 제목 및 작성자 정보
+            // 제목 입력
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    '게시글 작성',
+                    '제목',
                     style: TextStyle(
-                      fontSize: 24,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(12.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: TextField(
-                      controller: _contentController,
+                      controller: _titleController,
                       decoration: const InputDecoration(
-                        hintText: '내용을 입력하세요',
+                        hintText: '제목을 입력하세요',
                         border: InputBorder.none,
                       ),
-                      maxLines: 5,
+                      maxLines: 1,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // 운동 코스 지도
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '운동 코스',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    height: 200,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: _isMapLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : _routePoints.isEmpty
+                            ? const Center(
+                                child: Text(
+                                  '운동 기록이 없습니다',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              )
+                            : ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: GoogleMap(
+                                  initialCameraPosition: CameraPosition(
+                                    target: _routePoints.first,
+                                    zoom: 15,
+                                  ),
+                                  onMapCreated: _onMapCreated,
+                                  polylines: _polylines,
+                                  markers: _markers,
+                                  myLocationEnabled: false,
+                                  myLocationButtonEnabled: false,
+                                  zoomControlsEnabled: false,
+                                  mapToolbarEnabled: false,
+                                ),
+                              ),
+                  ),
                 ],
               ),
             ),
@@ -209,7 +380,6 @@ class _PostCreatePageState extends State<PostCreatePage> {
                       builder: (context) => TagListPage(
                         onTagsSelected: (tags) {
                           setState(() {
-                            // 기존 태그와 새로 선택된 태그를 합치고 중복 제거
                             final merged = [...selectedTags, ...tags];
                             final unique = <Tag>[];
                             for (final tag in merged) {
@@ -241,14 +411,14 @@ class _PostCreatePageState extends State<PostCreatePage> {
                 ),
               ),
             ),
-            // 세부 설명
+            // 내용 입력
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    '세부 설명',
+                    '내용',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -263,8 +433,9 @@ class _PostCreatePageState extends State<PostCreatePage> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: TextField(
+                      controller: _contentController,
                       decoration: const InputDecoration(
-                        hintText: '게시글의 세부 설명을 입력하세요',
+                        hintText: '내용을 입력하세요',
                         border: InputBorder.none,
                       ),
                       maxLines: 5,
@@ -279,13 +450,18 @@ class _PostCreatePageState extends State<PostCreatePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 4),
+                  const Text(
+                    '이미지',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
-                        _pickImage();
-                      },
+                      onPressed: _pickImage,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.black,
                         foregroundColor: Colors.white,

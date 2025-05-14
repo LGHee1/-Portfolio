@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../models/ranking_data.dart';
-import '../../utils/theme.dart';
+import '../Models/ranking_data.dart';
+import '../Utils/theme.dart';
 
 class UserMedalsScreen extends StatelessWidget {
   final RankingData userData;

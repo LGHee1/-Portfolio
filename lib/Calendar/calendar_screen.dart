@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
-import '../../models/workout_record.dart';
-import '../../utils/theme.dart';
+import '../Models/workout_record.dart';
+import '../Utils/theme.dart';
 import 'workout_detail_screen.dart';
 
 class CalendarScreen extends StatefulWidget {

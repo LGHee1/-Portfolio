@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:provider/provider.dart';
+import 'user_provider.dart';
 import 'workout_summary_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -40,6 +42,7 @@ class _RunningScreenState extends State<RunningScreen> {
 
   // 현재 위치 마커
   Marker? _currentLocationMarker;
+  Marker? _startLocationMarker;
 
   // 가속도계 관련 변수
   StreamSubscription<AccelerometerEvent>? _accelerometerSubscription;
@@ -49,6 +52,8 @@ class _RunningScreenState extends State<RunningScreen> {
   static const double _stepThreshold = 12.0; // 걸음 감지 임계값
   static const int _stepWindow = 3; // 걸음 감지 시간 윈도우 (프레임)
   List<double> _magnitudeWindow = [];
+
+  String _userNickname = '';
 
   String get formattedTime {
     final duration = Duration(seconds: _seconds);
@@ -74,7 +79,16 @@ class _RunningScreenState extends State<RunningScreen> {
     );
     _startTimer();
     _getCurrentLocation();
-    _startAccelerometer(); // 가속도계 시작
+    _startAccelerometer();
+    _loadUserData();
+    _addStartMarker();
+  }
+
+  void _loadUserData() {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    setState(() {
+      _userNickname = userProvider.nickname;
+    });
   }
 
   Future<void> _getCurrentLocation() async {
@@ -94,13 +108,22 @@ class _RunningScreenState extends State<RunningScreen> {
     }
   }
 
+  void _addStartMarker() {
+    _startLocationMarker = Marker(
+      markerId: const MarkerId('startLocation'),
+      position: widget.initialPosition,
+      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+      infoWindow: const InfoWindow(title: '시작점'),
+    );
+  }
+
   void _updateCurrentLocationMarker(Position position) {
     _currentLocationMarker = Marker(
       markerId: const MarkerId('currentLocation'),
       position: LatLng(position.latitude, position.longitude),
       icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
       infoWindow: const InfoWindow(title: '현재 위치'),
-      rotation: position.heading, // 방향 표시
+      rotation: position.heading,
     );
   }
 
@@ -201,7 +224,8 @@ class _RunningScreenState extends State<RunningScreen> {
       'duration': _seconds,
       'pace': _pace,
       'calories': _calories,
-      'routePoints': routePointsData, // 코스 데이터 추가
+      'routePoints': routePointsData,
+      'nickname': _userNickname,
     };
 
     await FirebaseFirestore.instance
@@ -209,6 +233,12 @@ class _RunningScreenState extends State<RunningScreen> {
         .doc(user.uid)
         .collection('Running_Data')
         .add(runningData);
+
+    // 사용자의 총 운동 거리 업데이트
+    await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+      'totalDistance': FieldValue.increment(_distance),
+      'totalWorkouts': FieldValue.increment(1),
+    });
   }
 
   Widget _dataBox(String title, String value) {
@@ -411,13 +441,15 @@ class _RunningScreenState extends State<RunningScreen> {
                       points: _routePoints,
                       color: const Color(0xFF764BA2),
                       width: 8,
-                      patterns: [PatternItem.dash(30), PatternItem.gap(10)],
                       startCap: Cap.roundCap,
                       endCap: Cap.roundCap,
                       jointType: JointType.round,
                     ),
                   },
-                  markers: _currentLocationMarker != null ? {_currentLocationMarker!} : {},
+                  markers: {
+                    if (_startLocationMarker != null) _startLocationMarker!,
+                    if (_currentLocationMarker != null) _currentLocationMarker!,
+                  },
                 ),
 
                 // 현재 위치 이동 버튼

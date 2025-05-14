@@ -6,8 +6,11 @@ import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import 'user_provider.dart';
 import 'home_screen.dart';
 import 'workout_summary_screen.dart';
+import 'Widgets/menu.dart';
 
 class WorkoutScreen extends StatefulWidget {
   const WorkoutScreen({super.key});
@@ -22,6 +25,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   Position? _currentPosition;
   StreamSubscription<Position>? _positionStream;
+  String _userNickname = '';
 
   // 운동 데이터
   double _distance = 0.0; // km
@@ -40,6 +44,14 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   void initState() {
     super.initState();
     _requestLocationPermission();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    setState(() {
+      _userNickname = userProvider.nickname;
+    });
   }
 
   Future<void> _requestLocationPermission() async {
@@ -279,29 +291,35 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     if (user == null) return;
 
     try {
-      final workoutData = {
-        'startTime': _workoutStartTime,
-        'endTime': DateTime.now(),
-        'duration': _duration.inSeconds,
+      // 운동 데이터 저장
+      await _firestore.collection('users').doc(user.uid).collection('workouts').add({
         'distance': _distance,
+        'duration': _duration.inSeconds,
+        'pace': _pace,
+        'cadence': _cadence,
         'calories': _calories,
-        'averagePace': _pace,
-        'averageCadence': _cadence,
         'routePoints': _routePoints.map((point) => {
           'latitude': point.latitude,
           'longitude': point.longitude,
         }).toList(),
-      };
+        'startTime': _workoutStartTime,
+        'endTime': DateTime.now(),
+        'nickname': _userNickname,
+      });
 
-      await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('workouts')
-          .add(workoutData);
+      // 사용자의 총 운동 거리 업데이트
+      await _firestore.collection('users').doc(user.uid).update({
+        'totalDistance': FieldValue.increment(_distance),
+        'totalWorkouts': FieldValue.increment(1),
+      });
 
-      debugPrint('운동 기록 저장 완료');
     } catch (e) {
-      debugPrint('운동 기록 저장 중 오류 발생: $e');
+      debugPrint('운동 데이터 저장 중 오류 발생: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('운동 데이터 저장 중 오류가 발생했습니다.')),
+        );
+      }
     }
   }
 
@@ -355,57 +373,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
         ),
       ),
 
-      drawer: Drawer(
-        width: 240,
-        backgroundColor: const Color(0xFFE5FBFF),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.only(left: 16.0),
-              child: IconButton(
-                icon: const Icon(Icons.menu, color: Colors.black),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Center(
-              child: Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.black26),
-                ),
-                child: const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.account_circle, size: 36, color: Colors.grey),
-                      SizedBox(height: 4),
-                      Text('임덕현', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            ...['랭킹', '기록', '친구관리', '문의', '환경 설정'].map((item) =>
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 20),
-                  child: Text(item, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                ),
-            ).toList(),
-            const Spacer(),
-            const Padding(
-              padding: EdgeInsets.only(left: 16.0, bottom: 12),
-              child: Icon(Icons.logout),
-            ),
-          ],
-        ),
-      ),
+      drawer: const Menu(),
 
       body: Stack(
         children: [

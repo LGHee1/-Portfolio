@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:provider/provider.dart';
+import 'user_provider.dart';
 import 'home_screen.dart';
-import 'utils/theme.dart';
+import 'Utils/theme.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'Widgets/menu.dart';
+import 'Post/post_create.dart';
 
 class WorkoutSummaryScreen extends StatefulWidget {
   final double distance;
@@ -30,14 +34,25 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
   bool isLiked = false;
   late GoogleMapController _mapController;
   final Set<Polyline> _polylines = {};
+  final Set<Marker> _markers = {};
   LatLng? _initialPosition;
   bool _isLoading = true;
+  String _userNickname = '';
 
   @override
   void initState() {
     super.initState();
     _initializePolylines();
+    _initializeMarkers();
     _determinePosition();
+    _loadUserData();
+  }
+
+  void _loadUserData() {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    setState(() {
+      _userNickname = userProvider.nickname;
+    });
   }
 
   void _initializePolylines() {
@@ -48,10 +63,33 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
           points: widget.routePoints,
           color: const Color(0xFF764BA2),
           width: 8,
-          patterns: [PatternItem.dash(30), PatternItem.gap(10)],
           startCap: Cap.roundCap,
           endCap: Cap.roundCap,
           jointType: JointType.round,
+        ),
+      );
+    }
+  }
+
+  void _initializeMarkers() {
+    if (widget.routePoints.isNotEmpty) {
+      // 시작점 마커
+      _markers.add(
+        Marker(
+          markerId: const MarkerId('startLocation'),
+          position: widget.routePoints.first,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          infoWindow: const InfoWindow(title: '시작점'),
+        ),
+      );
+
+      // 종료점 마커
+      _markers.add(
+        Marker(
+          markerId: const MarkerId('endLocation'),
+          position: widget.routePoints.last,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          infoWindow: const InfoWindow(title: '종료점'),
         ),
       );
     }
@@ -113,20 +151,28 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('운동 완료'),
+        title: Text('$_userNickname님의 운동 완료'),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu, color: Colors.black),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
       ),
+      drawer: const Menu(),
       body: SafeArea(
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
-            : Column(
+            : Stack(
                 children: [
-                  Expanded(
-                    flex: 1,
-                    child: Stack(
-                      children: [
-                        GoogleMap(
+                  Column(
+                    children: [
+                      // 지도 섹션 (1/3)
+                      Expanded(
+                        flex: 1,
+                        child: GoogleMap(
                           initialCameraPosition: CameraPosition(
                             target: widget.routePoints.isNotEmpty
                                 ? widget.routePoints.last
@@ -135,94 +181,100 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
                           ),
                           onMapCreated: _onMapCreated,
                           polylines: _polylines,
+                          markers: _markers,
                           myLocationEnabled: true,
                           myLocationButtonEnabled: false,
                           zoomControlsEnabled: true,
                           mapToolbarEnabled: false,
                         ),
-                        // 현재 위치 버튼
-                        Positioned(
-                          top: 16,
-                          right: 16,
-                          child: GestureDetector(
-                            onTap: _moveCamera,
-                            child: Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.white,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black26,
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Image.asset('assets/img/now_position.png'),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // 좋아요 버튼을 지도 밖으로 이동
-                  Padding(
-                    padding: const EdgeInsets.only(right: 16.0),
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            isLiked = !isLiked;
-                          });
-                        },
+                      ),
+                      // 운동 정보 섹션 (2/3)
+                      Expanded(
+                        flex: 2,
                         child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
+                          padding: const EdgeInsets.all(20),
+                          width: double.infinity,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                '운동 정보',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF764BA2),
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              Expanded(
+                                child: _buildStatsGrid(),
+                              ),
+                              // 게시글 작성 버튼
+                              Padding(
+                                padding: const EdgeInsets.only(top: 16.0),
+                                child: Align(
+                                  alignment: Alignment.bottomCenter,
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => PostCreatePage(),
+                                        ),
+                                      );
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF764BA2),
+                                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      '현재 운동코스 게시글 작성',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ),
                             ],
                           ),
-                          child: Icon(
-                            isLiked ? Icons.favorite : Icons.favorite_border,
-                            color: isLiked ? Colors.red : Colors.grey,
-                            size: 30,
-                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                  Expanded(
-                    flex: 2,
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            '운동 정보',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF764BA2),
+                  // 좋아요 버튼 지도 아래 오른쪽에 위치
+                  Positioned(
+                    top: MediaQuery.of(context).size.height / 3 - 30, // 지도 아래쪽
+                    right: 24,
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          isLiked = !isLiked;
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
                             ),
-                          ),
-                          const SizedBox(height: 20),
-                          Expanded(
-                            child: _buildStatsGrid(),
-                          ),
-                        ],
+                          ],
+                        ),
+                        child: Icon(
+                          isLiked ? Icons.favorite : Icons.favorite_border,
+                          color: isLiked ? Colors.red : Colors.grey,
+                          size: 24,
+                        ),
                       ),
                     ),
                   ),

@@ -10,7 +10,8 @@ import 'package:provider/provider.dart';
 import 'user_provider.dart';
 import 'Widgets/running_card_swiper.dart';
 import 'Profile/profile_screen.dart';
-import 'post/post_list.dart';
+import 'Post/post_list.dart';
+import 'Widgets/menu.dart';
 
 class ScreenHome extends StatefulWidget {
   const ScreenHome({super.key});
@@ -113,147 +114,7 @@ class _ScreenHomeState extends State<ScreenHome> {
       ),
 
       // ✅ Drawer 설정
-      drawer: Drawer(
-        width: 240,
-        backgroundColor: const Color(0xFFE5FBFF),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 16),
-            // 햄버거 버튼 (닫기용)
-            Padding(
-              padding: const EdgeInsets.only(left: 16.0),
-              child: IconButton(
-                icon: const Icon(Icons.menu, color: Colors.black),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // 사용자 박스
-            Center(
-              child: Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.black26),
-                ),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.account_circle, size: 36, color: Colors.grey),
-                      const SizedBox(height: 4),
-                      Text(_userName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // 내정보 버튼
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 20),
-              child: InkWell(
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => ProfileScreen()),
-                  );
-                },
-                child: const Text(
-                  '내정보',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-
-            // 랭킹 버튼
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 20),
-              child: InkWell(
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => RankingScreen()),
-                  );
-                },
-                child: const Text(
-                  '랭킹',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-
-            // 기록 버튼
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 20),
-              child: InkWell(
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => CalendarScreen()),
-                  );
-                },
-                child: const Text(
-                  '기록',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-
-            // 나머지 메뉴 항목들
-            ...['친구관리', '문의', '환경 설정'].map((item) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 20),
-                child: InkWell(
-                  onTap: () {
-                    if (item == '친구관리') {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const FriendsScreen()),
-                      );
-                    }
-                  },
-                  child: Text(item, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                ),
-              );
-            }).toList(),
-
-            const Spacer(),
-            Padding(
-              padding: const EdgeInsets.only(left: 16.0, bottom: 12),
-              child: InkWell(
-                onTap: _signOut,
-                child: Row(
-                  children: [
-                    const Icon(Icons.logout, color: Colors.red),
-                    const SizedBox(width: 8),
-                    Text(
-                      '로그아웃',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.red,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+      drawer: const Menu(),
 
       // ✅ 홈 버튼
       floatingActionButton: FloatingActionButton(

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../models/workout_record.dart';
-import '../../utils/theme.dart';
+import '../Models/workout_record.dart';
+import '../Utils/theme.dart';
 import 'package:intl/intl.dart';
-import '../post/post_create.dart';
+import '../Post/post_create.dart';
 
 class WorkoutDetailScreen extends StatelessWidget {
   final WorkoutRecord record;
