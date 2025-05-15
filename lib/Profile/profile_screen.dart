@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
+import '../Widgets/bottom_bar.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -24,6 +25,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String? photoUrl;
   File? _imageFile;
   List<String> postUids = [];
+  int _selectedIndex = 1;
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _messageController = TextEditingController();
@@ -339,6 +341,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
         ],
+      ),
+      bottomNavigationBar: BottomBar(
+        selectedIndex: _selectedIndex,
+        onTabSelected: (index) {
+          setState(() => _selectedIndex = index);
+        },
       ),
     );
   }

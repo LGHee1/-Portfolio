@@ -12,6 +12,7 @@ import 'Widgets/running_card_swiper.dart';
 import 'Profile/profile_screen.dart';
 import 'Post/post_list.dart';
 import 'Widgets/menu.dart';
+import 'Widgets/bottom_bar.dart';
 
 class ScreenHome extends StatefulWidget {
   const ScreenHome({super.key});
@@ -116,60 +117,24 @@ class _ScreenHomeState extends State<ScreenHome> {
       // ✅ Drawer 설정
       drawer: const Menu(),
 
-      // ✅ 홈 버튼
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.amber.shade100,
-        onPressed: () {
-          setState(() {
-            _selectedIndex = 1;
-          });
-        },
-        child: Icon(
-          Icons.home,
-          color: _selectedIndex == 1 ? Colors.black : Colors.grey,
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-
       // ✅ 하단 네비게이션 바
-      bottomNavigationBar: BottomAppBar(
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8.0,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                icon: Icon(
-                  Icons.directions_run,
-                  color: _selectedIndex == 0 ? Colors.amber : Colors.black,
-                ),
-                onPressed: () {
-                  setState(() => _selectedIndex = 0);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const WorkoutScreen()),
-                  );
-                },
-              ),
-
-              IconButton(
-                icon: Icon(
-                  Icons.star_border,
-                  color: _selectedIndex == 2 ? Colors.amber : Colors.black,
-                ),
-                onPressed: () {
-                  setState(() => _selectedIndex = 2);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const PostListPage()),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
+      bottomNavigationBar: BottomBar(
+        selectedIndex: _selectedIndex,
+        onTabSelected: (index) {
+          setState(() => _selectedIndex = index);
+          // 기존 네비게이션 동작 유지
+          if (index == 0) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const WorkoutScreen()),
+            );
+          } else if (index == 1) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const PostListPage()),
+            );
+          }
+        },
       ),
 
       // ✅ 본문

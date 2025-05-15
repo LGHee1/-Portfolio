@@ -9,6 +9,7 @@ import 'workout_summary_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sensors_plus/sensors_plus.dart';
+import 'Widgets/menu.dart';
 
 class RunningScreen extends StatefulWidget {
   final LatLng initialPosition;
@@ -28,6 +29,9 @@ class _RunningScreenState extends State<RunningScreen> {
   int _seconds = 0;
   bool _isHolding = false;
   Timer? _holdTimer;
+  bool _isCountingDown = true; // 카운트다운 상태
+  int _countdownValue = 3; // 카운트다운 값
+  bool _showHodadak = false; // 호다닥 표시 상태 추가
 
   // Google Maps 관련 변수
   final Completer<GoogleMapController> _controller = Completer();
@@ -77,7 +81,7 @@ class _RunningScreenState extends State<RunningScreen> {
       altitudeAccuracy: 0,
       headingAccuracy: 0,
     );
-    _startTimer();
+    _startCountdown();
     _getCurrentLocation();
     _startAccelerometer();
     _loadUserData();
@@ -286,7 +290,7 @@ class _RunningScreenState extends State<RunningScreen> {
     _isHolding = true;
     _holdTimer = Timer(const Duration(seconds: 3), () {
       if (_isHolding) {
-        _stopWorkout();
+        _showEndWorkoutDialog();
       }
     });
   }
@@ -294,6 +298,68 @@ class _RunningScreenState extends State<RunningScreen> {
   void _onLongPressEnd(_) {
     _isHolding = false;
     _holdTimer?.cancel();
+  }
+
+  void _showEndWorkoutDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            '운동 종료',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: const Text(
+            '운동을 종료하시겠습니까?',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 18,
+            ),
+          ),
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text(
+                    '취소',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    _stopWorkout();
+                  },
+                  child: const Text(
+                    '확인',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.grey,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _toggleTracking() {
@@ -331,6 +397,28 @@ class _RunningScreenState extends State<RunningScreen> {
     });
   }
 
+  void _startCountdown() {
+    Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        if (_countdownValue > 1) {
+          _countdownValue--;
+        } else if (_countdownValue == 1) {
+          _countdownValue = 0;
+          _showHodadak = true;
+          // 1초 후 호다닥만 보이게
+          Future.delayed(const Duration(seconds: 1), () {
+            setState(() {
+              _showHodadak = false;
+              _isCountingDown = false;
+              _startTimer();
+            });
+          });
+          timer.cancel();
+        }
+      });
+    });
+  }
+
   @override
   void dispose() {
     _accelerometerSubscription?.cancel();
@@ -362,64 +450,13 @@ class _RunningScreenState extends State<RunningScreen> {
           ],
         ),
       ),
-
-      drawer: Drawer(
-        width: 240,
-        backgroundColor: const Color(0xFFE5FBFF),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.only(left: 16.0),
-              child: IconButton(
-                icon: const Icon(Icons.menu, color: Colors.black),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Center(
-              child: Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.black26),
-                ),
-                child: const Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.account_circle, size: 36, color: Colors.grey),
-                    SizedBox(height: 4),
-                    Text('임덕현', style: TextStyle(fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            ...['랭킹', '기록', '친구관리', '문의', '환경 설정'].map((item) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 20),
-                child: Text(item, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              );
-            }).toList(),
-            const Spacer(),
-            const Padding(
-              padding: EdgeInsets.only(left: 16.0, bottom: 12),
-              child: Icon(Icons.logout),
-            ),
-          ],
-        ),
-      ),
-
-
-      body: Column(
+      drawer: const Menu(),
+      body: Stack(
         children: [
-          Expanded(
-            child: Stack(
-              children: [
-                GoogleMap(
+          Column(
+            children: [
+              Expanded(
+                child: GoogleMap(
                   mapType: MapType.normal,
                   initialCameraPosition: CameraPosition(
                     target: widget.initialPosition,
@@ -451,118 +488,87 @@ class _RunningScreenState extends State<RunningScreen> {
                     if (_currentLocationMarker != null) _currentLocationMarker!,
                   },
                 ),
-
-                // 현재 위치 이동 버튼
-                Positioned(
-                  top: 16,
-                  right: 16,
-                  child: GestureDetector(
-                    onTap: _moveCamera,
-                    child: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black26,
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Image.asset('assets/img/now_position.png'),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            color: const Color(0xFFE5FBFF),
-            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _dataBox('거리(km)', _distance.toStringAsFixed(2)),
-                    _dataBox('시간', formattedTime),
-                    _dataBox('케이던스', _cadence.toString()),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _dataBox('평균 페이스', _pace),
-                    _dataBox('칼로리(kcal)', _calories.toString()),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: _pauseTimer,
-                      icon: const Icon(Icons.pause),
-                      label: const Text('일시정지'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
-                      ),
-                    ),
-                    GestureDetector(
-                      onLongPressStart: _onLongPressStart,
-                      onLongPressEnd: _onLongPressEnd,
-                      child: ElevatedButton.icon(
-                        onPressed: () {},
-                        icon: const Icon(Icons.stop_circle, color: Colors.red),
-                        label: const Text('3초간 누르면 종료'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.red,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.amber.shade100,
-        onPressed: _startTimer,
-        child: const Icon(Icons.play_arrow, color: Colors.black),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-
-      bottomNavigationBar: BottomAppBar(
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8.0,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                onPressed: () {},
-                icon: const Icon(Icons.directions_run, color: Colors.amber),
               ),
-              IconButton(
-                onPressed: () {},
-                icon: const Icon(Icons.star_border),
+              Container(
+                color: const Color(0xFFE5FBFF),
+                padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _dataBox('거리(km)', _distance.toStringAsFixed(2)),
+                        _dataBox('시간', formattedTime),
+                        _dataBox('케이던스', _cadence.toString()),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _dataBox('평균 페이스', _pace),
+                        _dataBox('칼로리(kcal)', _calories.toString()),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: _pauseTimer,
+                          icon: const Icon(Icons.pause),
+                          label: const Text('일시정지'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.black,
+                          ),
+                        ),
+                        GestureDetector(
+                          onLongPressStart: _onLongPressStart,
+                          onLongPressEnd: _onLongPressEnd,
+                          child: ElevatedButton.icon(
+                            onPressed: () {},
+                            icon: const Icon(Icons.stop_circle, color: Colors.red),
+                            label: const Text('3초간 누르면 종료'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.red,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-        ),
+          if (_isCountingDown)
+            Container(
+              color: Colors.black.withOpacity(0.7),
+              child: Center(
+                child: _showHodadak
+                    ? const Text(
+                        '호다닥!',
+                        style: TextStyle(
+                          fontSize: 60,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      )
+                    : (_countdownValue > 0
+                        ? Text(
+                            _countdownValue.toString(),
+                            style: const TextStyle(
+                              fontSize: 120,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const SizedBox()),
+              ),
+            ),
+        ],
       ),
     );
   }

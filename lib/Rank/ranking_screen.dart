@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../Models/ranking_data.dart';
 import '../Utils/theme.dart';
 import 'user_medals_screen.dart';
+import '../Widgets/bottom_bar.dart';
 
 class RankingScreen extends StatefulWidget {
   @override
@@ -10,6 +11,7 @@ class RankingScreen extends StatefulWidget {
 
 class _RankingScreenState extends State<RankingScreen> {
   String selectedLevel = '전체'; // '전체', '초급자', '중급자', '상급자'
+  int _selectedIndex = 1;
 
   @override
   Widget build(BuildContext context) {
@@ -102,6 +104,12 @@ class _RankingScreenState extends State<RankingScreen> {
             child: _buildRankingList(currentUser),
           ),
         ],
+      ),
+      bottomNavigationBar: BottomBar(
+        selectedIndex: _selectedIndex,
+        onTabSelected: (index) {
+          setState(() => _selectedIndex = index);
+        },
       ),
     );
   }

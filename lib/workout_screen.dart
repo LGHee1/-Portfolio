@@ -11,6 +11,7 @@ import 'user_provider.dart';
 import 'home_screen.dart';
 import 'workout_summary_screen.dart';
 import 'Widgets/menu.dart';
+import 'Widgets/bottom_bar.dart';
 
 class WorkoutScreen extends StatefulWidget {
   const WorkoutScreen({super.key});
@@ -26,6 +27,8 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   Position? _currentPosition;
   StreamSubscription<Position>? _positionStream;
   String _userNickname = '';
+
+  int _selectedIndex = 1;
 
   // 운동 데이터
   double _distance = 0.0; // km
@@ -456,46 +459,11 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
         ],
       ),
 
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.amber.shade100,
-        onPressed: () {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const ScreenHome()),
-          );
+      bottomNavigationBar: BottomBar(
+        selectedIndex: _selectedIndex,
+        onTabSelected: (index) {
+          setState(() => _selectedIndex = index);
         },
-        child: const Icon(
-          Icons.home,
-          color: Colors.grey,
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-
-      bottomNavigationBar: BottomAppBar(
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8.0,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                icon: const Icon(
-                  Icons.directions_run,
-                  color: Colors.amber,
-                ),
-                onPressed: () {},
-              ),
-              IconButton(
-                icon: const Icon(
-                  Icons.star_border,
-                  color: Colors.black,
-                ),
-                onPressed: () {},
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

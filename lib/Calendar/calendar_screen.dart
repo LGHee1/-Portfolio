@@ -3,6 +3,7 @@ import 'package:table_calendar/table_calendar.dart';
 import '../Models/workout_record.dart';
 import '../Utils/theme.dart';
 import 'workout_detail_screen.dart';
+import '../Widgets/bottom_bar.dart';
 
 class CalendarScreen extends StatefulWidget {
   @override
@@ -17,6 +18,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   WorkoutRecord? _selectedRecord;
   String _currentUser = '나';
   final List<String> _friends = ['나', '친구1', '친구2', '친구3', '친구4', '친구5'];
+  int _selectedIndex = 1;
 
   @override
   void initState() {
@@ -73,6 +75,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
           ),
         ],
+      ),
+      bottomNavigationBar: BottomBar(
+        selectedIndex: _selectedIndex,
+        onTabSelected: (index) {
+          setState(() => _selectedIndex = index);
+        },
       ),
     );
   }

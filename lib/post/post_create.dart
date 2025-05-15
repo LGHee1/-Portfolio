@@ -8,6 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:path/path.dart' as path;
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../Widgets/bottom_bar.dart';
 
 class PostCreatePage extends StatefulWidget {
   const PostCreatePage({super.key});
@@ -27,6 +28,7 @@ class _PostCreatePageState extends State<PostCreatePage> {
   final Set<Marker> _markers = {};
   List<LatLng> _routePoints = [];
   bool _isMapLoading = true;
+  int _selectedIndex = 1;
 
   @override
   void initState() {
@@ -519,6 +521,19 @@ class _PostCreatePageState extends State<PostCreatePage> {
             ),
           ],
         ),
+      ),
+      bottomNavigationBar: BottomBar(
+        selectedIndex: _selectedIndex,
+        onTabSelected: (index) {
+          setState(() => _selectedIndex = index);
+          if (index == 0) {
+            Navigator.pushReplacementNamed(context, '/workout');
+          } else if (index == 1) {
+            Navigator.pushReplacementNamed(context, '/post');
+          } else if (index == 2) {
+            Navigator.pushReplacementNamed(context, '/profile');
+          }
+        },
       ),
     );
   }
