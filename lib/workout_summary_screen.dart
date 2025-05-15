@@ -79,7 +79,7 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
           markerId: const MarkerId('startLocation'),
           position: widget.routePoints.first,
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-          infoWindow: const InfoWindow(title: '시작점'),
+          infoWindow: const InfoWindow(title: '시작'),
         ),
       );
 
@@ -89,7 +89,17 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
           markerId: const MarkerId('endLocation'),
           position: widget.routePoints.last,
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-          infoWindow: const InfoWindow(title: '종료점'),
+          infoWindow: const InfoWindow(title: '종료'),
+        ),
+      );
+    } else if (_initialPosition != null) {
+      // 운동을 하지 않았을 때도 종료 마커 표시
+      _markers.add(
+        Marker(
+          markerId: const MarkerId('endLocation'),
+          position: _initialPosition!,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          infoWindow: const InfoWindow(title: '종료'),
         ),
       );
     }

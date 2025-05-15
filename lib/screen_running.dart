@@ -32,6 +32,7 @@ class _RunningScreenState extends State<RunningScreen> {
   bool _isCountingDown = true; // 카운트다운 상태
   int _countdownValue = 3; // 카운트다운 값
   bool _showHodadak = false; // 호다닥 표시 상태 추가
+  bool _isPaused = false; // 일시정지 상태 추가
 
   // Google Maps 관련 변수
   final Completer<GoogleMapController> _controller = Completer();
@@ -206,8 +207,21 @@ class _RunningScreenState extends State<RunningScreen> {
   }
 
   void _pauseTimer() {
-    _timer?.cancel();
-    _positionStream?.pause();
+    if (_isPaused) {
+      // 재생 상태로 전환
+      setState(() {
+        _isPaused = false;
+      });
+      _startTimer();
+      _positionStream?.resume();
+    } else {
+      // 일시정지 상태로 전환
+      setState(() {
+        _isPaused = true;
+      });
+      _timer?.cancel();
+      _positionStream?.pause();
+    }
   }
 
   Future<void> saveRunningData() async {
@@ -516,8 +530,8 @@ class _RunningScreenState extends State<RunningScreen> {
                       children: [
                         ElevatedButton.icon(
                           onPressed: _pauseTimer,
-                          icon: const Icon(Icons.pause),
-                          label: const Text('일시정지'),
+                          icon: Icon(_isPaused ? Icons.play_arrow : Icons.pause),
+                          label: Text(_isPaused ? '운동 재생' : '일시정지'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
                             foregroundColor: Colors.black,

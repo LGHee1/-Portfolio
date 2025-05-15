@@ -61,8 +61,25 @@ class _PostCreatePageState extends State<PostCreatePage> {
           _isMapLoading = false;
         });
 
-        _initializePolylines();
-        _initializeMarkers();
+        if (_routePoints.isNotEmpty) {
+          _initializePolylines();
+          _initializeMarkers();
+        } else if (workoutData['routePoints'] != null && workoutData['routePoints'].isNotEmpty) {
+          // 경로가 없는 경우 마지막 위치만 마커로 표시
+          final lastPoint = workoutData['routePoints'].last;
+          final lastPosition = LatLng(
+            lastPoint['latitude'] as double,
+            lastPoint['longitude'] as double,
+          );
+          _markers.add(
+            Marker(
+              markerId: const MarkerId('endLocation'),
+              position: lastPosition,
+              icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+              infoWindow: const InfoWindow(title: '종료'),
+            ),
+          );
+        }
       }
     } catch (e) {
       print('운동 데이터 로드 중 오류 발생: $e');
@@ -96,7 +113,7 @@ class _PostCreatePageState extends State<PostCreatePage> {
           markerId: const MarkerId('startLocation'),
           position: _routePoints.first,
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-          infoWindow: const InfoWindow(title: '시작점'),
+          infoWindow: const InfoWindow(title: '시작'),
         ),
       );
 
