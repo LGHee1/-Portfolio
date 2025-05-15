@@ -17,12 +17,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
   late DateTime _firstDay;
   late DateTime _lastDay;
   DateTime? _selectedDay;
-  WorkoutRecord? _selectedRecord;
+  List<WorkoutRecord> _selectedDayRecords = [];
+  int _currentRecordIndex = 0;
   String _currentUser = '나';
   final List<String> _friends = ['나', '친구1', '친구2', '친구3', '친구4', '친구5'];
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   List<WorkoutRecord> _workoutRecords = [];
+  final PageController _pageController = PageController();
 
   @override
   void initState() {
@@ -32,6 +34,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
     _lastDay = DateTime(_focusedDay.year + 1, 12, 31);
     _selectedDay = _focusedDay;
     _loadWorkoutData();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadWorkoutData() async {
@@ -83,46 +91,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
           print('변환된 운동 기록: ${record.date} - 거리: ${record.distance}km');
           return record;
         }).toList();
-        _updateSelectedRecord();
+        _updateSelectedRecords();
       });
     } catch (e) {
       print('운동 데이터 로드 중 오류 발생: $e');
     }
   }
 
-  void _updateSelectedRecord() {
+  void _updateSelectedRecords() {
     if (_selectedDay == null) return;
 
-    print('선택된 날짜: $_selectedDay');
-    print('현재 운동 기록 수: ${_workoutRecords.length}');
-
-    for (var record in _workoutRecords) {
-      print('비교 중: ${record.date} - 선택된 날짜: $_selectedDay');
-      if (isSameDay(record.date, _selectedDay)) {
-        print('일치하는 운동 기록 발견: ${record.date} - 거리: ${record.distance}km');
-      }
-    }
-
-    _selectedRecord = _workoutRecords.firstWhere(
-          (record) {
-        final isSame = isSameDay(record.date, _selectedDay);
-        print('날짜 비교: ${record.date} vs $_selectedDay = $isSame');
-        return isSame;
-      },
-      orElse: () {
-        print('일치하는 운동 기록 없음');
-        return WorkoutRecord(
-          userId: _currentUser,
-          date: _selectedDay!,
-          distance: 0,
-          duration: Duration.zero,
-          pace: 0,
-          cadence: 0,
-          calories: 0,
-          routePoints: [],
-        );
-      },
-    );
+    setState(() {
+      _selectedDayRecords = _workoutRecords
+          .where((record) => isSameDay(record.date, _selectedDay))
+          .toList();
+      _currentRecordIndex = 0;
+    });
   }
 
   @override
@@ -140,7 +124,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Container(
             height: 80,
             margin: EdgeInsets.only(bottom: 24),
-            child: _selectedRecord != null
+            child: _selectedDayRecords.isNotEmpty
                 ? _buildWorkoutSummary()
                 : _buildEmptyWorkoutSummary(),
           ),
@@ -173,7 +157,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               onTap: () {
                 setState(() {
                   _currentUser = friend;
-                  _updateSelectedRecord();
+                  _updateSelectedRecords();
                 });
               },
               child: Container(
@@ -239,108 +223,127 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildWorkoutSummary() {
-    if (_selectedRecord == null) return SizedBox.shrink();
+    if (_selectedDayRecords.isEmpty) return _buildEmptyWorkoutSummary();
 
-    return Container(
-      padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppTheme.primaryColor.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: _selectedRecord!.distance > 0
-          ? Row(
-        children: [
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '${_selectedRecord!.distance.toStringAsFixed(1)}km',
-                  style: TextStyle(
-                    color: AppTheme.darkTextColor,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
+    return Column(
+      children: [
+        Container(
+          height: 80,
+          child: PageView.builder(
+            controller: _pageController,
+            itemCount: _selectedDayRecords.length,
+            onPageChanged: (index) {
+              setState(() {
+                _currentRecordIndex = index;
+              });
+            },
+            itemBuilder: (context, index) {
+              final record = _selectedDayRecords[index];
+              return Container(
+                padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12),
-                  child: Text('•', style: TextStyle(color: Colors.grey)),
-                ),
-                Text(
-                  '${_selectedRecord!.duration.inMinutes}분',
-                  style: TextStyle(
-                    color: AppTheme.darkTextColor,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12),
-                  child: Text('•', style: TextStyle(color: Colors.grey)),
-                ),
-                Text(
-                  '${_selectedRecord!.pace.toStringAsFixed(2)}분/km',
-                  style: TextStyle(
-                    color: AppTheme.darkTextColor,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      WorkoutDetailScreen(record: _selectedRecord!),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            '${record.distance.toStringAsFixed(1)}km',
+                            style: TextStyle(
+                              color: AppTheme.darkTextColor,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 12),
+                            child: Text('•', style: TextStyle(color: Colors.grey)),
+                          ),
+                          Text(
+                            '${record.duration.inMinutes}분',
+                            style: TextStyle(
+                              color: AppTheme.darkTextColor,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 12),
+                            child: Text('•', style: TextStyle(color: Colors.grey)),
+                          ),
+                          Text(
+                            '${record.pace.toStringAsFixed(2)}분/km',
+                            style: TextStyle(
+                              color: AppTheme.darkTextColor,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => WorkoutDetailScreen(record: record),
+                          ),
+                        );
+                      },
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '상세보기',
+                            style: TextStyle(
+                              color: AppTheme.darkTextColor,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          SizedBox(width: 4),
+                          Icon(
+                            Icons.arrow_forward_ios,
+                            size: 14,
+                            color: AppTheme.darkTextColor,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               );
             },
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '상세보기',
-                  style: TextStyle(
-                    color: AppTheme.darkTextColor,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                SizedBox(width: 4),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 14,
-                  color: AppTheme.darkTextColor,
-                ),
-              ],
-            ),
           ),
-        ],
-      )
-          : Row(
-        children: [
-          Expanded(
+        ),
+        if (_selectedDayRecords.length > 1)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '날짜를 선택해 주세요',
-                  style: TextStyle(
-                    color: AppTheme.darkTextColor,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
+              children: List.generate(
+                _selectedDayRecords.length,
+                (index) => Container(
+                  width: 8,
+                  height: 8,
+                  margin: EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _currentRecordIndex == index
+                        ? AppTheme.primaryColor
+                        : AppTheme.primaryColor.withOpacity(0.3),
                   ),
                 ),
-              ],
+              ),
             ),
           ),
-        ],
-      ),
+      ],
     );
   }
 
@@ -412,18 +415,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
           return null;
         },
       ),
-      onDaySelected: (selectedDay, focusedDay) {
-        setState(() {
-          _selectedDay = selectedDay;
-          _focusedDay = focusedDay;
-          _updateSelectedRecord();
-        });
-      },
+      onDaySelected: _onDaySelected,
       onPageChanged: (focusedDay) {
         setState(() {
           _focusedDay = focusedDay;
         });
       },
     );
+  }
+
+  void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
+    setState(() {
+      _selectedDay = selectedDay;
+      _focusedDay = focusedDay;
+      _updateSelectedRecords();
+    });
   }
 }

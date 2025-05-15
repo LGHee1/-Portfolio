@@ -114,18 +114,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     try {
-      final query = await FirebaseFirestore.instance
+      // 실시간 업데이트를 위해 snapshots() 사용
+      FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .collection('Post_Data')
           .orderBy('createdAt', descending: true)
-          .get();
-      setState(() {
-        myPosts = query.docs.map((doc) {
-          final data = doc.data();
-          data['id'] = doc.id;
-          return data;
-        }).toList();
+          .snapshots()
+          .listen((snapshot) {
+        setState(() {
+          myPosts = snapshot.docs.map((doc) {
+            final data = doc.data();
+            data['id'] = doc.id;
+            return data;
+          }).toList();
+        });
       });
     } catch (e) {
       print('내 게시글 불러오기 오류: $e');
@@ -230,6 +233,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
       print('프로필 업데이트 중 오류 발생: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('프로필 업데이트에 실패했습니다.')),
+      );
+    }
+  }
+
+  Future<void> _deletePost(String postId) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      // Firebase에서 게시글 삭제
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('Post_Data')
+          .doc(postId)
+          .delete();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('게시글이 삭제되었습니다')),
+      );
+    } catch (e) {
+      print('게시글 삭제 중 오류 발생: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('게시글 삭제에 실패했습니다')),
       );
     }
   }
@@ -399,50 +426,93 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(color: Colors.purple.shade100),
                                 ),
-                                child: Row(
+                                child: Stack(
                                   children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            post['title'] ?? '',
-                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Row(
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              Text('코스 ${post['distance']?.toStringAsFixed(1) ?? '-'}km', style: const TextStyle(fontSize: 13)),
-                                              const SizedBox(width: 8),
-                                              const Icon(Icons.favorite, size: 16, color: Colors.purple),
-                                              Text(' ${post['likes'] ?? 0}', style: const TextStyle(fontSize: 13)),
+                                              Text(
+                                                post['title'] ?? '',
+                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Row(
+                                                children: [
+                                                  Text('코스 ${post['distance']?.toStringAsFixed(1) ?? '-'}km', style: const TextStyle(fontSize: 13)),
+                                                  const SizedBox(width: 8),
+                                                  const Icon(Icons.favorite, size: 16, color: Colors.purple),
+                                                  Text(' ${post['likes'] ?? 0}', style: const TextStyle(fontSize: 13)),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 4),
+                                              if (post['tags'] != null && (post['tags'] as List).isNotEmpty)
+                                                Wrap(
+                                                  spacing: 4,
+                                                  children: (post['tags'] as List).map<Widget>((tag) =>
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.yellow.shade200,
+                                                        borderRadius: BorderRadius.circular(8),
+                                                      ),
+                                                      child: Text(tag.toString(), style: const TextStyle(fontSize: 12)),
+                                                    )
+                                                  ).toList(),
+                                                ),
+                                              if (post['createdAt'] != null)
+                                                Padding(
+                                                  padding: const EdgeInsets.only(top: 4),
+                                                  child: Text(
+                                                    '작성일: ${(post['createdAt'] as Timestamp).toDate().toString().split('.')[0]}',
+                                                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                                  ),
+                                                ),
                                             ],
                                           ),
-                                          const SizedBox(height: 4),
-                                          Wrap(
-                                            spacing: 4,
-                                            children: (post['tags'] ?? []).map<Widget>((tag) =>
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.yellow.shade200,
-                                                  borderRadius: BorderRadius.circular(8),
-                                                ),
-                                                child: Text(tag, style: const TextStyle(fontSize: 12)),
-                                              )
-                                            ).toList(),
+                                        ),
+                                        if ((post['imageUrls'] ?? []).isNotEmpty)
+                                          ClipRRect(
+                                            borderRadius: BorderRadius.circular(8),
+                                            child: Image.network(
+                                              post['imageUrls'][0],
+                                              width: 70,
+                                              height: 70,
+                                              fit: BoxFit.cover,
+                                            ),
                                           ),
-                                        ],
-                                      ),
+                                      ],
                                     ),
-                                    if ((post['imageUrls'] ?? []).isNotEmpty)
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: Image.network(
-                                          post['imageUrls'][0],
-                                          width: 70,
-                                          height: 70,
-                                          fit: BoxFit.cover,
+                                    if (isEditing)
+                                      Positioned(
+                                        top: 0,
+                                        right: 0,
+                                        child: IconButton(
+                                          icon: const Icon(Icons.delete, color: Colors.red),
+                                          onPressed: () {
+                                            showDialog(
+                                              context: context,
+                                              builder: (context) => AlertDialog(
+                                                title: const Text('게시글 삭제'),
+                                                content: const Text('이 게시글을 삭제하시겠습니까?'),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed: () => Navigator.pop(context),
+                                                    child: const Text('취소'),
+                                                  ),
+                                                  TextButton(
+                                                    onPressed: () {
+                                                      Navigator.pop(context);
+                                                      _deletePost(post['id']);
+                                                    },
+                                                    child: const Text('삭제', style: TextStyle(color: Colors.red)),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          },
                                         ),
                                       ),
                                   ],

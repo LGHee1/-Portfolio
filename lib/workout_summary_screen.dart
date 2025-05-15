@@ -249,7 +249,16 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (context) => PostCreatePage(),
+                                            builder: (context) => PostCreatePage(
+                                              workoutData: {
+                                                'routePoints': widget.routePoints.map((point) => {
+                                                  'latitude': point.latitude,
+                                                  'longitude': point.longitude,
+                                                }).toList(),
+                                                'distance': widget.distance,
+                                                'duration': widget.duration.inSeconds,
+                                              },
+                                            ),
                                           ),
                                         );
                                       }

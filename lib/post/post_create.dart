@@ -13,8 +13,14 @@ import '../Widgets/bottom_bar.dart';
 class PostCreatePage extends StatefulWidget {
   final Map<String, dynamic>? postData;
   final String? postId;
+  final Map<String, dynamic>? workoutData;
 
-  const PostCreatePage({Key? key, this.postData, this.postId}) : super(key: key);
+  const PostCreatePage({
+    Key? key, 
+    this.postData, 
+    this.postId,
+    this.workoutData,
+  }) : super(key: key);
 
   @override
   State<PostCreatePage> createState() => _PostCreatePageState();
@@ -41,9 +47,25 @@ class _PostCreatePageState extends State<PostCreatePage> {
       isEditMode = true;
       _titleController.text = widget.postData!['title'] ?? '';
       _contentController.text = widget.postData!['content'] ?? '';
-      // 이미지, 태그 등도 필요시 초기화
     }
-    _loadLatestWorkoutData();
+    
+    if (widget.workoutData != null) {
+      _loadWorkoutData();
+    } else if (widget.postData != null && widget.postData!['routePoints'] != null) {
+      // 게시글 수정 시 기존 운동 데이터 로드
+      final List<dynamic> routePointsData = widget.postData!['routePoints'] ?? [];
+      setState(() {
+        _routePoints = routePointsData.map((point) => LatLng(
+          point['latitude'] as double,
+          point['longitude'] as double,
+        )).toList();
+        _isMapLoading = false;
+      });
+      if (_routePoints.isNotEmpty) {
+        _initializePolylines();
+        _initializeMarkers();
+      }
+    }
   }
 
   Future<void> _loadLatestWorkoutData() async {
@@ -90,6 +112,32 @@ class _PostCreatePageState extends State<PostCreatePage> {
             ),
           );
         }
+      }
+    } catch (e) {
+      print('운동 데이터 로드 중 오류 발생: $e');
+      setState(() {
+        _isMapLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadWorkoutData() async {
+    try {
+      if (widget.workoutData == null) return;
+
+      final List<dynamic> routePointsData = widget.workoutData!['routePoints'] ?? [];
+      
+      setState(() {
+        _routePoints = routePointsData.map((point) => LatLng(
+          point['latitude'] as double,
+          point['longitude'] as double,
+        )).toList();
+        _isMapLoading = false;
+      });
+
+      if (_routePoints.isNotEmpty) {
+        _initializePolylines();
+        _initializeMarkers();
       }
     } catch (e) {
       print('운동 데이터 로드 중 오류 발생: $e');
@@ -218,6 +266,12 @@ class _PostCreatePageState extends State<PostCreatePage> {
       // 이미지 업로드
       List<String> imageUrls = await _uploadImages();
 
+      // 운동 경로 데이터 준비
+      List<Map<String, dynamic>> routePoints = _routePoints.map((point) => {
+        'latitude': point.latitude,
+        'longitude': point.longitude,
+      }).toList();
+
       // Firestore에 게시글 저장
       await FirebaseFirestore.instance.collection('users').doc(user.uid).collection('Post_Data').add({
         'title': _titleController.text,
@@ -227,6 +281,10 @@ class _PostCreatePageState extends State<PostCreatePage> {
         'userId': user.uid,
         'nickname': nickname,
         'likes': 0,
+        'routePoints': routePoints,
+        'distance': widget.workoutData?['distance'] ?? 0.0,
+        'duration': widget.workoutData?['duration'] ?? 0,
+        'tags': selectedTags.map((tag) => tag.name).toList(),
       });
 
       if (mounted) {
@@ -258,6 +316,13 @@ class _PostCreatePageState extends State<PostCreatePage> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
+
+      // 운동 경로 데이터 준비
+      List<Map<String, dynamic>> routePoints = _routePoints.map((point) => {
+        'latitude': point.latitude,
+        'longitude': point.longitude,
+      }).toList();
+
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -267,6 +332,10 @@ class _PostCreatePageState extends State<PostCreatePage> {
         'title': _titleController.text,
         'content': _contentController.text,
         'updatedAt': FieldValue.serverTimestamp(),
+        'routePoints': routePoints,
+        'distance': widget.workoutData?['distance'] ?? 0.0,
+        'duration': widget.workoutData?['duration'] ?? 0,
+        'tags': selectedTags.map((tag) => tag.name).toList(),
       });
       if (mounted) {
         Navigator.pop(context);

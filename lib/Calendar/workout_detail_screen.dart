@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/workout_record.dart';
 import '../../utils/theme.dart';
 import 'package:intl/intl.dart';
-import '../post/post_create.dart';
+import '../Post/post_create.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class WorkoutDetailScreen extends StatefulWidget {
@@ -98,7 +98,13 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => const PostCreatePage()),
+                    builder: (context) => PostCreatePage(
+                      workoutData: {
+                        'routePoints': widget.record.routePoints,
+                        'date': widget.record.date,
+                      },
+                    ),
+                  ),
                 );
               },
               style: ElevatedButton.styleFrom(
