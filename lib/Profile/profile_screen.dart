@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
 import '../Widgets/bottom_bar.dart';
+import '../Post/post_create.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -26,6 +27,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   File? _imageFile;
   List<String> postUids = [];
   int _selectedIndex = 1;
+  bool showPosts = false;
+  List<Map<String, dynamic>> myPosts = [];
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _messageController = TextEditingController();
@@ -34,6 +37,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _loadUserData();
+    _loadMyPosts();
   }
 
   Future<void> _loadUserData() async {
@@ -103,6 +107,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     } catch (e) {
       print('사용자 데이터 로드 중 오류 발생: $e');
+    }
+  }
+
+  Future<void> _loadMyPosts() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    try {
+      final query = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('Post_Data')
+          .orderBy('createdAt', descending: true)
+          .get();
+      setState(() {
+        myPosts = query.docs.map((doc) {
+          final data = doc.data();
+          data['id'] = doc.id;
+          return data;
+        }).toList();
+      });
+    } catch (e) {
+      print('내 게시글 불러오기 오류: $e');
     }
   }
 
@@ -327,6 +353,104 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: Text(isEditing ? '수정완료' : '수정하기'),
                         ),
                       ),
+                    ],
+                  ),
+                ),
+                // 내 게시글 영역
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            showPosts = !showPosts;
+                          });
+                        },
+                        child: Row(
+                          children: [
+                            const Icon(Icons.arrow_drop_down),
+                            const SizedBox(width: 4),
+                            const Text('내 게시글', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ),
+                      if (showPosts)
+                        Column(
+                          children: myPosts.map((post) {
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => PostCreatePage(
+                                      postData: post,
+                                      postId: post['id'],
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(vertical: 6),
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFCBF6FF),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.purple.shade100),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            post['title'] ?? '',
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            children: [
+                                              Text('코스 ${post['distance']?.toStringAsFixed(1) ?? '-'}km', style: const TextStyle(fontSize: 13)),
+                                              const SizedBox(width: 8),
+                                              const Icon(Icons.favorite, size: 16, color: Colors.purple),
+                                              Text(' ${post['likes'] ?? 0}', style: const TextStyle(fontSize: 13)),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Wrap(
+                                            spacing: 4,
+                                            children: (post['tags'] ?? []).map<Widget>((tag) =>
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.yellow.shade200,
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                                child: Text(tag, style: const TextStyle(fontSize: 12)),
+                                              )
+                                            ).toList(),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if ((post['imageUrls'] ?? []).isNotEmpty)
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.network(
+                                          post['imageUrls'][0],
+                                          width: 70,
+                                          height: 70,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
                     ],
                   ),
                 ),

@@ -11,7 +11,10 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../Widgets/bottom_bar.dart';
 
 class PostCreatePage extends StatefulWidget {
-  const PostCreatePage({super.key});
+  final Map<String, dynamic>? postData;
+  final String? postId;
+
+  const PostCreatePage({Key? key, this.postData, this.postId}) : super(key: key);
 
   @override
   State<PostCreatePage> createState() => _PostCreatePageState();
@@ -29,10 +32,17 @@ class _PostCreatePageState extends State<PostCreatePage> {
   List<LatLng> _routePoints = [];
   bool _isMapLoading = true;
   int _selectedIndex = 1;
+  bool isEditMode = false;
 
   @override
   void initState() {
     super.initState();
+    if (widget.postData != null) {
+      isEditMode = true;
+      _titleController.text = widget.postData!['title'] ?? '';
+      _contentController.text = widget.postData!['content'] ?? '';
+      // 이미지, 태그 등도 필요시 초기화
+    }
     _loadLatestWorkoutData();
   }
 
@@ -210,6 +220,7 @@ class _PostCreatePageState extends State<PostCreatePage> {
 
       // Firestore에 게시글 저장
       await FirebaseFirestore.instance.collection('users').doc(user.uid).collection('Post_Data').add({
+        'title': _titleController.text,
         'content': _contentController.text,
         'imageUrls': imageUrls,
         'createdAt': FieldValue.serverTimestamp(),
@@ -239,6 +250,45 @@ class _PostCreatePageState extends State<PostCreatePage> {
     }
   }
 
+  Future<void> _updatePost() async {
+    if (widget.postId == null) return;
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('Post_Data')
+          .doc(widget.postId)
+          .update({
+        'title': _titleController.text,
+        'content': _contentController.text,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('게시글이 수정되었습니다')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('수정 오류: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -252,18 +302,30 @@ class _PostCreatePageState extends State<PostCreatePage> {
             Navigator.pop(context);
           },
         ),
-        title: const Text('게시글 작성'),
+        title: Text(isEditMode ? '게시글 수정' : '게시글 작성'),
         actions: [
-          TextButton(
-            onPressed: _isLoading ? null : _createPost,
-            child: _isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('게시'),
-          ),
+          if (isEditMode)
+            TextButton(
+              onPressed: _isLoading ? null : _updatePost,
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('수정'),
+            )
+          else
+            TextButton(
+              onPressed: _isLoading ? null : _createPost,
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('게시'),
+            ),
         ],
       ),
       backgroundColor: const Color(0xFFCBF6FF),

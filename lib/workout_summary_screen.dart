@@ -7,6 +7,7 @@ import 'Utils/theme.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'Widgets/menu.dart';
 import 'Post/post_create.dart';
+import 'Widgets/bottom_bar.dart';
 
 class WorkoutSummaryScreen extends StatefulWidget {
   final double distance;
@@ -226,12 +227,32 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
                                   alignment: Alignment.bottomCenter,
                                   child: ElevatedButton(
                                     onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => PostCreatePage(),
-                                        ),
-                                      );
+                                      if (widget.routePoints.isEmpty) {
+                                        showDialog(
+                                          context: context,
+                                          builder: (context) => AlertDialog(
+                                            content: const Text('운동 경로가 없어 작성할 수 없습니다.'),
+                                            actions: [
+                                              Align(
+                                                alignment: Alignment.bottomRight,
+                                                child: TextButton(
+                                                  onPressed: () {
+                                                    Navigator.of(context).pop();
+                                                  },
+                                                  child: const Text('확인'),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      } else {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => PostCreatePage(),
+                                          ),
+                                        );
+                                      }
                                     },
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: const Color(0xFF764BA2),
@@ -290,6 +311,12 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
                   ),
                 ],
               ),
+      ),
+      bottomNavigationBar: BottomBar(
+        selectedIndex: 1,
+        onTabSelected: (index) {
+          // 필요시 네비게이션 동작 추가
+        },
       ),
     );
   }
