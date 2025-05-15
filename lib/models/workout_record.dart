@@ -6,7 +6,7 @@ class WorkoutRecord {
   final int cadence; // steps per minute
   final int calories;
   final List<Map<String, double>>
-      routePoints; // List of {latitude, longitude} points
+  routePoints; // List of {latitude, longitude} points
   final String userId; // 사용자 구분을 위한 ID 추가
 
   WorkoutRecord({

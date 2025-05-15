@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import '../Models/ranking_data.dart';
-import '../Utils/theme.dart';
+import '../../models/ranking_data.dart';
+import '../../utils/theme.dart';
 import 'user_medals_screen.dart';
-import '../Widgets/bottom_bar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 
 class RankingScreen extends StatefulWidget {
   @override
@@ -10,14 +12,205 @@ class RankingScreen extends StatefulWidget {
 }
 
 class _RankingScreenState extends State<RankingScreen> {
-  String selectedLevel = '전체'; // '전체', '초급자', '중급자', '상급자'
-  int _selectedIndex = 1;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  String selectedLevel = '전체';
+  List<RankingData> _rankingData = [];
+  bool _isLoading = true;
+  RankingData? _currentUser;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRankingData();
+  }
+
+  Future<void> _loadRankingData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) {
+        throw Exception('사용자가 로그인되어 있지 않습니다.');
+      }
+
+      // 현재 달의 시작일과 종료일 계산
+      final now = DateTime.now();
+      final firstDayOfMonth = DateTime(now.year, now.month, 1);
+      final lastDayOfMonth = DateTime(now.year, now.month + 1, 0);
+
+      // Timestamp로 변환
+      final firstDayTimestamp = Timestamp.fromDate(firstDayOfMonth);
+      final lastDayTimestamp = Timestamp.fromDate(lastDayOfMonth);
+
+      // 모든 사용자 데이터 가져오기
+      final usersSnapshot = await _firestore.collection('users').get();
+      List<RankingData> rankingList = [];
+
+      for (var userDoc in usersSnapshot.docs) {
+        try {
+          print('사용자 ${userDoc.id}의 데이터 로드 시작'); // 디버깅용 로그
+
+          // 사용자의 이번 달 운동 데이터 가져오기
+          final workoutSnapshot = await _firestore
+              .collection('users')
+              .doc(userDoc.id)
+              .collection('Running_Data')
+              .where('date', isGreaterThanOrEqualTo: firstDayTimestamp)
+              .where('date', isLessThanOrEqualTo: lastDayTimestamp)
+              .get();
+
+          print(
+              '사용자 ${userDoc.id}의 운동 기록 수: ${workoutSnapshot.docs.length}'); // 디버깅용 로그
+
+          // 날짜별 거리 합산을 위한 Map
+          Map<String, double> dailyDistances = {};
+
+          // 총 거리 계산 (운동 기록이 없는 경우 0으로 설정)
+          double totalDistance = 0;
+          if (workoutSnapshot.docs.isNotEmpty) {
+            for (var workout in workoutSnapshot.docs) {
+              final workoutData = workout.data();
+              print('운동 기록 데이터: $workoutData'); // 디버깅용 로그
+
+              // date가 Timestamp인지 확인하고 적절히 처리
+              DateTime workoutDate;
+              if (workoutData['date'] is Timestamp) {
+                workoutDate = (workoutData['date'] as Timestamp).toDate();
+              } else if (workoutData['date'] is String) {
+                workoutDate = DateTime.parse(workoutData['date']);
+              } else {
+                print('알 수 없는 날짜 형식: ${workoutData['date']}');
+                continue;
+              }
+
+              // 이번 달 데이터인지 확인
+              if (workoutDate.year == now.year &&
+                  workoutDate.month == now.month) {
+                // 날짜를 문자열 키로 변환 (YYYY-MM-DD 형식)
+                final dateKey =
+                    '${workoutDate.year}-${workoutDate.month.toString().padLeft(2, '0')}-${workoutDate.day.toString().padLeft(2, '0')}';
+
+                // distance 값이 null이 아닌지 확인
+                if (workoutData['distance'] != null) {
+                  final distance = (workoutData['distance'] as num).toDouble();
+                  print('날짜: $dateKey, 거리: $distance'); // 디버깅용 로그
+
+                  // 해당 날짜의 거리를 누적
+                  dailyDistances[dateKey] =
+                      (dailyDistances[dateKey] ?? 0) + distance;
+                }
+              }
+            }
+
+            // 모든 날짜의 거리를 합산
+            totalDistance = dailyDistances.values
+                .fold(0.0, (sum, distance) => sum + distance);
+            print('사용자 ${userDoc.id}의 총 거리: $totalDistance'); // 디버깅용 로그
+          }
+
+          // 레벨 결정 (운동 기록이 없는 경우 '초급자'로 설정)
+          String level;
+          if (totalDistance >= 60) {
+            level = '상급자';
+          } else if (totalDistance >= 30) {
+            level = '중급자';
+          } else {
+            level = '초급자';
+          }
+
+          final userData = RankingData(
+            userId: userDoc.id,
+            name: userDoc.data()['nickname'] ?? 'Unknown User',
+            totalDistance: totalDistance,
+            level: level,
+            rank: 0,
+            levelRank: 0,
+            monthlyMedals: {},
+          );
+
+          rankingList.add(userData);
+          print(
+              '사용자 ${userDoc.id}의 랭킹 데이터 추가 완료: ${userData.name}, 거리: ${userData.totalDistance}'); // 디버깅용 로그
+
+          // 현재 사용자 데이터 저장
+          if (userDoc.id == currentUser.uid) {
+            _currentUser = userData;
+          }
+        } catch (e) {
+          print('사용자 ${userDoc.id}의 데이터 로드 중 오류: $e');
+          // 오류가 발생한 사용자도 기본 데이터로 추가
+          final userData = RankingData(
+            userId: userDoc.id,
+            name: userDoc.data()['nickname'] ?? 'Unknown User',
+            totalDistance: 0,
+            level: '초급자',
+            rank: 0,
+            levelRank: 0,
+            monthlyMedals: {},
+          );
+          rankingList.add(userData);
+
+          if (userDoc.id == currentUser.uid) {
+            _currentUser = userData;
+          }
+        }
+      }
+
+      // 전체 순위 계산
+      rankingList.sort((a, b) => b.totalDistance.compareTo(a.totalDistance));
+      for (var i = 0; i < rankingList.length; i++) {
+        rankingList[i] = rankingList[i].copyWith(rank: i + 1);
+      }
+
+      print(
+          '최종 랭킹 데이터: ${rankingList.map((r) => '${r.name}: ${r.totalDistance}km').join(', ')}'); // 디버깅용 로그
+
+      setState(() {
+        _rankingData = rankingList;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('랭킹 데이터 로드 중 오류 발생: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // 현재 사용자의 데이터 가져오기
-    final currentUser =
-    dummyRankingData.firstWhere((data) => data.userId == currentUserId);
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          title: Text('${DateTime.now().month}월 달 랭킹'),
+          centerTitle: true,
+        ),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_currentUser == null) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          title: Text('${DateTime.now().month}월 달 랭킹'),
+          centerTitle: true,
+        ),
+        body: Center(
+          child: Text(
+            '사용자 정보를 불러올 수 없습니다.',
+            style: TextStyle(
+              fontSize: 16,
+              color: AppTheme.lightTextColor,
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -27,7 +220,7 @@ class _RankingScreenState extends State<RankingScreen> {
       ),
       body: Column(
         children: [
-          _buildMyStatus(currentUser),
+          _buildMyStatus(_currentUser!),
           _buildLevelSelector(),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -49,7 +242,7 @@ class _RankingScreenState extends State<RankingScreen> {
                         showDialog(
                           context: context,
                           builder: (context) => AlertDialog(
-                            backgroundColor: Color(0xFFCCF6FF), // 배경색
+                            backgroundColor: Color(0xFFCCF6FF),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
@@ -90,26 +283,18 @@ class _RankingScreenState extends State<RankingScreen> {
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
                           color: AppTheme.lightTextColor,
-                          //decoration: TextDecoration.underline,
                         ),
                       ),
                     ),
-
                   ],
                 ),
               ],
             ),
           ),
           Expanded(
-            child: _buildRankingList(currentUser),
+            child: _buildRankingList(_currentUser!),
           ),
         ],
-      ),
-      bottomNavigationBar: BottomBar(
-        selectedIndex: _selectedIndex,
-        onTabSelected: (index) {
-          setState(() => _selectedIndex = index);
-        },
       ),
     );
   }
@@ -192,7 +377,8 @@ class _RankingScreenState extends State<RankingScreen> {
                 child: Container(
                   padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                   decoration: BoxDecoration(
-                    color: isSelected ? AppTheme.primaryColor : Colors.transparent,
+                    color:
+                        isSelected ? AppTheme.primaryColor : Colors.transparent,
                     border: Border.all(
                       color: isSelected
                           ? AppTheme.primaryColor
@@ -203,8 +389,10 @@ class _RankingScreenState extends State<RankingScreen> {
                   child: Text(
                     level,
                     style: TextStyle(
-                      color: isSelected ? Colors.black : AppTheme.lightTextColor,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      color:
+                          isSelected ? Colors.black : AppTheme.lightTextColor,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
                 ),
@@ -218,7 +406,7 @@ class _RankingScreenState extends State<RankingScreen> {
 
   Widget _buildRankingList(RankingData currentUser) {
     // 선택된 레벨에 따라 필터링
-    var filteredList = dummyRankingData.where((data) {
+    var filteredList = _rankingData.where((data) {
       if (selectedLevel == '전체') return true;
       return data.level == selectedLevel;
     }).toList();
@@ -229,18 +417,8 @@ class _RankingScreenState extends State<RankingScreen> {
       filteredList.sort((a, b) => b.totalDistance.compareTo(a.totalDistance));
       // 레벨 내 순위 재할당
       for (var i = 0; i < filteredList.length; i++) {
-        filteredList[i] = RankingData(
-          userId: filteredList[i].userId,
-          name: filteredList[i].name,
-          totalDistance: filteredList[i].totalDistance,
-          rank: filteredList[i].rank,
-          levelRank: i + 1,
-          monthlyMedals: filteredList[i].monthlyMedals,
-        );
+        filteredList[i] = filteredList[i].copyWith(levelRank: i + 1);
       }
-    } else {
-      // 전체 순위일 경우 기존 rank 사용
-      filteredList.sort((a, b) => a.rank.compareTo(b.rank));
     }
 
     // 상위 10명 추출
@@ -253,11 +431,11 @@ class _RankingScreenState extends State<RankingScreen> {
     if (isUserInSelectedLevel) {
       // 현재 사용자의 순위 정보
       final userRankInfo = filteredList.firstWhere(
-            (data) => data.userId == currentUser.userId,
+        (data) => data.userId == currentUser.userId,
         orElse: () => currentUser,
       );
       final isUserInTop10 =
-      displayList.any((data) => data.userId == currentUser.userId);
+          displayList.any((data) => data.userId == currentUser.userId);
 
       // 현재 사용자가 상위 10등 밖이면 구분선과 함께 추가
       if (!isUserInTop10) {
@@ -355,12 +533,12 @@ class _RankingScreenState extends State<RankingScreen> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: isCurrentUser
                   ? [
-                BoxShadow(
-                  color: AppTheme.primaryColor.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: Offset(0, 2),
-                ),
-              ]
+                      BoxShadow(
+                        color: AppTheme.primaryColor.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
+                      ),
+                    ]
                   : null,
             ),
             child: Row(
@@ -403,7 +581,7 @@ class _RankingScreenState extends State<RankingScreen> {
                                   horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
                                 color:
-                                _getMedalColor(data.medal).withOpacity(0.2),
+                                    _getMedalColor(data.medal).withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(

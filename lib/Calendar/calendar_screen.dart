@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
-import '../Models/workout_record.dart';
-import '../Utils/theme.dart';
+import '../../models/workout_record.dart';
+import '../../utils/theme.dart';
 import 'workout_detail_screen.dart';
-import '../Widgets/bottom_bar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class CalendarScreen extends StatefulWidget {
   @override
@@ -18,7 +20,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
   WorkoutRecord? _selectedRecord;
   String _currentUser = '나';
   final List<String> _friends = ['나', '친구1', '친구2', '친구3', '친구4', '친구5'];
-  int _selectedIndex = 1;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  List<WorkoutRecord> _workoutRecords = [];
 
   @override
   void initState() {
@@ -27,25 +31,97 @@ class _CalendarScreenState extends State<CalendarScreen> {
     _firstDay = DateTime(_focusedDay.year - 1, 1, 1);
     _lastDay = DateTime(_focusedDay.year + 1, 12, 31);
     _selectedDay = _focusedDay;
-    _updateSelectedRecord();
+    _loadWorkoutData();
+  }
+
+  Future<void> _loadWorkoutData() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    try {
+      print('운동 데이터 로드 시작 - 사용자: ${user.uid}');
+      final snapshot = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('Running_Data')
+          .orderBy('date', descending: true)
+          .get();
+
+      print('가져온 운동 데이터 수: ${snapshot.docs.length}');
+
+      setState(() {
+        _workoutRecords = snapshot.docs.map((doc) {
+          final data = doc.data();
+          print('운동 데이터: ${data['date']} - 거리: ${data['distance']}km');
+
+          final List<Map<String, double>> routePoints =
+          (data['routePoints'] as List)
+              .map((point) => Map<String, double>.from(point))
+              .toList();
+
+          // Convert pace string (e.g., "5'30"") to double
+          String paceStr = data['pace'] as String;
+          double pace = 0.0;
+          if (paceStr.contains("'")) {
+            final parts = paceStr.split("'");
+            final minutes = int.parse(parts[0]);
+            final seconds = int.parse(parts[1].replaceAll('"', ''));
+            pace = minutes + (seconds / 60);
+          }
+
+          final record = WorkoutRecord(
+            userId: user.uid,
+            date: (data['date'] as Timestamp).toDate(),
+            distance: (data['distance'] as num).toDouble(),
+            duration: Duration(seconds: data['duration'] as int),
+            pace: pace,
+            cadence: 0, // Not stored in Firebase yet
+            calories: data['calories'] as int,
+            routePoints: routePoints,
+          );
+
+          print('변환된 운동 기록: ${record.date} - 거리: ${record.distance}km');
+          return record;
+        }).toList();
+        _updateSelectedRecord();
+      });
+    } catch (e) {
+      print('운동 데이터 로드 중 오류 발생: $e');
+    }
   }
 
   void _updateSelectedRecord() {
     if (_selectedDay == null) return;
 
-    final userRecords = userWorkoutRecords[_currentUser] ?? [];
-    _selectedRecord = userRecords.firstWhere(
-          (record) => isSameDay(record.date, _selectedDay),
-      orElse: () => WorkoutRecord(
-        userId: _currentUser,
-        date: _selectedDay!,
-        distance: 0,
-        duration: Duration.zero,
-        pace: 0,
-        cadence: 0,
-        calories: 0,
-        routePoints: [],
-      ),
+    print('선택된 날짜: $_selectedDay');
+    print('현재 운동 기록 수: ${_workoutRecords.length}');
+
+    for (var record in _workoutRecords) {
+      print('비교 중: ${record.date} - 선택된 날짜: $_selectedDay');
+      if (isSameDay(record.date, _selectedDay)) {
+        print('일치하는 운동 기록 발견: ${record.date} - 거리: ${record.distance}km');
+      }
+    }
+
+    _selectedRecord = _workoutRecords.firstWhere(
+          (record) {
+        final isSame = isSameDay(record.date, _selectedDay);
+        print('날짜 비교: ${record.date} vs $_selectedDay = $isSame');
+        return isSame;
+      },
+      orElse: () {
+        print('일치하는 운동 기록 없음');
+        return WorkoutRecord(
+          userId: _currentUser,
+          date: _selectedDay!,
+          distance: 0,
+          duration: Duration.zero,
+          pace: 0,
+          cadence: 0,
+          calories: 0,
+          routePoints: [],
+        );
+      },
     );
   }
 
@@ -75,12 +151,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
           ),
         ],
-      ),
-      bottomNavigationBar: BottomBar(
-        selectedIndex: _selectedIndex,
-        onTabSelected: (index) {
-          setState(() => _selectedIndex = index);
-        },
       ),
     );
   }
@@ -275,8 +345,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildCalendar() {
-    final userRecords = userWorkoutRecords[_currentUser] ?? [];
-
+    print('캘린더 빌드 - 현재 운동 기록 수: ${_workoutRecords.length}');
     return TableCalendar(
       firstDay: _firstDay,
       lastDay: _lastDay,
@@ -315,15 +384,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
         cellMargin: EdgeInsets.all(4),
         rangeHighlightScale: 1.0,
       ),
-      eventLoader: (day) {
-        return userRecords
-            .where((record) => isSameDay(record.date, day))
-            .toList();
-      },
       calendarBuilders: CalendarBuilders(
         defaultBuilder: (context, day, focusedDay) {
-          final hasWorkout =
-          userRecords.any((record) => isSameDay(record.date, day));
+          final hasWorkout = _workoutRecords.any((record) {
+            final isSame = isSameDay(record.date, day);
+            if (isSame) {
+              print('운동 기록 있는 날짜 발견: $day - 거리: ${record.distance}km');
+            }
+            return isSame;
+          });
+
           if (hasWorkout) {
             return Container(
               margin: EdgeInsets.all(4),
