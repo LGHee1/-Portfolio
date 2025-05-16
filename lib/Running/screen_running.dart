@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
-import 'user_provider.dart';
+import '../user_provider.dart';
 import 'workout_summary_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sensors_plus/sensors_plus.dart';
-import 'Widgets/menu.dart';
+import '../Widgets/menu.dart';
 
 class RunningScreen extends StatefulWidget {
   final LatLng initialPosition;

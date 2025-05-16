@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
-import 'user_provider.dart';
-import 'home_screen.dart';
-import 'Utils/theme.dart';
+import '../user_provider.dart';
+import '../home_screen.dart';
+import '../Utils/theme.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'Widgets/menu.dart';
-import 'Post/post_create.dart';
-import 'Widgets/bottom_bar.dart';
+import '../Widgets/menu.dart';
+import '../Post/post_create.dart';
+import '../Widgets/bottom_bar.dart';
 
 class WorkoutSummaryScreen extends StatefulWidget {
   final double distance;

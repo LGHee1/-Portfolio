@@ -6,6 +6,8 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
 import '../Widgets/bottom_bar.dart';
 import '../Post/post_create.dart';
+import 'package:provider/provider.dart';
+import '../user_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -82,6 +84,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _nameController.text = name;
             _messageController.text = message;
           });
+          
+          // UserProvider 업데이트
+          Provider.of<UserProvider>(context, listen: false).setPhotoUrl(photoUrl);
+          
           print('MyProfile 데이터 로드 성공');
         } else {
           // MyProfile이 없으면 생성
@@ -149,6 +155,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _imageFile = File(pickedFile.path);
         isEditingPhoto = true;
       });
+      // 여기서 _saveProfile() 호출하지 않음!
     }
   }
 
@@ -191,11 +198,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
     
     // 이미지가 선택되었다면 업로드
     if (_imageFile != null) {
-      uploadedUrl = await _uploadImage();
-      if (uploadedUrl == null) {
+      try {
+        setState(() {
+          isUploading = true;
+        });
+        
+        // Firebase Storage에 이미지 업로드
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('profile_images')
+            .child('${user.uid}.jpg');
+
+        final uploadTask = await storageRef.putFile(_imageFile!);
+        uploadedUrl = await uploadTask.ref.getDownloadURL();
+        
+        if (uploadedUrl == null) {
+          throw Exception('이미지 URL을 가져오는데 실패했습니다.');
+        }
+      } catch (e) {
+        print('이미지 업로드 중 오류 발생: $e');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('이미지 업로드에 실패했습니다.')),
         );
+        setState(() {
+          isUploading = false;
+        });
         return;
       }
     }
@@ -217,6 +244,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
+      // UserProvider 업데이트
+      Provider.of<UserProvider>(context, listen: false).setPhotoUrl(uploadedUrl);
+
       setState(() {
         message = _messageController.text;
         photoUrl = uploadedUrl;
@@ -224,6 +254,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         isEditingMessage = false;
         isEditingPhoto = false;
         _imageFile = null;
+        isUploading = false;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -234,6 +265,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('프로필 업데이트에 실패했습니다.')),
       );
+      setState(() {
+        isUploading = false;
+      });
     }
   }
 
@@ -294,23 +328,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ? FileImage(_imageFile!)
                                 : (photoUrl != null ? NetworkImage(photoUrl!) : null) as ImageProvider?,
                             child: (photoUrl == null && _imageFile == null)
-                                ? IconButton(
-                                    icon: const Icon(Icons.add, size: 36, color: Colors.grey),
-                                    onPressed: isEditing ? _pickImage : null,
-                                  )
+                                ? const Icon(Icons.account_circle, size: 36, color: Colors.grey)
                                 : null,
                           ),
-                          if (isEditing)
-                            Positioned(
-                              right: 0,
-                              bottom: 0,
-                              child: IconButton(
-                                icon: const Icon(Icons.edit, color: Colors.black),
-                                onPressed: _pickImage,
-                              ),
-                            ),
                         ],
                       ),
+                      if (isEditing)
+                        Positioned(
+                          top: -4,
+                          right: -4,
+                          child: IconButton(
+                            icon: const Icon(Icons.edit, size: 18),
+                            onPressed: _pickImage,
+                          ),
+                        ),
                       const SizedBox(height: 8),
                       Text(
                         nickname,
@@ -329,15 +360,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const Text('Name'),
                       TextField(
                         controller: _nameController,
-                        enabled: isEditing,
-                        decoration: const InputDecoration(border: OutlineInputBorder()),
+                        enabled: false,
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       const Text('Email'),
                       TextField(
                         controller: TextEditingController(text: email),
                         enabled: false,
-                        decoration: const InputDecoration(border: OutlineInputBorder()),
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       Row(

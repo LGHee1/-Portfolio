@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../Post/post_list.dart';
 import '../home_screen.dart';
-import '../workout_screen.dart';
+import '../Running/workout_screen.dart';
 
 class BottomBar extends StatelessWidget {
   final int selectedIndex;

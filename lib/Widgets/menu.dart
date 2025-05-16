@@ -68,31 +68,43 @@ class Menu extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Center(
-            child: Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.black26),
-              ),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.account_circle, size: 36, color: Colors.grey),
-                    const SizedBox(height: 4),
-                    Consumer<UserProvider>(
-                      builder: (context, userProvider, child) {
-                        return Text(
-                          userProvider.nickname,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        );
-                      },
-                    ),
-                  ],
+            child: Column(
+              children: [
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.black26),
+                  ),
+                  child: Consumer<UserProvider>(
+                    builder: (context, userProvider, child) {
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: userProvider.photoUrl != null
+                            ? Image.network(
+                                userProvider.photoUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Icon(Icons.account_circle, size: 36, color: Colors.grey);
+                                },
+                              )
+                            : const Icon(Icons.account_circle, size: 36, color: Colors.grey),
+                      );
+                    },
+                  ),
                 ),
-              ),
+                const SizedBox(height: 8),
+                Consumer<UserProvider>(
+                  builder: (context, userProvider, child) {
+                    return Text(
+                      userProvider.nickname,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    );
+                  },
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 20),

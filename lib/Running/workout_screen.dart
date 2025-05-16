@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:app_project/screen_running.dart';
+import 'package:app_project/Running/screen_running.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
@@ -7,11 +7,11 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
-import 'user_provider.dart';
-import 'home_screen.dart';
+import '../user_provider.dart';
+import '../home_screen.dart';
 import 'workout_summary_screen.dart';
-import 'Widgets/menu.dart';
-import 'Widgets/bottom_bar.dart';
+import '../Widgets/menu.dart';
+import '../Widgets/bottom_bar.dart';
 
 class WorkoutScreen extends StatefulWidget {
   const WorkoutScreen({super.key});
