@@ -1,11 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'user_provider.dart';
+import '../user_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../Widgets/bottom_bar.dart';
+import 'friends_list.dart';
+import 'friends_request.dart';
 
-class FriendsScreen extends StatelessWidget {
+class FriendsScreen extends StatefulWidget {
   const FriendsScreen({super.key});
+
+  @override
+  State<FriendsScreen> createState() => _FriendsScreenState();
+}
+
+class _FriendsScreenState extends State<FriendsScreen> {
+  int _selectedIndex = 1;
 
   Future<void> showFriendSearchDialog(BuildContext context) async {
     showDialog(
@@ -67,7 +77,14 @@ class FriendsScreen extends StatelessWidget {
                               height: 28,
                               width: MediaQuery.of(context).size.width * 0.25,
                               child: ElevatedButton(
-                                onPressed: () {},
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const FriendsListPage(),
+                                    ),
+                                  );
+                                },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFFB6F5E8),
                                   foregroundColor: Colors.black,
@@ -86,7 +103,14 @@ class FriendsScreen extends StatelessWidget {
                               height: 28,
                               width: MediaQuery.of(context).size.width * 0.25,
                               child: ElevatedButton(
-                                onPressed: () {},
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const FriendsRequestPage(),
+                                    ),
+                                  );
+                                },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFFB6F5E8),
                                   foregroundColor: Colors.black,
@@ -102,9 +126,12 @@ class FriendsScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    const Icon(Icons.person_outline, size: 32, color: Colors.black54),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
+                    GestureDetector(
+                      onTap: () => showFriendSearchDialog(context),
+                      child: const Icon(Icons.person_add, size: 32, color: Colors.black54),
+                    ),
+                    const SizedBox(width: 18),
                   ],
                 ),
                 const SizedBox(height: 40),
@@ -147,6 +174,14 @@ class FriendsScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+      bottomNavigationBar: BottomBar(
+        selectedIndex: _selectedIndex,
+        onTabSelected: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
       ),
     );
   }

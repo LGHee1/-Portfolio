@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'post_view.dart';
 import 'tag_list.dart';
 import '../models/tag.dart';
+import '../Widgets/bottom_bar.dart';
+import '../home_screen.dart';
+import '../Running/workout_screen.dart';
 
 class PostListPage extends StatefulWidget {
   const PostListPage({super.key});
@@ -12,9 +15,24 @@ class PostListPage extends StatefulWidget {
 
 class _PostListPageState extends State<PostListPage> {
   List<Tag> selectedTags = [];
+  int _selectedIndex = 2;
 
   @override
   Widget build(BuildContext context) {
+    // 화면 크기 정보 가져오기
+    final screenSize = MediaQuery.of(context).size;
+    final screenWidth = screenSize.width;
+    final screenHeight = screenSize.height;
+    
+    // 동적 크기 계산
+    final mapHeight = screenHeight * 0.35; // 화면 높이의 35%
+    final searchBarHeight = screenHeight * 0.06; // 화면 높이의 6%
+    final padding = screenWidth * 0.04; // 화면 너비의 4%
+    final titleFontSize = screenWidth * 0.05; // 화면 너비의 5%
+    final subtitleFontSize = screenWidth * 0.035; // 화면 너비의 3.5%
+    final tagFontSize = screenWidth * 0.035; // 화면 너비의 3.5%
+    final thumbnailSize = screenWidth * 0.2; // 화면 너비의 20%
+
     return Scaffold(
       backgroundColor: const Color(0xFFCBF6FF),
       appBar: AppBar(
@@ -22,38 +40,44 @@ class _PostListPageState extends State<PostListPage> {
         backgroundColor: const Color(0xFFCBF6FF),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: Icon(Icons.arrow_back, size: screenWidth * 0.06),
           onPressed: () {
-            Navigator.pop(context);
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const ScreenHome()),
+            );
           },
         ),
       ),
       body: Column(
         children: [
           Container(
-            height: 300,
+            height: mapHeight,
             color: Colors.grey[300],
             child: const Center(
               child: Text('Google Maps will be displayed here'),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: EdgeInsets.all(padding),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              height: 50,
+              padding: EdgeInsets.symmetric(horizontal: padding),
+              height: searchBarHeight,
               decoration: BoxDecoration(
                 color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(25),
+                borderRadius: BorderRadius.circular(searchBarHeight / 2),
                 border: Border.all(color: Colors.grey[400]!),
               ),
               child: Row(
                 children: [
                   if (selectedTags.isEmpty)
-                    const Expanded(
+                    Expanded(
                       child: Text(
                         '원하는 태그를 추가하세요',
-                        style: TextStyle(color: Colors.grey),
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: subtitleFontSize,
+                        ),
                       ),
                     )
                   else
@@ -63,9 +87,12 @@ class _PostListPageState extends State<PostListPage> {
                         child: Row(
                           children: selectedTags.map((tag) {
                             return Padding(
-                              padding: const EdgeInsets.only(right: 8.0),
+                              padding: EdgeInsets.only(right: screenWidth * 0.02),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.02,
+                                  vertical: screenHeight * 0.005,
+                                ),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFE7EFA2),
                                   borderRadius: BorderRadius.circular(12),
@@ -73,15 +100,21 @@ class _PostListPageState extends State<PostListPage> {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Text(tag.name, style: const TextStyle(fontSize: 14)),
-                                    const SizedBox(width: 4),
+                                    Text(
+                                      tag.name,
+                                      style: TextStyle(fontSize: tagFontSize),
+                                    ),
+                                    SizedBox(width: screenWidth * 0.01),
                                     GestureDetector(
                                       onTap: () {
                                         setState(() {
                                           selectedTags.remove(tag);
                                         });
                                       },
-                                      child: const Icon(Icons.close, size: 16),
+                                      child: Icon(
+                                        Icons.close,
+                                        size: tagFontSize,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -106,9 +139,13 @@ class _PostListPageState extends State<PostListPage> {
                         ),
                       );
                     },
-                    child: const Padding(
-                      padding: EdgeInsets.only(left: 8.0),
-                      child: Icon(Icons.search, color: Colors.grey),
+                    child: Padding(
+                      padding: EdgeInsets.only(left: screenWidth * 0.02),
+                      child: Icon(
+                        Icons.search,
+                        color: Colors.grey,
+                        size: subtitleFontSize * 1.2,
+                      ),
                     ),
                   ),
                 ],
@@ -118,7 +155,7 @@ class _PostListPageState extends State<PostListPage> {
           Expanded(
             child: ListView.builder(
               itemCount: 10, // 임시 데이터
-              padding: const EdgeInsets.symmetric(horizontal: 18.0),
+              padding: EdgeInsets.symmetric(horizontal: padding),
               itemBuilder: (context, index) {
                 return Column(
                   children: [
@@ -128,70 +165,96 @@ class _PostListPageState extends State<PostListPage> {
                       height: 1,
                     ),
                     ListTile(
-                      contentPadding: const EdgeInsets.symmetric(vertical: 8.0),
+                      contentPadding: EdgeInsets.symmetric(vertical: screenHeight * 0.01),
                       title: Text(
                         '게시글 ${index + 1}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 20,
+                          fontSize: titleFontSize,
                         ),
                       ),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SizedBox(height: 4),
+                          SizedBox(height: screenHeight * 0.005),
                           Row(
                             children: [
-                              const Icon(Icons.route, size: 16),
-                              const SizedBox(width: 4),
-                              Text('${((index + 1) * 2.0).toStringAsFixed(1)}km'),
-                              const SizedBox(width: 16),
-                              const Icon(Icons.favorite, size: 16, color: Colors.red),
-                              const SizedBox(width: 4),
-                              Text('${(index + 1) * 10}'),
+                              Icon(Icons.route, size: subtitleFontSize),
+                              SizedBox(width: screenWidth * 0.01),
+                              Text(
+                                '${((index + 1) * 2.0).toStringAsFixed(1)}km',
+                                style: TextStyle(fontSize: subtitleFontSize),
+                              ),
+                              SizedBox(width: screenWidth * 0.04),
+                              Icon(Icons.favorite, size: subtitleFontSize, color: Colors.red),
+                              SizedBox(width: screenWidth * 0.01),
+                              Text(
+                                '${(index + 1) * 10}',
+                                style: TextStyle(fontSize: subtitleFontSize),
+                              ),
                             ],
                           ),
-                          const SizedBox(height: 4),
+                          SizedBox(height: screenHeight * 0.005),
                           Wrap(
-                            spacing: 4,
+                            spacing: screenWidth * 0.01,
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.02,
+                                  vertical: screenHeight * 0.005,
+                                ),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFE7EFA2),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: const Text('태그길이에대응', style: TextStyle(fontSize: 14)),
+                                child: Text(
+                                  '태그길이에대응',
+                                  style: TextStyle(fontSize: tagFontSize),
+                                ),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.02,
+                                  vertical: screenHeight * 0.005,
+                                ),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFE7EFA2),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: const Text('태그2', style: TextStyle(fontSize: 14)),
+                                child: Text(
+                                  '태그2',
+                                  style: TextStyle(fontSize: tagFontSize),
+                                ),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.02,
+                                  vertical: screenHeight * 0.005,
+                                ),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFE7EFA2),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: const Text('태그3', style: TextStyle(fontSize: 14)),
+                                child: Text(
+                                  '태그3',
+                                  style: TextStyle(fontSize: tagFontSize),
+                                ),
                               ),
                             ],
                           ),
                         ],
                       ),
                       trailing: Container(
-                        width: 80,
-                        height: 80,
+                        width: thumbnailSize,
+                        height: thumbnailSize,
                         decoration: BoxDecoration(
                           color: Colors.grey[300],
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Center(
-                          child: Icon(Icons.image, color: Colors.grey),
+                        child: Icon(
+                          Icons.image,
+                          color: Colors.grey,
+                          size: thumbnailSize * 0.4,
                         ),
                       ),
                       onTap: () {
@@ -209,6 +272,30 @@ class _PostListPageState extends State<PostListPage> {
             ),
           ),
         ],
+      ),
+      bottomNavigationBar: BottomBar(
+        selectedIndex: _selectedIndex,
+        onTabSelected: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+          if (index == 0) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const WorkoutScreen()),
+            );
+          } else if (index == 1) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const ScreenHome()),
+            );
+          } else if (index == 2) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const PostListPage()),
+            );
+          }
+        },
       ),
     );
   }

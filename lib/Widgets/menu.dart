@@ -6,7 +6,7 @@ import '../Auth/login_screen.dart';
 import '../Profile/profile_screen.dart';
 import '../Rank/ranking_screen.dart';
 import '../Calendar/calendar_screen.dart';
-import '../friends_screen.dart';
+import '../Friends/friends_screen.dart';
 
 class Menu extends StatelessWidget {
   const Menu({super.key});
@@ -68,54 +68,62 @@ class Menu extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Center(
-            child: Column(
-              children: [
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.black26),
+            child: GestureDetector(
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ProfileScreen()),
+                );
+              },
+              child: Column(
+                children: [
+                  Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.black26),
+                    ),
+                    child: Consumer<UserProvider>(
+                      builder: (context, userProvider, child) {
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: userProvider.photoUrl != null
+                              ? Image.network(
+                                  userProvider.photoUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return const Icon(Icons.account_circle, size: 36, color: Colors.grey);
+                                  },
+                                )
+                              : const Icon(Icons.account_circle, size: 36, color: Colors.grey),
+                        );
+                      },
+                    ),
                   ),
-                  child: Consumer<UserProvider>(
+                  const SizedBox(height: 8),
+                  Consumer<UserProvider>(
                     builder: (context, userProvider, child) {
-                      return ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: userProvider.photoUrl != null
-                            ? Image.network(
-                                userProvider.photoUrl!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Icon(Icons.account_circle, size: 36, color: Colors.grey);
-                                },
-                              )
-                            : const Icon(Icons.account_circle, size: 36, color: Colors.grey),
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            userProvider.nickname,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
+                        ],
                       );
                     },
                   ),
-                ),
-                const SizedBox(height: 8),
-                Consumer<UserProvider>(
-                  builder: (context, userProvider, child) {
-                    return Text(
-                      userProvider.nickname,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    );
-                  },
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 20),
-          _buildMenuItem(
-            context,
-            '내정보',
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => ProfileScreen()),
-            ),
-          ),
           _buildMenuItem(
             context,
             '랭킹',

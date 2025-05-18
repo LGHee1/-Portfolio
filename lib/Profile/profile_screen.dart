@@ -120,7 +120,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     try {
-      // 실시간 업데이트를 위해 snapshots() 사용
       FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -297,6 +296,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 화면 크기 정보 가져오기
+    final screenSize = MediaQuery.of(context).size;
+    final screenWidth = screenSize.width;
+    final screenHeight = screenSize.height;
+    
+    // 동적 크기 계산
+    final avatarRadius = screenWidth * 0.12; // 화면 너비의 12%
+    final titleFontSize = screenWidth * 0.06; // 화면 너비의 6%
+    final contentFontSize = screenWidth * 0.035; // 화면 너비의 3.5%
+    final padding = screenWidth * 0.04; // 화면 너비의 4%
+    final spacing = screenHeight * 0.02; // 화면 높이의 2%
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFFD8F9FF),
@@ -305,7 +316,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Text('$nickname님의 프로필', style: const TextStyle(color: Colors.black)),
+        title: Text(
+          '$nickname님의 프로필',
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: titleFontSize * 0.8,
+          ),
+        ),
       ),
       body: Stack(
         children: [
@@ -317,250 +334,367 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   width: double.infinity,
                   child: Column(
                     children: [
-                      const SizedBox(height: 16),
+                      SizedBox(height: spacing),
                       Stack(
                         alignment: Alignment.center,
                         children: [
                           CircleAvatar(
-                            radius: 48,
+                            radius: avatarRadius,
                             backgroundColor: Colors.grey.shade300,
                             backgroundImage: _imageFile != null
                                 ? FileImage(_imageFile!)
                                 : (photoUrl != null ? NetworkImage(photoUrl!) : null) as ImageProvider?,
                             child: (photoUrl == null && _imageFile == null)
-                                ? const Icon(Icons.account_circle, size: 36, color: Colors.grey)
+                                ? Icon(Icons.account_circle, size: avatarRadius * 0.75, color: Colors.grey)
                                 : null,
                           ),
-                        ],
-                      ),
-                      if (isEditing)
-                        Positioned(
-                          top: -4,
-                          right: -4,
-                          child: IconButton(
-                            icon: const Icon(Icons.edit, size: 18),
-                            onPressed: _pickImage,
-                          ),
-                        ),
-                      const SizedBox(height: 8),
-                      Text(
-                        nickname,
-                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 8),
-                      const Text('Name'),
-                      TextField(
-                        controller: _nameController,
-                        enabled: false,
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          filled: true,
-                          fillColor: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text('Email'),
-                      TextField(
-                        controller: TextEditingController(text: email),
-                        enabled: false,
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          filled: true,
-                          fillColor: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          const Text('Message'),
                           if (isEditing)
-                            IconButton(
-                              icon: const Icon(Icons.edit, size: 18),
-                              onPressed: () {
-                                setState(() {
-                                  isEditingMessage = true;
-                                });
-                              },
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                width: avatarRadius * 0.3,
+                                height: avatarRadius * 0.3,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      spreadRadius: 1,
+                                      blurRadius: 2,
+                                      offset: const Offset(0, 1),
+                                    ),
+                                  ],
+                                ),
+                                child: IconButton(
+                                  icon: Icon(Icons.edit, size: avatarRadius * 0.15),
+                                  onPressed: _pickImage,
+                                  color: Colors.black87,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                ),
+                              ),
                             ),
                         ],
                       ),
-                      TextField(
-                        controller: _messageController,
-                        enabled: isEditing,
-                        maxLines: 2,
-                        decoration: const InputDecoration(border: OutlineInputBorder()),
-                      ),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: isEditing ? Colors.black : const Color(0xFFD8F9FF),
-                            foregroundColor: isEditing ? Colors.white : Colors.black,
-                          ),
-                          onPressed: isUploading ? null : () {
-                            if (isEditing) {
-                              _saveProfile();
-                            } else {
-                              setState(() {
-                                isEditing = true;
-                              });
-                            }
-                          },
-                          child: Text(isEditing ? '수정완료' : '수정하기'),
+                      SizedBox(height: spacing * 0.5),
+                      Text(
+                        nickname,
+                        style: TextStyle(
+                          fontSize: titleFontSize,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
+                      SizedBox(height: spacing),
                     ],
                   ),
                 ),
-                // 내 게시글 영역
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            showPosts = !showPosts;
-                          });
-                        },
-                        child: Row(
-                          children: [
-                            const Icon(Icons.arrow_drop_down),
-                            const SizedBox(width: 4),
-                            const Text('내 게시글', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                      ),
-                      if (showPosts)
-                        Column(
-                          children: myPosts.map((post) {
-                            return GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => PostCreatePage(
-                                      postData: post,
-                                      postId: post['id'],
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(vertical: 6),
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFCBF6FF),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.purple.shade100),
+                Container(
+                  color: Colors.white,
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: EdgeInsets.all(padding),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(height: spacing * 0.5),
+                          Text('Name', style: TextStyle(fontSize: contentFontSize)),
+                          TextField(
+                            controller: _nameController,
+                            enabled: false,
+                            style: TextStyle(fontSize: contentFontSize),
+                            decoration: const InputDecoration(
+                              border: OutlineInputBorder(),
+                              filled: true,
+                              fillColor: Colors.white,
+                            ),
+                          ),
+                          SizedBox(height: spacing),
+                          Text('Email', style: TextStyle(fontSize: contentFontSize)),
+                          TextField(
+                            controller: TextEditingController(text: email),
+                            enabled: false,
+                            style: TextStyle(fontSize: contentFontSize),
+                            decoration: const InputDecoration(
+                              border: OutlineInputBorder(),
+                              filled: true,
+                              fillColor: Colors.white,
+                            ),
+                          ),
+                          SizedBox(height: spacing),
+                          Row(
+                            children: [
+                              Text('Message', style: TextStyle(fontSize: contentFontSize)),
+                              if (isEditing)
+                                IconButton(
+                                  icon: Icon(Icons.edit, size: contentFontSize * 1.2),
+                                  onPressed: () {
+                                    setState(() {
+                                      isEditingMessage = true;
+                                    });
+                                  },
                                 ),
-                                child: Stack(
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                post['title'] ?? '',
-                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Row(
-                                                children: [
-                                                  Text('코스 ${post['distance']?.toStringAsFixed(1) ?? '-'}km', style: const TextStyle(fontSize: 13)),
-                                                  const SizedBox(width: 8),
-                                                  const Icon(Icons.favorite, size: 16, color: Colors.purple),
-                                                  Text(' ${post['likes'] ?? 0}', style: const TextStyle(fontSize: 13)),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 4),
-                                              if (post['tags'] != null && (post['tags'] as List).isNotEmpty)
-                                                Wrap(
-                                                  spacing: 4,
-                                                  children: (post['tags'] as List).map<Widget>((tag) =>
-                                                    Container(
-                                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.yellow.shade200,
-                                                        borderRadius: BorderRadius.circular(8),
-                                                      ),
-                                                      child: Text(tag.toString(), style: const TextStyle(fontSize: 12)),
-                                                    )
-                                                  ).toList(),
-                                                ),
-                                              if (post['createdAt'] != null)
-                                                Padding(
-                                                  padding: const EdgeInsets.only(top: 4),
-                                                  child: Text(
-                                                    '작성일: ${(post['createdAt'] as Timestamp).toDate().toString().split('.')[0]}',
-                                                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                                                  ),
-                                                ),
-                                            ],
-                                          ),
-                                        ),
-                                        if ((post['imageUrls'] ?? []).isNotEmpty)
-                                          ClipRRect(
-                                            borderRadius: BorderRadius.circular(8),
-                                            child: Image.network(
-                                              post['imageUrls'][0],
-                                              width: 70,
-                                              height: 70,
-                                              fit: BoxFit.cover,
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                    if (isEditing)
-                                      Positioned(
-                                        top: 0,
-                                        right: 0,
-                                        child: IconButton(
-                                          icon: const Icon(Icons.delete, color: Colors.red),
-                                          onPressed: () {
-                                            showDialog(
-                                              context: context,
-                                              builder: (context) => AlertDialog(
-                                                title: const Text('게시글 삭제'),
-                                                content: const Text('이 게시글을 삭제하시겠습니까?'),
-                                                actions: [
-                                                  TextButton(
-                                                    onPressed: () => Navigator.pop(context),
-                                                    child: const Text('취소'),
-                                                  ),
-                                                  TextButton(
-                                                    onPressed: () {
-                                                      Navigator.pop(context);
-                                                      _deletePost(post['id']);
-                                                    },
-                                                    child: const Text('삭제', style: TextStyle(color: Colors.red)),
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                          },
+                            ],
+                          ),
+                          TextField(
+                            controller: _messageController,
+                            enabled: isEditing,
+                            maxLines: 2,
+                            style: TextStyle(fontSize: contentFontSize),
+                            decoration: const InputDecoration(border: OutlineInputBorder()),
+                          ),
+                          SizedBox(height: spacing * 1.5),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isEditing ? Colors.black : const Color(0xFFD8F9FF),
+                                foregroundColor: isEditing ? Colors.white : Colors.black,
+                                padding: EdgeInsets.symmetric(vertical: spacing * 0.8),
+                              ),
+                              onPressed: isUploading ? null : () {
+                                if (isEditing) {
+                                  _saveProfile();
+                                } else {
+                                  setState(() {
+                                    isEditing = true;
+                                  });
+                                }
+                              },
+                              child: Text(
+                                isEditing ? '수정완료' : '수정하기',
+                                style: TextStyle(fontSize: contentFontSize * 1.2),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                // 내 게시글 영역
+                Container(
+                  color: Colors.white,
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: padding, vertical: spacing * 0.5),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              showPosts = !showPosts;
+                            });
+                          },
+                          child: Container(
+                            padding: EdgeInsets.symmetric(vertical: spacing * 0.5),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  showPosts ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_right,
+                                  color: Colors.black87,
+                                  size: contentFontSize * 2,
+                                ),
+                                SizedBox(width: spacing * 0.3),
+                                Text(
+                                  '내 게시글',
+                                  style: TextStyle(
+                                    fontSize: contentFontSize * 1.3,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(width: spacing * 0.4),
+                                Text(
+                                  '(${myPosts.length})',
+                                  style: TextStyle(
+                                    fontSize: contentFontSize,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        if (showPosts)
+                          Column(
+                            children: myPosts.isEmpty
+                                ? [
+                                    Padding(
+                                      padding: EdgeInsets.symmetric(vertical: spacing),
+                                      child: Text(
+                                        '등록된 게시글이 없습니다.',
+                                        style: TextStyle(
+                                          color: Colors.grey,
+                                          fontSize: contentFontSize,
                                         ),
                                       ),
-                                  ],
+                                    ),
+                                  ]
+                                : myPosts.map((post) {
+                              return GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => PostCreatePage(
+                                        postData: post,
+                                        postId: post['id'],
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  margin: EdgeInsets.symmetric(vertical: spacing * 0.3),
+                                  padding: EdgeInsets.all(padding * 0.5),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.purple.shade100),
+                                  ),
+                                  child: Stack(
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  post['title'] ?? '',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: contentFontSize * 1.1,
+                                                  ),
+                                                ),
+                                                SizedBox(height: spacing * 0.2),
+                                                Row(
+                                                  children: [
+                                                    Text(
+                                                      '코스 ${post['distance']?.toStringAsFixed(1) ?? '-'}km',
+                                                      style: TextStyle(fontSize: contentFontSize * 0.9),
+                                                    ),
+                                                    SizedBox(width: spacing * 0.4),
+                                                    Icon(Icons.favorite, size: contentFontSize, color: Colors.purple),
+                                                    Text(
+                                                      ' ${post['likes'] ?? 0}',
+                                                      style: TextStyle(fontSize: contentFontSize * 0.9),
+                                                    ),
+                                                  ],
+                                                ),
+                                                SizedBox(height: spacing * 0.2),
+                                                if (post['tags'] != null && (post['tags'] as List).isNotEmpty)
+                                                  Wrap(
+                                                    spacing: spacing * 0.2,
+                                                    children: (post['tags'] as List).map<Widget>((tag) =>
+                                                      Container(
+                                                        padding: EdgeInsets.symmetric(
+                                                          horizontal: padding * 0.4,
+                                                          vertical: spacing * 0.1,
+                                                        ),
+                                                        decoration: BoxDecoration(
+                                                          color: Colors.yellow.shade200,
+                                                          borderRadius: BorderRadius.circular(8),
+                                                        ),
+                                                        child: Text(
+                                                          tag.toString(),
+                                                          style: TextStyle(fontSize: contentFontSize * 0.85),
+                                                        ),
+                                                      )
+                                                    ).toList(),
+                                                  ),
+                                                if (post['createdAt'] != null)
+                                                  Padding(
+                                                    padding: EdgeInsets.only(top: spacing * 0.2),
+                                                    child: Text(
+                                                      '작성일: ${(post['createdAt'] as Timestamp).toDate().toString().split('.')[0]}',
+                                                      style: TextStyle(
+                                                        fontSize: contentFontSize * 0.85,
+                                                        color: Colors.grey,
+                                                      ),
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                          if ((post['imageUrls'] ?? []).isNotEmpty)
+                                            ClipRRect(
+                                              borderRadius: BorderRadius.circular(8),
+                                              child: Image.network(
+                                                post['imageUrls'][0],
+                                                width: screenWidth * 0.2,
+                                                height: screenWidth * 0.2,
+                                                fit: BoxFit.cover,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      if (isEditing)
+                                        Positioned(
+                                          top: 0,
+                                          right: 0,
+                                          child: IconButton(
+                                            icon: Icon(Icons.delete, color: Colors.red, size: contentFontSize * 1.2),
+                                            onPressed: () {
+                                              showDialog(
+                                                context: context,
+                                                builder: (context) => AlertDialog(
+                                                  title: Text('게시글 삭제', style: TextStyle(fontSize: contentFontSize * 1.2)),
+                                                  content: Text('이 게시글을 삭제하시겠습니까?', style: TextStyle(fontSize: contentFontSize)),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed: () => Navigator.pop(context),
+                                                      child: Text('취소', style: TextStyle(fontSize: contentFontSize)),
+                                                    ),
+                                                    TextButton(
+                                                      onPressed: () {
+                                                        Navigator.pop(context);
+                                                        _deletePost(post['id']);
+                                                      },
+                                                      child: Text('삭제', style: TextStyle(fontSize: contentFontSize, color: Colors.red)),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            );
-                          }).toList(),
+                              );
+                            }).toList(),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                // 회원탈퇴 버튼
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: padding, vertical: spacing),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('회원탈퇴가 완료되었습니다.'),
+                            duration: Duration(seconds: 1),
+                          ),
+                        );
+                        Navigator.of(context).pushNamedAndRemoveUntil(
+                          '/',
+                          (route) => false,
+                        );
+                      },
+                      child: Text(
+                        '회원 탈퇴',
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontSize: contentFontSize,
                         ),
-                    ],
+                      ),
+                    ),
                   ),
                 ),
               ],

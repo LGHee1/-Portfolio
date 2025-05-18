@@ -5,7 +5,7 @@ import 'Auth/login_screen.dart';
 import 'Running/workout_screen.dart';
 import 'Calendar/calendar_screen.dart';
 import 'Rank/ranking_screen.dart';
-import 'friends_screen.dart';
+import 'Friends/friends_screen.dart';
 import 'package:provider/provider.dart';
 import 'user_provider.dart';
 import 'Widgets/running_card_swiper.dart';
@@ -101,6 +101,17 @@ class _ScreenHomeState extends State<ScreenHome> {
 
   @override
   Widget build(BuildContext context) {
+    // 화면 크기 정보 가져오기
+    final screenSize = MediaQuery.of(context).size;
+    final screenWidth = screenSize.width;
+    final screenHeight = screenSize.height;
+    
+    // 동적 크기 계산
+    final titleFontSize = screenWidth * 0.06; // 화면 너비의 6%
+    final subtitleFontSize = screenWidth * 0.04; // 화면 너비의 4%
+    final padding = screenWidth * 0.06; // 화면 너비의 6%
+    final spacing = screenHeight * 0.02; // 화면 높이의 2%
+
     return Scaffold(
       // ✅ 앱바 (햄버거 버튼 고정)
       appBar: AppBar(
@@ -108,7 +119,7 @@ class _ScreenHomeState extends State<ScreenHome> {
         elevation: 0,
         leading: Builder(
           builder: (context) => IconButton(
-            icon: const Icon(Icons.menu, color: Colors.black),
+            icon: Icon(Icons.menu, color: Colors.black, size: titleFontSize * 0.8),
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
@@ -150,30 +161,30 @@ class _ScreenHomeState extends State<ScreenHome> {
             child: Container(
               color: Colors.transparent,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                padding: EdgeInsets.symmetric(horizontal: padding),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const SizedBox(height: 8),
+                    SizedBox(height: spacing * 0.5),
                     Text(
                       '안녕하세요, $_userName님 👋',
-                      style: const TextStyle(
-                        fontSize: 22,
+                      style: TextStyle(
+                        fontSize: titleFontSize,
                         fontWeight: FontWeight.bold,
                         color: Colors.black87,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
+                    SizedBox(height: spacing * 0.5),
+                    Text(
                       '오늘도 건강하게 달려봐요!',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: subtitleFontSize,
                         color: Colors.black54,
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    SizedBox(height: spacing * 1.5),
                     const RunningCardSwiper(),
-                    const SizedBox(height: 16),
+                    SizedBox(height: spacing),
                   ],
                 ),
               ),

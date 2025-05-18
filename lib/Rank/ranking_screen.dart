@@ -5,6 +5,7 @@ import 'user_medals_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import '../Widgets/bottom_bar.dart';
 
 class RankingScreen extends StatefulWidget {
   @override
@@ -18,6 +19,7 @@ class _RankingScreenState extends State<RankingScreen> {
   List<RankingData> _rankingData = [];
   bool _isLoading = true;
   RankingData? _currentUser;
+  int _selectedIndex = 1;
 
   @override
   void initState() {
@@ -295,6 +297,14 @@ class _RankingScreenState extends State<RankingScreen> {
             child: _buildRankingList(_currentUser!),
           ),
         ],
+      ),
+      bottomNavigationBar: BottomBar(
+        selectedIndex: _selectedIndex,
+        onTabSelected: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
       ),
     );
   }

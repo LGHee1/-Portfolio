@@ -15,73 +15,88 @@ class BottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-    
-    return Stack(
-      clipBehavior: Clip.none,
-      alignment: Alignment.center,
-      children: [
-        BottomAppBar(
-          shape: const CircularNotchedRectangle(),
-          notchMargin: 8.0,
-          child: Container(
-            padding: EdgeInsets.only(
-              left: 32,
-              right: 32,
-              bottom: bottomPadding,
-              top: 8,
+    return WillPopScope(
+      onWillPop: () async {
+        // 뒤로가기 시 홈 화면으로 이동하고 selectedIndex를 1로 설정
+        onTabSelected(1);
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const ScreenHome()),
+          (route) => false,
+        );
+        return false;
+      },
+      child: Container(
+        height: 80,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            BottomAppBar(
+              shape: const CircularNotchedRectangle(),
+              notchMargin: 8.0,
+              child: Container(
+                height: 60,
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        Icons.directions_run,
+                        color: selectedIndex == 0 ? Colors.amber : Colors.black,
+                      ),
+                      onPressed: () {
+                        onTabSelected(0);
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) => const WorkoutScreen()),
+                        );
+                      },
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        Icons.route,
+                        color: selectedIndex == 2 ? Colors.amber : Colors.black,
+                      ),
+                      onPressed: () {
+                        onTabSelected(2);
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) => const PostListPage()),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                IconButton(
-                  icon: Icon(
-                    Icons.directions_run,
-                    color: selectedIndex == 0 ? Colors.amber : Colors.black,
-                  ),
+            Positioned(
+              bottom: 30,
+              child: Container(
+                height: 64,
+                width: 64,
+                child: FloatingActionButton(
+                  backgroundColor: Colors.amber.shade100,
+                  elevation: 4,
                   onPressed: () {
-                    onTabSelected(0);
-                    Navigator.push(
+                    onTabSelected(1);
+                    Navigator.pushAndRemoveUntil(
                       context,
-                      MaterialPageRoute(builder: (context) => const WorkoutScreen()),
+                      MaterialPageRoute(builder: (context) => const ScreenHome()),
+                      (route) => false,
                     );
                   },
-                ),
-                IconButton(
-                  icon: Icon(
-                    Icons.star_border,
-                    color: selectedIndex == 2 ? Colors.amber : Colors.black,
+                  child: Icon(
+                    Icons.home,
+                    color: selectedIndex == 1 ? Colors.black : Colors.grey,
                   ),
-                  onPressed: () {
-                    onTabSelected(2);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const PostListPage()),
-                    );
-                  },
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
-        Positioned(
-          bottom: bottomPadding + 8,
-          child: FloatingActionButton(
-            backgroundColor: Colors.amber.shade100,
-            onPressed: () {
-              onTabSelected(1);
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const ScreenHome()),
-              );
-            },
-            child: Icon(
-              Icons.home,
-              color: selectedIndex == 1 ? Colors.black : Colors.grey,
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 } 

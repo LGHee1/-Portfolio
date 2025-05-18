@@ -3,7 +3,11 @@ import '../../models/workout_record.dart';
 import '../../utils/theme.dart';
 import 'package:intl/intl.dart';
 import '../Post/post_create.dart';
+import '../Post/post_list.dart';
+import '../Running/workout_screen.dart';
+import '../home_screen.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../Widgets/bottom_bar.dart';
 
 class WorkoutDetailScreen extends StatefulWidget {
   final WorkoutRecord record;
@@ -18,6 +22,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
   late GoogleMapController _mapController;
   final Set<Polyline> _polylines = {};
   LatLng? _initialPosition;
+  int _selectedIndex = 1;
 
   @override
   void initState() {
@@ -83,16 +88,29 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 화면 크기 정보 가져오기
+    final screenSize = MediaQuery.of(context).size;
+    final screenWidth = screenSize.width;
+    final screenHeight = screenSize.height;
+    
+    // 동적 크기 계산
+    final titleFontSize = screenWidth * 0.045; // 화면 너비의 4.5%
+    final subtitleFontSize = screenWidth * 0.035; // 화면 너비의 3.5%
+    final padding = screenWidth * 0.04; // 화면 너비의 4%
+    final spacing = screenHeight * 0.02; // 화면 높이의 2%
+    final mapHeight = screenHeight * 0.3; // 화면 높이의 30%
+    final buttonHeight = screenHeight * 0.05; // 화면 높이의 5%
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
           DateFormat('yyyy년 M월 d일').format(widget.record.date),
-          style: TextStyle(fontSize: 18),
+          style: TextStyle(fontSize: titleFontSize),
         ),
         centerTitle: true,
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 16.0),
+            padding: EdgeInsets.only(right: padding),
             child: ElevatedButton(
               onPressed: () {
                 Navigator.push(
@@ -110,16 +128,18 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF9800),
                 foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding: EdgeInsets.symmetric(
+                  horizontal: padding * 0.8,
+                  vertical: buttonHeight * 0.3,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: const Text(
+              child: Text(
                 '게시글 작성',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: subtitleFontSize,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -130,8 +150,8 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
       body: Column(
         children: [
           Container(
-            height: 250,
-            margin: EdgeInsets.all(16),
+            height: mapHeight,
+            margin: EdgeInsets.all(padding),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
@@ -150,7 +170,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                         '경로 데이터가 없습니다',
                         style: TextStyle(
                           color: AppTheme.lightTextColor,
-                          fontSize: 16,
+                          fontSize: subtitleFontSize,
                         ),
                       ),
                     )
@@ -170,50 +190,83 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
           ),
           Expanded(
             child: Container(
-              padding: EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '운동 정보',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.darkTextColor,
+              padding: EdgeInsets.all(padding),
+              child: SingleChildScrollView(
+                physics: AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '운동 정보',
+                      style: TextStyle(
+                        fontSize: titleFontSize,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.darkTextColor,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 20),
-                  _buildStatsGrid(),
-                ],
+                    SizedBox(height: spacing),
+                    _buildStatsGrid(subtitleFontSize),
+                  ],
+                ),
               ),
             ),
           ),
         ],
       ),
+      bottomNavigationBar: BottomBar(
+        selectedIndex: _selectedIndex,
+        onTabSelected: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+          if (index == 0) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const WorkoutScreen()),
+            );
+          } else if (index == 1) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const ScreenHome()),
+            );
+          } else if (index == 2) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const PostListPage()),
+            );
+          }
+        },
+      ),
     );
   }
 
-  Widget _buildStatsGrid() {
+  Widget _buildStatsGrid(double fontSize) {
+    final screenSize = MediaQuery.of(context).size;
+    final screenWidth = screenSize.width;
+    
+    final gridSpacing = screenWidth * 0.04; // 화면 너비의 4%
+    final itemPadding = screenWidth * 0.04; // 화면 너비의 4%
+
     return GridView.count(
+      physics: NeverScrollableScrollPhysics(),
       shrinkWrap: true,
       crossAxisCount: 2,
       childAspectRatio: 2,
-      mainAxisSpacing: 16,
-      crossAxisSpacing: 16,
+      mainAxisSpacing: gridSpacing,
+      crossAxisSpacing: gridSpacing,
       children: [
-        _buildStatItem('거리', '${widget.record.distance.toStringAsFixed(2)} km'),
-        _buildStatItem('시간', '${widget.record.duration.inMinutes} 분'),
-        _buildStatItem('케이던스', '${widget.record.cadence} spm'),
-        _buildStatItem(
-            '평균 페이스', '${widget.record.pace.toStringAsFixed(2)} /km'),
-        _buildStatItem('칼로리', '${widget.record.calories} kcal'),
+        _buildStatItem('거리', '${widget.record.distance.toStringAsFixed(2)} km', fontSize, itemPadding),
+        _buildStatItem('시간', '${widget.record.duration.inMinutes} 분', fontSize, itemPadding),
+        _buildStatItem('케이던스', '${widget.record.cadence} spm', fontSize, itemPadding),
+        _buildStatItem('평균 페이스', '${widget.record.pace.toStringAsFixed(2)} /km', fontSize, itemPadding),
+        _buildStatItem('칼로리', '${widget.record.calories} kcal', fontSize, itemPadding),
       ],
     );
   }
 
-  Widget _buildStatItem(String label, String value) {
+  Widget _buildStatItem(String label, String value, double fontSize, double padding) {
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
         color: AppTheme.primaryColor.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12),
@@ -226,15 +279,15 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
             label,
             style: TextStyle(
               color: AppTheme.lightTextColor,
-              fontSize: 14,
+              fontSize: fontSize * 0.9,
             ),
           ),
-          SizedBox(height: 4),
+          SizedBox(height: padding * 0.25),
           Text(
             value,
             style: TextStyle(
               color: AppTheme.darkTextColor,
-              fontSize: 16,
+              fontSize: fontSize,
               fontWeight: FontWeight.bold,
             ),
           ),

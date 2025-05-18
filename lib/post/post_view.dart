@@ -1,8 +1,17 @@
 import 'package:flutter/material.dart';
+import 'post_list.dart';
 import '../models/tag.dart';
+import '../Widgets/bottom_bar.dart';
 
-class PostViewPage extends StatelessWidget {
+class PostViewPage extends StatefulWidget {
   const PostViewPage({super.key});
+
+  @override
+  State<PostViewPage> createState() => _PostViewPageState();
+}
+
+class _PostViewPageState extends State<PostViewPage> {
+  int _selectedIndex = 2;
 
   @override
   Widget build(BuildContext context) {
@@ -15,7 +24,10 @@ class PostViewPage extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.pop(context);
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const PostListPage()),
+            );
           },
         ),
         actions: [
@@ -214,6 +226,14 @@ class PostViewPage extends StatelessWidget {
             ),
           ],
         ),
+      ),
+      bottomNavigationBar: BottomBar(
+        selectedIndex: _selectedIndex,
+        onTabSelected: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
       ),
     );
   }

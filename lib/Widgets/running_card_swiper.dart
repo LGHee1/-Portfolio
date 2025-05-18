@@ -46,10 +46,25 @@ class _RunningCardSwiperState extends State<RunningCardSwiper> {
 
   @override
   Widget build(BuildContext context) {
+    // 화면 크기 정보 가져오기
+    final screenSize = MediaQuery.of(context).size;
+    final screenWidth = screenSize.width;
+    final screenHeight = screenSize.height;
+    
+    // 동적 크기 계산
+    final cardHeight = screenHeight * 0.5; // 화면 높이의 50%
+    final cardPadding = screenWidth * 0.06; // 화면 너비의 6%
+    final cardMargin = screenWidth * 0.05; // 화면 너비의 5%
+    final textFontSize = screenWidth * 0.04; // 화면 너비의 4%
+    final messageFontSize = screenWidth * 0.045; // 화면 너비의 4.5%
+    final spacing = screenHeight * 0.015; // 화면 높이의 1.5%
+    final dotSize = screenWidth * 0.015; // 화면 너비의 1.5%
+    final activeDotSize = screenWidth * 0.03; // 화면 너비의 3%
+
     return Column(
       children: [
         SizedBox(
-          height: 380,
+          height: cardHeight,
           child: PageView.builder(
             controller: _pageController,
             itemCount: _dataList.length,
@@ -61,8 +76,8 @@ class _RunningCardSwiperState extends State<RunningCardSwiper> {
             itemBuilder: (context, index) {
               final item = _dataList[index];
               return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                padding: const EdgeInsets.all(24),
+                margin: EdgeInsets.symmetric(horizontal: cardMargin, vertical: spacing),
+                padding: EdgeInsets.all(cardPadding),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.8),
                   borderRadius: BorderRadius.circular(20),
@@ -78,17 +93,17 @@ class _RunningCardSwiperState extends State<RunningCardSwiper> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _infoText('러닝 거리', item['거리']!),
-                    const SizedBox(height: 12),
-                    _infoText('러닝 시간', item['시간']!),
-                    const SizedBox(height: 12),
-                    _infoText('소모 칼로리', item['칼로리']!),
-                    const SizedBox(height: 24),
+                    _infoText('러닝 거리', item['거리']!, textFontSize),
+                    SizedBox(height: spacing),
+                    _infoText('러닝 시간', item['시간']!, textFontSize),
+                    SizedBox(height: spacing),
+                    _infoText('소모 칼로리', item['칼로리']!, textFontSize),
+                    SizedBox(height: spacing * 1.5),
                     Text(
                       item['메시지']!,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.blue,
-                        fontSize: 16,
+                        fontSize: messageFontSize,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -98,18 +113,18 @@ class _RunningCardSwiperState extends State<RunningCardSwiper> {
             },
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: spacing),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(_dataList.length, (index) {
             return AnimatedContainer(
               duration: const Duration(milliseconds: 300),
-              width: _currentPage == index ? 12 : 6,
-              height: 6,
-              margin: const EdgeInsets.symmetric(horizontal: 4),
+              width: _currentPage == index ? activeDotSize : dotSize,
+              height: dotSize,
+              margin: EdgeInsets.symmetric(horizontal: dotSize * 0.3),
               decoration: BoxDecoration(
                 color: _currentPage == index ? Colors.black : Colors.grey,
-                borderRadius: BorderRadius.circular(3),
+                borderRadius: BorderRadius.circular(dotSize * 0.5),
               ),
             );
           }),
@@ -118,11 +133,11 @@ class _RunningCardSwiperState extends State<RunningCardSwiper> {
     );
   }
 
-  Widget _infoText(String label, String value) {
+  Widget _infoText(String label, String value, double fontSize) {
     return Text(
       '$label : $value',
-      style: const TextStyle(
-        fontSize: 16,
+      style: TextStyle(
+        fontSize: fontSize,
         color: Colors.blue,
         fontWeight: FontWeight.w500,
       ),
