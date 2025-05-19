@@ -267,22 +267,22 @@ class _FriendSearchDialogState extends State<_FriendSearchDialog> {
         return;
       }
 
-      // 이미 신청한 적이 있는지 확인
-      final requestCheck = await FirebaseFirestore.instance
+      // 이미 신청한 적이 있는지 확인 (보낸 요청에서 확인)
+      final sentRequestCheck = await FirebaseFirestore.instance
           .collection('Friends_Data')
-          .doc(targetUid)
-          .collection('friend_requests')
           .doc(myUid)
+          .collection('sent_requests')
+          .doc(targetUid)
           .get();
 
-      if (requestCheck.exists) {
+      if (sentRequestCheck.exists) {
         setState(() {
           _error = '이미 친구신청을 보냈습니다.';
         });
         return;
       }
 
-      // 친구신청 요청을 Firestore에 저장
+      // 상대방의 받은 요청 컬렉션에 저장
       await FirebaseFirestore.instance
           .collection('Friends_Data')
           .doc(targetUid)
@@ -296,6 +296,20 @@ class _FriendSearchDialogState extends State<_FriendSearchDialog> {
             .get())
             .data()?['nickname'],
         'to': targetUid,
+        'createdAt': FieldValue.serverTimestamp(),
+        'status': 'pending'
+      });
+
+      // 내 보낸 요청 컬렉션에도 저장
+      await FirebaseFirestore.instance
+          .collection('Friends_Data')
+          .doc(myUid)
+          .collection('sent_requests')
+          .doc(targetUid)
+          .set({
+        'to': targetUid,
+        'toNickname': (_searchResult!.data() as Map<String, dynamic>)['nickname'],
+        'from': myUid,
         'createdAt': FieldValue.serverTimestamp(),
         'status': 'pending'
       });
@@ -398,15 +412,31 @@ class _FriendSearchDialogState extends State<_FriendSearchDialog> {
             .doc(currentUser.uid)
             .set({
           'nickname': (await FirebaseFirestore.instance
-              .collection('Friends_Data')
+              .collection('users')
               .doc(currentUser.uid)
               .get())
               .data()?['nickname'],
           'addedAt': FieldValue.serverTimestamp(),
         });
+
+        // 보낸 요청의 상태를 'accepted'로 업데이트
+        await FirebaseFirestore.instance
+            .collection('Friends_Data')
+            .doc(fromUid)
+            .collection('sent_requests')
+            .doc(currentUser.uid)
+            .update({'status': 'accepted'});
+      } else {
+        // 거절된 경우 보낸 요청 삭제
+        await FirebaseFirestore.instance
+            .collection('Friends_Data')
+            .doc(fromUid)
+            .collection('sent_requests')
+            .doc(currentUser.uid)
+            .delete();
       }
 
-      // 친구 신청 문서 삭제
+      // 받은 요청 문서 삭제
       await FirebaseFirestore.instance
           .collection('Friends_Data')
           .doc(currentUser.uid)
