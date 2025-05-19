@@ -51,7 +51,7 @@ class _FriendsRequestPageState extends State<FriendsRequestPage> with SingleTick
       ),
       body: TabBarView(
         controller: _tabController,
-        children: [
+        children: const [
           _ReceivedRequestsTab(),
           _SentRequestsTab(),
         ],
@@ -61,50 +61,134 @@ class _FriendsRequestPageState extends State<FriendsRequestPage> with SingleTick
 }
 
 class _ReceivedRequestsTab extends StatelessWidget {
-  // 임시 받은 요청 데이터
-  final List<Map<String, String>> _tempReceivedRequests = [
-    {
-      'name': '박지민',
-      'status': '함께 달리자고요!',
-    },
-    {
-      'name': '최유진',
-      'status': '같이 운동해요',
-    },
-  ];
+  const _ReceivedRequestsTab();
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      itemCount: _tempReceivedRequests.length,
-      itemBuilder: (context, index) {
-        final request = _tempReceivedRequests[index];
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: ListTile(
-            leading: const CircleAvatar(
-              child: Icon(Icons.person),
+    final currentUser = FirebaseAuth.instance.currentUser;
+    
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('Friends_Data')
+          .doc(currentUser!.uid)
+          .collection('friend_requests')
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        
+        final docs = snapshot.data?.docs ?? [];
+        
+        if (docs.isEmpty) {
+          return const Center(
+            child: Text(
+              '받은 친구 요청이 없습니다.',
+              style: TextStyle(fontSize: 16, color: Colors.black54),
             ),
-            title: Text(request['name']!),
-            subtitle: Text(request['status']!),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.check, color: Colors.green),
-                  onPressed: () {
-                    // TODO: 친구 요청 수락 기능 구현
-                  },
+          );
+        }
+        
+        return ListView.builder(
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            final doc = docs[index];
+            final data = doc.data() as Map<String, dynamic>;
+            final fromUid = data['from'];
+            final fromNickname = data['fromNickname'];
+            
+            return Card(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: ListTile(
+                leading: const CircleAvatar(
+                  child: Icon(Icons.person),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.red),
-                  onPressed: () {
-                    // TODO: 친구 요청 거절 기능 구현
-                  },
+                title: Text(fromNickname ?? '알 수 없음'),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.check, color: Colors.green),
+                      onPressed: () async {
+                        try {
+                          final batch = FirebaseFirestore.instance.batch();
+                          final myUid = currentUser.uid;
+                          
+                          // 내 친구 목록에 추가
+                          final myFriendRef = FirebaseFirestore.instance
+                              .collection('Friends_Data')
+                              .doc(myUid)
+                              .collection('friends')
+                              .doc(fromUid);
+                              
+                          batch.set(myFriendRef, {
+                            'nickname': fromNickname,
+                            'addedAt': FieldValue.serverTimestamp(),
+                          });
+
+                          // 상대방 친구 목록에 추가
+                          final theirFriendRef = FirebaseFirestore.instance
+                              .collection('Friends_Data')
+                              .doc(fromUid)
+                              .collection('friends')
+                              .doc(myUid);
+                              
+                          final myProfile = await FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(myUid)
+                              .get();
+                          final myNickname = myProfile.data()?['nickname'] ?? '';
+                          
+                          batch.set(theirFriendRef, {
+                            'nickname': myNickname,
+                            'addedAt': FieldValue.serverTimestamp(),
+                          });
+
+                          // 친구 요청 삭제
+                          batch.delete(doc.reference);
+
+                          // 모든 작업 한번에 실행
+                          await batch.commit();
+
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('친구 요청을 수락했습니다.')),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('친구 요청 수락 중 오류가 발생했습니다.')),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.red),
+                      onPressed: () async {
+                        try {
+                          await doc.reference.delete();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('친구 요청을 거절했습니다.')),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('친구 요청 거절 중 오류가 발생했습니다.')),
+                            );
+                          }
+                        }
+
+
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -112,39 +196,71 @@ class _ReceivedRequestsTab extends StatelessWidget {
 }
 
 class _SentRequestsTab extends StatelessWidget {
-  // 임시 보낸 요청 데이터
-  final List<Map<String, String>> _tempSentRequests = [
-    {
-      'name': '정민수',
-      'status': '요청 대기 중',
-    },
-    {
-      'name': '한소희',
-      'status': '요청 대기 중',
-    },
-  ];
+  const _SentRequestsTab();
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      itemCount: _tempSentRequests.length,
-      itemBuilder: (context, index) {
-        final request = _tempSentRequests[index];
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: ListTile(
-            leading: const CircleAvatar(
-              child: Icon(Icons.person),
+    final currentUser = FirebaseAuth.instance.currentUser;
+    
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('Friends_Data')
+          .where('from', isEqualTo: currentUser!.uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        
+        final docs = snapshot.data?.docs ?? [];
+        
+        if (docs.isEmpty) {
+          return const Center(
+            child: Text(
+              '보낸 친구 요청이 없습니다.',
+              style: TextStyle(fontSize: 16, color: Colors.black54),
             ),
-            title: Text(request['name']!),
-            subtitle: Text(request['status']!),
-            trailing: IconButton(
-              icon: const Icon(Icons.cancel, color: Colors.grey),
-              onPressed: () {
-                // TODO: 친구 요청 취소 기능 구현
-              },
-            ),
-          ),
+          );
+        }
+        
+        return ListView.builder(
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            final doc = docs[index];
+            final data = doc.data() as Map<String, dynamic>;
+            final toNickname = data['toNickname'];
+            final status = data['status'];
+            
+            return Card(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: ListTile(
+                leading: const CircleAvatar(
+                  child: Icon(Icons.person),
+                ),
+                title: Text(toNickname ?? '알 수 없음'),
+                subtitle: Text(status == 'pending' ? '대기 중' : '수락됨'),
+                trailing: status == 'pending' ? IconButton(
+                  icon: const Icon(Icons.close, color: Colors.red),
+                  onPressed: () async {
+                    try {
+                      await doc.reference.delete();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('친구 요청을 취소했습니다.')),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('친구 요청 취소 중 오류가 발생했습니다.')),
+                        );
+                      }
+                    }
+                  },
+                ) : null,
+              ),
+            );
+          },
         );
       },
     );

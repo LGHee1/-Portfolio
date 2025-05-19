@@ -1,27 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class FriendsListPage extends StatefulWidget {
+class FriendsListPage extends StatelessWidget {
   const FriendsListPage({super.key});
 
   @override
-  State<FriendsListPage> createState() => _FriendsListPageState();
-}
-
-class _FriendsListPageState extends State<FriendsListPage> {
-  // 임시 친구 데이터
-  final List<Map<String, String>> _tempFriends = [
-    {
-      'name': '김철수',
-      'status': '오늘도 열심히 달려요!',
-    },
-    {
-      'name': '이영희',
-      'status': '주말에 등산 가요',
-    },
-  ];
-
-  @override
   Widget build(BuildContext context) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final friendsStream = FirebaseFirestore.instance
+        .collection('Friends_Data')
+        .doc(currentUser!.uid)
+        .collection('friends')
+        .orderBy('addedAt', descending: true)
+        .snapshots();
+
     return Scaffold(
       backgroundColor: const Color(0xFFCBF6FF),
       appBar: AppBar(
@@ -35,19 +28,73 @@ class _FriendsListPageState extends State<FriendsListPage> {
         ),
         elevation: 0,
       ),
-      body: ListView.builder(
-        itemCount: _tempFriends.length,
-        itemBuilder: (context, index) {
-          final friend = _tempFriends[index];
-          return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: ListTile(
-              leading: const CircleAvatar(
-                child: Icon(Icons.person),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: friendsStream,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(
+              child: Text(
+                '등록된 친구가 없습니다.',
+                style: TextStyle(fontSize: 16, color: Colors.black54),
               ),
-              title: Text(friend['name']!),
-              subtitle: Text(friend['status']!),
-            ),
+            );
+          }
+
+          final friends = snapshot.data!.docs;
+          return ListView.builder(
+            itemCount: friends.length,
+            itemBuilder: (context, index) {
+              final doc = friends[index];
+              final friend = doc.data() as Map<String, dynamic>;
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: ListTile(
+                  leading: const CircleAvatar(
+                    child: Icon(Icons.person),
+                  ),
+                  title: Text(friend['nickname'] ?? '알 수 없음'),
+                  subtitle: Text(friend['addedAt']?.toDate().toString() ?? ''),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () async {
+                      try {
+                        final batch = FirebaseFirestore.instance.batch();
+                        
+                        // 내 친구 목록에서 삭제
+                        batch.delete(doc.reference);
+                        
+                        // 상대방 친구 목록에서 삭제
+                        batch.delete(
+                          FirebaseFirestore.instance
+                              .collection('Friends_Data')
+                              .doc(doc.id)
+                              .collection('friends')
+                              .doc(currentUser.uid)
+                        );
+                        
+                        await batch.commit();
+                        
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('친구가 삭제되었습니다.')),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('친구 삭제 중 오류가 발생했습니다.')),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                ),
+              );
+            },
           );
         },
       ),
