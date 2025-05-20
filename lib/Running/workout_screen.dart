@@ -392,7 +392,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
               _controller.complete(controller);
             },
             myLocationEnabled: true,
-            myLocationButtonEnabled: false,
+            myLocationButtonEnabled: true,
             polylines: {
               Polyline(
                 polylineId: const PolylineId('route'),
@@ -401,34 +401,6 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                 width: 5,
               ),
             },
-          ),
-
-          // 현재 위치 이동 버튼 (상단 오른쪽으로 이동)
-          Positioned(
-            top: 16,
-            right: 16,
-            child: GestureDetector(
-              onTap: _moveCamera,
-              child: Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black26,
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Image.asset('assets/img/now_position.png'),
-                ),
-              ),
-            ),
           ),
 
           Positioned(
