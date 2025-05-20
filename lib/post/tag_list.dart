@@ -50,6 +50,8 @@ class _TagListPageState extends State<TagListPage> {
             padding: const EdgeInsets.only(right: 8.0),
             child: ElevatedButton(
               onPressed: () {
+                print('TagListPage - 추가하기 버튼 클릭됨, 선택된 태그: $selectedTags');
+                widget.onTagsSelected(selectedTags);
                 Navigator.pop(context, selectedTags);
               },
               style: ElevatedButton.styleFrom(
