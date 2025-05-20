@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../models/workout_record.dart';
 import '../../utils/theme.dart';
 import 'package:intl/intl.dart';
@@ -88,29 +89,16 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 화면 크기 정보 가져오기
-    final screenSize = MediaQuery.of(context).size;
-    final screenWidth = screenSize.width;
-    final screenHeight = screenSize.height;
-    
-    // 동적 크기 계산
-    final titleFontSize = screenWidth * 0.045; // 화면 너비의 4.5%
-    final subtitleFontSize = screenWidth * 0.035; // 화면 너비의 3.5%
-    final padding = screenWidth * 0.04; // 화면 너비의 4%
-    final spacing = screenHeight * 0.02; // 화면 높이의 2%
-    final mapHeight = screenHeight * 0.3; // 화면 높이의 30%
-    final buttonHeight = screenHeight * 0.05; // 화면 높이의 5%
-
     return Scaffold(
       appBar: AppBar(
         title: Text(
           DateFormat('yyyy년 M월 d일').format(widget.record.date),
-          style: TextStyle(fontSize: titleFontSize),
+          style: TextStyle(fontSize: 18.sp),
         ),
         centerTitle: true,
         actions: [
           Padding(
-            padding: EdgeInsets.only(right: padding),
+            padding: EdgeInsets.only(right: 16.w),
             child: ElevatedButton(
               onPressed: () {
                 Navigator.push(
@@ -128,18 +116,15 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF9800),
                 foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(
-                  horizontal: padding * 0.8,
-                  vertical: buttonHeight * 0.3,
-                ),
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(8.r),
                 ),
               ),
               child: Text(
                 '게시글 작성',
                 style: TextStyle(
-                  fontSize: subtitleFontSize,
+                  fontSize: 14.sp,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -150,10 +135,10 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
       body: Column(
         children: [
           Container(
-            height: mapHeight,
-            margin: EdgeInsets.all(padding),
+            height: 250.h,
+            margin: EdgeInsets.all(16.w),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(16.r),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.1),
@@ -163,14 +148,14 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
               ],
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(16.r),
               child: _initialPosition == null
                   ? Center(
                       child: Text(
                         '경로 데이터가 없습니다',
                         style: TextStyle(
                           color: AppTheme.lightTextColor,
-                          fontSize: subtitleFontSize,
+                          fontSize: 16.sp,
                         ),
                       ),
                     )
@@ -190,22 +175,21 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
           ),
           Expanded(
             child: Container(
-              padding: EdgeInsets.all(padding),
+              padding: EdgeInsets.all(20.w),
               child: SingleChildScrollView(
-                physics: AlwaysScrollableScrollPhysics(),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       '운동 정보',
                       style: TextStyle(
-                        fontSize: titleFontSize,
+                        fontSize: 20.sp,
                         fontWeight: FontWeight.bold,
                         color: AppTheme.darkTextColor,
                       ),
                     ),
-                    SizedBox(height: spacing),
-                    _buildStatsGrid(subtitleFontSize),
+                    SizedBox(height: 16.h),
+                    _buildStatsGrid(),
                   ],
                 ),
               ),
@@ -240,36 +224,29 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
     );
   }
 
-  Widget _buildStatsGrid(double fontSize) {
-    final screenSize = MediaQuery.of(context).size;
-    final screenWidth = screenSize.width;
-    
-    final gridSpacing = screenWidth * 0.04; // 화면 너비의 4%
-    final itemPadding = screenWidth * 0.04; // 화면 너비의 4%
-
+  Widget _buildStatsGrid() {
     return GridView.count(
-      physics: NeverScrollableScrollPhysics(),
       shrinkWrap: true,
       crossAxisCount: 2,
       childAspectRatio: 2,
-      mainAxisSpacing: gridSpacing,
-      crossAxisSpacing: gridSpacing,
+      mainAxisSpacing: 16.h,
+      crossAxisSpacing: 16.w,
       children: [
-        _buildStatItem('거리', '${widget.record.distance.toStringAsFixed(2)} km', fontSize, itemPadding),
-        _buildStatItem('시간', '${widget.record.duration.inMinutes} 분', fontSize, itemPadding),
-        _buildStatItem('케이던스', '${widget.record.cadence} spm', fontSize, itemPadding),
-        _buildStatItem('평균 페이스', '${widget.record.pace.toStringAsFixed(2)} /km', fontSize, itemPadding),
-        _buildStatItem('칼로리', '${widget.record.calories} kcal', fontSize, itemPadding),
+        _buildStatItem('거리', '${widget.record.distance.toStringAsFixed(2)} km'),
+        _buildStatItem('시간', '${widget.record.duration.inMinutes} 분'),
+        _buildStatItem('케이던스', '${widget.record.cadence} spm'),
+        _buildStatItem('평균 페이스', '${widget.record.pace.toStringAsFixed(2)} /km'),
+        _buildStatItem('칼로리', '${widget.record.calories} kcal'),
       ],
     );
   }
 
-  Widget _buildStatItem(String label, String value, double fontSize, double padding) {
+  Widget _buildStatItem(String label, String value) {
     return Container(
-      padding: EdgeInsets.all(padding),
+      padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
         color: AppTheme.primaryColor.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12.r),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -279,15 +256,15 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
             label,
             style: TextStyle(
               color: AppTheme.lightTextColor,
-              fontSize: fontSize * 0.9,
+              fontSize: 14.sp,
             ),
           ),
-          SizedBox(height: padding * 0.25),
+          SizedBox(height: 4.h),
           Text(
             value,
             style: TextStyle(
               color: AppTheme.darkTextColor,
-              fontSize: fontSize,
+              fontSize: 16.sp,
               fontWeight: FontWeight.bold,
             ),
           ),
