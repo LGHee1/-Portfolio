@@ -3,10 +3,12 @@ import '../models/tag.dart';
 
 class TagListPage extends StatefulWidget {
   final Function(List<Tag>) onTagsSelected;
+  final List<Tag> initialSelectedTags;
   
   const TagListPage({
     super.key,
     required this.onTagsSelected,
+    this.initialSelectedTags = const [],
   });
 
   @override
@@ -14,7 +16,7 @@ class TagListPage extends StatefulWidget {
 }
 
 class _TagListPageState extends State<TagListPage> {
-  final List<Tag> selectedTags = [];
+  late List<Tag> selectedTags;
   final Map<TagCategory, bool> categoryExpanded = {
     TagCategory.location: true,
     TagCategory.exercise: true,
@@ -22,6 +24,12 @@ class _TagListPageState extends State<TagListPage> {
     TagCategory.etc: true,
   };
   String? selectedRegion;  // 선택된 지역을 저장
+
+  @override
+  void initState() {
+    super.initState();
+    selectedTags = List.from(widget.initialSelectedTags);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +42,7 @@ class _TagListPageState extends State<TagListPage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.pop(context);
+            Navigator.pop(context, selectedTags);
           },
         ),
         actions: [
@@ -42,8 +50,7 @@ class _TagListPageState extends State<TagListPage> {
             padding: const EdgeInsets.only(right: 8.0),
             child: ElevatedButton(
               onPressed: () {
-                widget.onTagsSelected(selectedTags);
-                Navigator.pop(context);
+                Navigator.pop(context, selectedTags);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF9800),

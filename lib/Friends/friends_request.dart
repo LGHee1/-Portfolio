@@ -66,20 +66,20 @@ class _ReceivedRequestsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
-    
+
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('Friends_Data')
           .doc(currentUser!.uid)
-          .collection('friend_requests')
+          .collection('friend_requests') // ✅ 받은 요청
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        
+
         final docs = snapshot.data?.docs ?? [];
-        
+
         if (docs.isEmpty) {
           return const Center(
             child: Text(
@@ -88,7 +88,7 @@ class _ReceivedRequestsTab extends StatelessWidget {
             ),
           );
         }
-        
+
         return ListView.builder(
           itemCount: docs.length,
           itemBuilder: (context, index) {
@@ -96,7 +96,7 @@ class _ReceivedRequestsTab extends StatelessWidget {
             final data = doc.data() as Map<String, dynamic>;
             final fromUid = data['from'];
             final fromNickname = data['fromNickname'];
-            
+
             return Card(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: ListTile(
@@ -113,14 +113,14 @@ class _ReceivedRequestsTab extends StatelessWidget {
                         try {
                           final batch = FirebaseFirestore.instance.batch();
                           final myUid = currentUser.uid;
-                          
+
                           // 내 친구 목록에 추가
                           final myFriendRef = FirebaseFirestore.instance
                               .collection('Friends_Data')
                               .doc(myUid)
                               .collection('friends')
                               .doc(fromUid);
-                              
+
                           batch.set(myFriendRef, {
                             'nickname': fromNickname,
                             'addedAt': FieldValue.serverTimestamp(),
@@ -132,13 +132,13 @@ class _ReceivedRequestsTab extends StatelessWidget {
                               .doc(fromUid)
                               .collection('friends')
                               .doc(myUid);
-                              
+
                           final myProfile = await FirebaseFirestore.instance
                               .collection('users')
                               .doc(myUid)
                               .get();
                           final myNickname = myProfile.data()?['nickname'] ?? '';
-                          
+
                           batch.set(theirFriendRef, {
                             'nickname': myNickname,
                             'addedAt': FieldValue.serverTimestamp(),
@@ -147,7 +147,6 @@ class _ReceivedRequestsTab extends StatelessWidget {
                           // 친구 요청 삭제
                           batch.delete(doc.reference);
 
-                          // 모든 작업 한번에 실행
                           await batch.commit();
 
                           if (context.mounted) {
@@ -181,14 +180,13 @@ class _ReceivedRequestsTab extends StatelessWidget {
                             );
                           }
                         }
-                      }, // ✅ 이 부분이 꼭 있어야 합니다!
+                      },
                     ),
-
                   ],
                 ),
               ),
             );
-    },
+          },
         );
       },
     );
@@ -201,19 +199,20 @@ class _SentRequestsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
-    
+
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('Friends_Data')
-          .where('from', isEqualTo: currentUser!.uid)
+          .doc(currentUser!.uid)
+          .collection('sent_requests') // ✅ 보낸 요청
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        
+
         final docs = snapshot.data?.docs ?? [];
-        
+
         if (docs.isEmpty) {
           return const Center(
             child: Text(
@@ -222,24 +221,26 @@ class _SentRequestsTab extends StatelessWidget {
             ),
           );
         }
-        
+
         return ListView.builder(
           itemCount: docs.length,
           itemBuilder: (context, index) {
             final doc = docs[index];
             final data = doc.data() as Map<String, dynamic>;
-            final toNickname = data['toNickname'];
-            final status = data['status'];
-            
+
+            final toNickname = data['toNickname'] ?? data['to'] ?? '알 수 없음';
+            final status = data['status'] ?? 'pending';
+
             return Card(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: ListTile(
                 leading: const CircleAvatar(
                   child: Icon(Icons.person),
                 ),
-                title: Text(toNickname ?? '알 수 없음'),
+                title: Text(toNickname),
                 subtitle: Text(status == 'pending' ? '대기 중' : '수락됨'),
-                trailing: status == 'pending' ? IconButton(
+                trailing: status == 'pending'
+                    ? IconButton(
                   icon: const Icon(Icons.close, color: Colors.red),
                   onPressed: () async {
                     try {
@@ -257,7 +258,8 @@ class _SentRequestsTab extends StatelessWidget {
                       }
                     }
                   },
-                ) : null,
+                )
+                    : null,
               ),
             );
           },
@@ -265,4 +267,4 @@ class _SentRequestsTab extends StatelessWidget {
       },
     );
   }
-} 
+}

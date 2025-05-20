@@ -171,7 +171,7 @@ class _PostListPageState extends State<PostListPage> {
             b['latitude'] ?? 0,
             b['longitude'] ?? 0
           );
-          return distanceB.compareTo(distanceA);
+          return distanceA.compareTo(distanceB); // 거리가 가까운 순으로 정렬
         });
       }
 
@@ -194,6 +194,7 @@ class _PostListPageState extends State<PostListPage> {
       print('게시글을 불러오는데 실패했습니다: $e');
       setState(() {
         _isLoading = false;
+        _hasMore = false; // 에러 발생 시 더 이상 로딩하지 않도록 설정
       });
     }
   }
@@ -202,7 +203,7 @@ class _PostListPageState extends State<PostListPage> {
     return Geolocator.distanceBetween(lat1, lon1, lat2, lon2);
   }
 
-  Future<void> _filterPostsByTags() async {
+  void _filterPostsByTags() async {
     if (selectedTags.isEmpty) {
       setState(() {
         _filteredPosts = _posts;
@@ -310,8 +311,8 @@ class _PostListPageState extends State<PostListPage> {
                 children: [
                   Expanded(
                     child: GestureDetector(
-                      onTap: () {
-                        Navigator.push(
+                      onTap: () async {
+                        final result = await Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => TagListPage(
@@ -320,9 +321,16 @@ class _PostListPageState extends State<PostListPage> {
                                   selectedTags = tags;
                                 });
                               },
+                              initialSelectedTags: selectedTags, // 기존 선택된 태그 전달
                             ),
                           ),
                         );
+                        if (result != null) {
+                          setState(() {
+                            selectedTags = result;
+                          });
+                          _filterPostsByTags(); // 태그 선택 후 필터링 실행
+                        }
                       },
                       child: selectedTags.isEmpty
                           ? Text(
@@ -360,6 +368,7 @@ class _PostListPageState extends State<PostListPage> {
                                               setState(() {
                                                 selectedTags.remove(tag);
                                               });
+                                              _filterPostsByTags(); // 태그 제거 후 필터링 실행
                                             },
                                             child: Icon(
                                               Icons.close,
