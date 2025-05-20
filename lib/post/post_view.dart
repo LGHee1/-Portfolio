@@ -4,6 +4,7 @@ import '../models/tag.dart';
 import '../Widgets/bottom_bar.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import '../Running/workout_screen.dart';
 
 class PostViewPage extends StatefulWidget {
   final Map<String, dynamic> postData;
@@ -133,7 +134,19 @@ class _PostViewPageState extends State<PostViewPage> {
             padding: const EdgeInsets.only(right: 8.0),
             child: ElevatedButton(
               onPressed: () {
-                // TODO: 적용하기 기능 구현
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => WorkoutScreen(
+                      isRecommendedCourse: true,
+                      recommendedRoutePoints: (widget.postData['routePoints'] as List).map((point) => LatLng(
+                        point['latitude'] as double,
+                        point['longitude'] as double,
+                      )).toList(),
+                      recommendedCourseName: widget.postData['title'] ?? '추천 코스',
+                    ),
+                  ),
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF9800),

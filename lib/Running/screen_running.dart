@@ -13,10 +13,16 @@ import '../Widgets/menu.dart';
 
 class RunningScreen extends StatefulWidget {
   final LatLng initialPosition;
+  final bool isRecommendedCourse;
+  final List<LatLng> recommendedRoutePoints;
+  final String recommendedCourseName;
 
   const RunningScreen({
     super.key,
     required this.initialPosition,
+    this.isRecommendedCourse = false,
+    this.recommendedRoutePoints = const [],
+    this.recommendedCourseName = '',
   });
 
   @override
@@ -37,7 +43,7 @@ class _RunningScreenState extends State<RunningScreen> {
   // Google Maps 관련 변수
   final Completer<GoogleMapController> _controller = Completer();
   Position? _currentPosition;
-  final List<LatLng> _routePoints = [];
+  List<LatLng> _routePoints = [];
   StreamSubscription<Position>? _positionStream;
   double _distance = 0.0; // km
   int _calories = 0;
@@ -59,6 +65,8 @@ class _RunningScreenState extends State<RunningScreen> {
   List<double> _magnitudeWindow = [];
 
   String _userNickname = '';
+
+  List<Polyline> _polylines = [];
 
   String get formattedTime {
     final duration = Duration(seconds: _seconds);
@@ -87,6 +95,10 @@ class _RunningScreenState extends State<RunningScreen> {
     _startAccelerometer();
     _loadUserData();
     _addStartMarker();
+    
+    if (widget.isRecommendedCourse) {
+      _initializeRecommendedRoute();
+    }
   }
 
   void _loadUserData() {
@@ -433,6 +445,26 @@ class _RunningScreenState extends State<RunningScreen> {
     });
   }
 
+  void _initializeRecommendedRoute() {
+    if (widget.recommendedRoutePoints.isNotEmpty) {
+      setState(() {
+        _routePoints = List.from(widget.recommendedRoutePoints);
+        // 추천 코스의 경로를 초록색 선으로 표시
+        _polylines.add(
+          Polyline(
+            polylineId: const PolylineId('recommendedRoute'),
+            points: _routePoints,
+            color: Colors.green,
+            width: 8,
+            startCap: Cap.roundCap,
+            endCap: Cap.roundCap,
+            jointType: JointType.round,
+          ),
+        );
+      });
+    }
+  }
+
   @override
   void dispose() {
     _accelerometerSubscription?.cancel();
@@ -461,6 +493,25 @@ class _RunningScreenState extends State<RunningScreen> {
               icon: const Icon(Icons.arrow_back, color: Colors.black),
               onPressed: () => Navigator.of(context).pop(),
             ),
+            if (widget.isRecommendedCourse)
+              Expanded(
+                child: Container(
+                  margin: const EdgeInsets.only(left: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '추천 코스: ${widget.recommendedCourseName}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -496,6 +547,7 @@ class _RunningScreenState extends State<RunningScreen> {
                       endCap: Cap.roundCap,
                       jointType: JointType.round,
                     ),
+                    ..._polylines,
                   },
                   markers: {
                     if (_startLocationMarker != null) _startLocationMarker!,
