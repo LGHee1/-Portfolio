@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../models/tag.dart';
+import '../services/region_service.dart';
 
 class TagListPage extends StatefulWidget {
   final Function(List<Tag>) onTagsSelected;
@@ -21,7 +23,25 @@ class _TagListPageState extends State<TagListPage> {
     TagCategory.surrounding: true,
     TagCategory.etc: true,
   };
-  String? selectedRegion;  // 선택된 지역을 저장
+  
+  String? selectedParentRegion;  // 시/도
+  String? selectedMiddleRegion;  // 시/군/구
+  List<RegionTag> regions = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRegions();
+  }
+
+  Future<void> _loadRegions() async {
+    final loadedRegions = await RegionService.loadRegions();
+    setState(() {
+      regions = loadedRegions;
+      isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,14 +52,14 @@ class _TagListPageState extends State<TagListPage> {
         backgroundColor: const Color(0xFFCBF6FF),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: Icon(Icons.arrow_back, size: 24.sp),
           onPressed: () {
             Navigator.pop(context);
           },
         ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 8.0),
+            padding: EdgeInsets.only(right: 8.w),
             child: ElevatedButton(
               onPressed: () {
                 widget.onTagsSelected(selectedTags);
@@ -48,15 +68,15 @@ class _TagListPageState extends State<TagListPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF9800),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(8.r),
                 ),
               ),
-              child: const Text(
+              child: Text(
                 '추가하기',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 16.sp,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -64,267 +84,249 @@ class _TagListPageState extends State<TagListPage> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          const Divider(
-            thickness: 1,
-            color: Colors.grey,
-            height: 1,
-          ),
-          // 선택된 태그들을 보여주는 부분
-          Container(
-            height: 60,
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-            decoration: BoxDecoration(
-              color: const Color(0xFFACE3FF),
-              border: Border(
-                bottom: BorderSide(
-                  color: Colors.grey,
-                  width: 1.0,
-                ),
-              ),
-            ),
-            child: Row(
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
               children: [
+                const Divider(
+                  thickness: 1,
+                  color: Colors.grey,
+                ),
                 Expanded(
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: selectedTags.map((tag) {
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8.0),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE7EFA2),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(tag.name, style: const TextStyle(fontSize: 14)),
-                                  const SizedBox(width: 4),
-                                  GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        selectedTags.remove(tag);
-                                      });
-                                    },
-                                    child: const Icon(Icons.close, size: 16),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
+                  child: ListView(
+                    children: [
+                      _buildRegionSection(),
+                      _buildOtherTagsSection(),
+                    ],
                   ),
                 ),
               ],
             ),
+    );
+  }
+
+  Widget _buildRegionSection() {
+    final parentRegions = RegionService.getParentRegions(regions);
+    
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFFACE3FF),
+      ),
+      child: ExpansionTile(
+        initiallyExpanded: categoryExpanded[TagCategory.location] ?? true,
+        onExpansionChanged: (expanded) {
+          setState(() {
+            categoryExpanded[TagCategory.location] = expanded;
+          });
+        },
+        title: Text(
+          '지역',
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+            fontSize: 16.sp,
           ),
-          // 카테고리별 태그 목록
-          Expanded(
+        ),
+        children: [
+          // 시/도 선택
+          Container(
+            height: 50.h,
+            color: const Color(0xFFCBF6FF),
             child: ListView.builder(
-              itemCount: TagCategory.values.length,
+              scrollDirection: Axis.horizontal,
+              itemCount: parentRegions.length,
               itemBuilder: (context, index) {
-                final category = TagCategory.values[index];
-                final categoryTags = sampleTags
-                    .where((tag) => tag.category == category)
-                    .toList();
-
-                if (category == TagCategory.location) {
-                  // 지역 카테고리인 경우 가로 스크롤로 표시
-                  final regions = categoryTags
-                      .where((tag) => tag.parentRegion == null)
-                      .toList();
-                  
-                  return Container(
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFACE3FF),
+                final region = parentRegions[index];
+                final isSelected = selectedParentRegion == region.name;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      selectedParentRegion = isSelected ? null : region.name;
+                      selectedMiddleRegion = null;
+                    });
+                  },
+                  child: Container(
+                    width: 80.w,
+                    margin: EdgeInsets.symmetric(horizontal: 4.w),
+                    decoration: BoxDecoration(
+                      color: isSelected ? const Color(0xFFE7EFA2) : Colors.white,
+                      border: Border.all(
+                        color: isSelected ? const Color(0xFFE7EFA2) : Colors.grey,
+                      ),
+                      borderRadius: BorderRadius.circular(8.r),
                     ),
-                    child: ExpansionTile(
-                      initiallyExpanded: categoryExpanded[category] ?? true,
-                      onExpansionChanged: (expanded) {
-                        setState(() {
-                          categoryExpanded[category] = expanded;
-                        });
-                      },
-                      title: Text(
-                        _getCategoryName(category),
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.bold,
+                    child: Center(
+                      child: Text(
+                        region.name,
+                        style: TextStyle(
+                          color: isSelected ? Colors.black : Colors.grey,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          fontSize: 14.sp,
                         ),
                       ),
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              height: 50,
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: regions.length,
-                                itemBuilder: (context, index) {
-                                  final region = regions[index];
-                                  final isSelected = selectedRegion == region.name;
-                                  return GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        selectedRegion = isSelected ? null : region.name;
-                                      });
-                                    },
-                                    child: Container(
-                                      width: 80,
-                                      decoration: BoxDecoration(
-                                        color: isSelected ? const Color(0xFFE7EFA2) : Colors.white,
-                                        border: Border.all(
-                                          color: isSelected ? const Color(0xFFE7EFA2) : Colors.grey,
-                                        ),
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          region.name,
-                                          style: TextStyle(
-                                            color: isSelected ? Colors.black : Colors.grey,
-                                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                            if (selectedRegion != null) ...[
-                              Container(
-                                color: const Color(0xFFCBF6FF),
-                                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 0, 16.0),
-                                width: double.infinity,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Wrap(
-                                      spacing: 8.0,
-                                      runSpacing: 8.0,
-                                      children: categoryTags
-                                          .where((tag) => tag.parentRegion == selectedRegion)
-                                          .map((tag) {
-                                        final isSelected = selectedTags.contains(tag);
-                                        return GestureDetector(
-                                          onTap: () {
-                                            setState(() {
-                                              if (isSelected) {
-                                                selectedTags.remove(tag);
-                                              } else {
-                                                selectedTags.add(tag);
-                                              }
-                                            });
-                                          },
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: isSelected ? const Color(0xFFE7EFA2) : const Color(0xFFE7EFA2),
-                                              borderRadius: BorderRadius.circular(12),
-                                            ),
-                                            child: Text(tag.name, style: const TextStyle(fontSize: 14)),
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ],
                     ),
-                  );
-                }
-
-                // 지역외 카테고리
-                return Container(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFACE3FF),
-                  ),
-                  child: ExpansionTile(
-                    initiallyExpanded: categoryExpanded[category] ?? true,
-                    onExpansionChanged: (expanded) {
-                      setState(() {
-                        categoryExpanded[category] = expanded;
-                      });
-                    },
-                    title: Text(
-                      _getCategoryName(category),
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    children: [
-                      Container(
-                        color: const Color(0xFFCBF6FF),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Wrap(
-                              alignment: WrapAlignment.start,
-                              crossAxisAlignment: WrapCrossAlignment.start,
-                              spacing: 8.0,
-                              runSpacing: 8.0,
-                              children: categoryTags.map((tag) {
-                                final isSelected = selectedTags.contains(tag);
-                                return GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      if (isSelected) {
-                                        selectedTags.remove(tag);
-                                      } else {
-                                        selectedTags.add(tag);
-                                      }
-                                    });
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: isSelected ? const Color(0xFFE7EFA2) : const Color(0xFFE7EFA2),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(tag.name, style: const TextStyle(fontSize: 14)),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
                 );
               },
             ),
           ),
+          
+          // 시/군/구 선택
+          if (selectedParentRegion != null) ...[
+            Container(
+              height: 50.h,
+              color: const Color(0xFFCBF6FF),
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: RegionService.getChildRegions(regions, selectedParentRegion!).length,
+                itemBuilder: (context, index) {
+                  final region = RegionService.getChildRegions(regions, selectedParentRegion!)[index];
+                  final isSelected = selectedMiddleRegion == region.name;
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        selectedMiddleRegion = isSelected ? null : region.name;
+                      });
+                    },
+                    child: Container(
+                      width: 80.w,
+                      margin: EdgeInsets.symmetric(horizontal: 4.w),
+                      decoration: BoxDecoration(
+                        color: isSelected ? const Color(0xFFE7EFA2) : Colors.white,
+                        border: Border.all(
+                          color: isSelected ? const Color(0xFFE7EFA2) : Colors.grey,
+                        ),
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
+                      child: Center(
+                        child: Text(
+                          region.name,
+                          style: TextStyle(
+                            color: isSelected ? Colors.black : Colors.grey,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            fontSize: 14.sp,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+          
+          // 읍/면/동 선택
+          if (selectedMiddleRegion != null) ...[
+            Container(
+              color: const Color(0xFFCBF6FF),
+              padding: EdgeInsets.all(16.w),
+              child: Wrap(
+                spacing: 8.w,
+                runSpacing: 8.h,
+                children: RegionService.getChildRegions(regions, selectedMiddleRegion!)
+                    .map((region) {
+                  final isSelected = selectedTags.contains(region);
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        if (isSelected) {
+                          selectedTags.remove(region);
+                        } else {
+                          selectedTags.add(region);
+                        }
+                      });
+                    },
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 3.h),
+                      decoration: BoxDecoration(
+                        color: isSelected ? const Color(0xFFE7EFA2) : Colors.white,
+                        borderRadius: BorderRadius.circular(12.r),
+                        border: Border.all(
+                          color: isSelected ? const Color(0xFFE7EFA2) : Colors.grey,
+                        ),
+                      ),
+                      child: Text(
+                        region.name,
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          color: isSelected ? Colors.black : Colors.grey,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  String _getCategoryName(TagCategory category) {
-    switch (category) {
-      case TagCategory.location:
-        return '지역';
-      case TagCategory.exercise:
-        return '운동환경';
-      case TagCategory.surrounding:
-        return '주변환경';
-      case TagCategory.etc:
-        return '기타';
-    }
+  Widget _buildOtherTagsSection() {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFFACE3FF),
+      ),
+      child: ExpansionTile(
+        initiallyExpanded: categoryExpanded[TagCategory.exercise] ?? true,
+        onExpansionChanged: (expanded) {
+          setState(() {
+            categoryExpanded[TagCategory.exercise] = expanded;
+          });
+        },
+        title: Text(
+          '운동환경',
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+            fontSize: 16.sp,
+          ),
+        ),
+        children: [
+          Container(
+            color: const Color(0xFFCBF6FF),
+            padding: EdgeInsets.all(16.w),
+            child: Wrap(
+              spacing: 8.w,
+              runSpacing: 8.h,
+              children: sampleTags
+                  .where((tag) => tag.category == TagCategory.exercise)
+                  .map((tag) {
+                final isSelected = selectedTags.contains(tag);
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      if (isSelected) {
+                        selectedTags.remove(tag);
+                      } else {
+                        selectedTags.add(tag);
+                      }
+                    });
+                  },
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 3.h),
+                    decoration: BoxDecoration(
+                      color: isSelected ? const Color(0xFFE7EFA2) : Colors.white,
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(
+                        color: isSelected ? const Color(0xFFE7EFA2) : Colors.grey,
+                      ),
+                    ),
+                    child: Text(
+                      tag.name,
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        color: isSelected ? Colors.black : Colors.grey,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 } 
