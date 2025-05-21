@@ -24,6 +24,7 @@ dependencies:
   image_picker: ^1.0.4
   firebase_storage: ^11.7.7
   sensors_plus: ^4.0.2
+  firebase_app_check: ^0.2.2+7
 
 dev_dependencies:
   flutter_test:
