@@ -14,7 +14,16 @@ import '../Widgets/menu.dart';
 import '../Widgets/bottom_bar.dart';
 
 class WorkoutScreen extends StatefulWidget {
-  const WorkoutScreen({super.key});
+  final bool isRecommendedCourse;
+  final List<LatLng> recommendedRoutePoints;
+  final String recommendedCourseName;
+
+  const WorkoutScreen({
+    super.key,
+    this.isRecommendedCourse = false,
+    this.recommendedRoutePoints = const [],
+    this.recommendedCourseName = '',
+  });
 
   @override
   State<WorkoutScreen> createState() => _WorkoutScreenState();
@@ -27,6 +36,9 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   Position? _currentPosition;
   StreamSubscription<Position>? _positionStream;
   String _userNickname = '';
+  bool _isRecommendedCourse = false;
+  String _recommendedCourseName = '';
+  List<LatLng> _recommendedRoutePoints = [];
 
   int _selectedIndex = 1;
 
@@ -48,6 +60,9 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     super.initState();
     _requestLocationPermission();
     _loadUserData();
+    _isRecommendedCourse = widget.isRecommendedCourse;
+    _recommendedCourseName = widget.recommendedCourseName;
+    _recommendedRoutePoints = widget.recommendedRoutePoints;
   }
 
   Future<void> _loadUserData() async {
@@ -392,7 +407,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
               _controller.complete(controller);
             },
             myLocationEnabled: true,
-            myLocationButtonEnabled: false,
+            myLocationButtonEnabled: true,
             polylines: {
               Polyline(
                 polylineId: const PolylineId('route'),
@@ -403,33 +418,41 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
             },
           ),
 
-          // 현재 위치 이동 버튼 (상단 오른쪽으로 이동)
-          Positioned(
-            top: 16,
-            right: 16,
-            child: GestureDetector(
-              onTap: _moveCamera,
+          if (_isRecommendedCourse)
+            Positioned(
+              top: 16,
+              left: 16,
+              right: 16,
               child: Container(
-                width: 48,
-                height: 48,
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
                   color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black26,
-                      blurRadius: 6,
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
                   ],
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Image.asset('assets/img/now_position.png'),
+                child: Row(
+                  children: [
+                    const Icon(Icons.route, color: Colors.blue),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '추천 코스: $_recommendedCourseName',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          ),
 
           Positioned(
             bottom: 32,
@@ -438,6 +461,10 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
             child: ElevatedButton(
               onPressed: () {
                 print("운동 시작 버튼 클릭됨");
+                if (_isRecommendedCourse && !_isWithinRecommendedDistance()) {
+                  _showDistanceWarningDialog();
+                  return;
+                }
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -445,6 +472,9 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                       initialPosition: _currentPosition != null 
                           ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
                           : const LatLng(37.5665, 126.9780),
+                      isRecommendedCourse: _isRecommendedCourse,
+                      recommendedRoutePoints: _recommendedRoutePoints,
+                      recommendedCourseName: _recommendedCourseName,
                     ),
                   ),
                 );
@@ -497,5 +527,42 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     String minutes = twoDigits(duration.inMinutes.remainder(60));
     String seconds = twoDigits(duration.inSeconds.remainder(60));
     return '$hours:$minutes:$seconds';
+  }
+
+  // 추천 코스 시작점과의 거리 체크 함수 추가
+  bool _isWithinRecommendedDistance() {
+    if (!_isRecommendedCourse || _recommendedRoutePoints.isEmpty || _currentPosition == null) {
+      return true;
+    }
+
+    final startPoint = _recommendedRoutePoints.first;
+    final distance = Geolocator.distanceBetween(
+      _currentPosition!.latitude,
+      _currentPosition!.longitude,
+      startPoint.latitude,
+      startPoint.longitude,
+    );
+
+    return distance <= 3000; // 3km 이내인지 체크
+  }
+
+  void _showDistanceWarningDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('거리 경고'),
+          content: const Text('추천 코스 시작점과 현재 위치가 3km 이상 떨어져 있습니다.\n추천 코스 시작점 근처로 이동해주세요.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('확인'),
+            ),
+          ],
+        );
+      },
+    );
   }
 }

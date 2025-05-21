@@ -47,6 +47,15 @@ class _PostCreatePageState extends State<PostCreatePage> {
       isEditMode = true;
       _titleController.text = widget.postData!['title'] ?? '';
       _contentController.text = widget.postData!['content'] ?? '';
+      
+      // 기존 태그 데이터 로드
+      if (widget.postData!['tags'] != null) {
+        final List<dynamic> tagNames = widget.postData!['tags'];
+        selectedTags = tagNames.map((tagName) => Tag(
+          name: tagName.toString(),
+          category: TagCategory.etc, // 기본 카테고리 설정
+        )).toList();
+      }
     }
     
     if (widget.workoutData != null) {
@@ -491,74 +500,106 @@ class _PostCreatePageState extends State<PostCreatePage> {
             // 태그 목록
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Wrap(
-                spacing: 8.0,
-                runSpacing: 8.0,
-                children: selectedTags.map((tag) {
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE7EFA2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(tag.name, style: const TextStyle(fontSize: 16)),
-                        const SizedBox(width: 4),
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              selectedTags.remove(tag);
-                            });
-                          },
-                          child: const Icon(Icons.close, size: 16),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => TagListPage(
-                        onTagsSelected: (tags) {
-                          setState(() {
-                            final merged = [...selectedTags, ...tags];
-                            final unique = <Tag>[];
-                            for (final tag in merged) {
-                              if (!unique.any((t) => t.name == tag.name)) {
-                                unique.add(tag);
-                              }
-                            }
-                            selectedTags = unique;
-                          });
-                        },
-                      ),
-                    ),
-                  );
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE7EFA2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Text(
-                    '태그 추가',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '태그',
                     style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.black,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(8.0),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (selectedTags.isNotEmpty)
+                          Wrap(
+                            spacing: 8.0,
+                            runSpacing: 8.0,
+                            children: selectedTags.map((tag) {
+                              return Container(
+                                margin: const EdgeInsets.only(right: 8, bottom: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE7EFA2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      tag.name,
+                                      style: const TextStyle(fontSize: 16),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          selectedTags.remove(tag);
+                                        });
+                                      },
+                                      child: const Icon(Icons.close, size: 16),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        GestureDetector(
+                          onTap: () async {
+                            print('태그 추가 버튼 클릭됨');
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => TagListPage(
+                                  onTagsSelected: (tags) {
+                                    print('TagListPage에서 태그 선택됨: $tags');
+                                    setState(() {
+                                      final merged = [...selectedTags, ...tags];
+                                      final unique = <Tag>[];
+                                      for (final tag in merged) {
+                                        if (!unique.any((t) => t.name == tag.name)) {
+                                          unique.add(tag);
+                                        }
+                                      }
+                                      selectedTags = unique;
+                                      print('Selected Tags after update: $selectedTags');
+                                    });
+                                  },
+                                ),
+                              ),
+                            );
+                            print('TagListPage에서 돌아옴, 결과: $result');
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE7EFA2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Text(
+                              '태그 추가',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
             // 내용 입력

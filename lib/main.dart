@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter/services.dart';
 import 'Auth/login_screen.dart';
 import 'Auth/signup_screen.dart';
@@ -13,6 +14,12 @@ void main() async {
     // Firebase 초기화
     await Firebase.initializeApp();
     print('Firebase 초기화 성공');
+    // ✅ App Check 활성화 (디버그 모드)
+    await FirebaseAppCheck.instance.activate(
+      androidProvider: AndroidProvider.debug,
+      appleProvider: AppleProvider.debug,
+    );
+    print('Firebase App Check 활성화 완료');
   } catch (e) {
     print('Firebase 초기화 실패: $e');
   }
