@@ -7,6 +7,7 @@ import '../Profile/profile_screen.dart';
 import '../Rank/ranking_screen.dart';
 import '../Calendar/calendar_screen.dart';
 import '../Friends/friends_screen.dart';
+import '../Setting/setting_screen.dart';
 
 class Menu extends StatelessWidget {
   const Menu({super.key});
@@ -149,7 +150,14 @@ class Menu extends StatelessWidget {
             ),
           ),
           _buildMenuItem(context, '문의', () {}),
-          _buildMenuItem(context, '환경 설정', () {}),
+          _buildMenuItem(
+            context,
+            '환경 설정',
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const SettingScreen()),
+            ),
+          ),
           const Spacer(),
           Padding(
             padding: const EdgeInsets.only(left: 16.0, bottom: 12),

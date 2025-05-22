@@ -36,7 +36,21 @@ class _PostViewPageState extends State<PostViewPage> {
             padding: EdgeInsets.only(right: 8.w),
             child: ElevatedButton(
               onPressed: () {
-                // TODO: 적용하기 기능 구현
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      title: const Text('코스 적용'),
+                      content: const Text('운동화면에 현재 코스의 동선이 표시됩니다.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('확인'),
+                        ),
+                      ],
+                    );
+                  },
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF9800),
