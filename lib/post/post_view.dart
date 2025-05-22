@@ -5,6 +5,8 @@ import '../Widgets/bottom_bar.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import '../Running/workout_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class PostViewPage extends StatefulWidget {
   final Map<String, dynamic> postData;
@@ -19,12 +21,19 @@ class _PostViewPageState extends State<PostViewPage> {
   GoogleMapController? _mapController;
   Set<Marker> _markers = {};
   Set<Polyline> _polylines = {};
+  bool _isLiked = false;
 
   @override
   void initState() {
     super.initState();
     _initializeMarkers();
     _initializePolylines();
+    _checkIfLiked();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   void _initializeMarkers() {
@@ -112,6 +121,83 @@ class _PostViewPageState extends State<PostViewPage> {
     );
   }
 
+  Future<void> _checkIfLiked() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final likedPostDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('LikedPosts')
+          .doc(widget.postData['id'])
+          .get();
+
+      if (mounted) {
+        setState(() {
+          _isLiked = likedPostDoc.exists;
+        });
+      }
+    } catch (e) {
+      print('좋아요 상태 확인 중 오류: $e');
+    }
+  }
+
+  Future<void> _toggleLike() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final postRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.postData['userId'])
+          .collection('Post_Data')
+          .doc(widget.postData['id']);
+
+      final likedPostRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('LikedPosts')
+          .doc(widget.postData['id']);
+
+      if (_isLiked) {
+        // 좋아요 취소
+        await postRef.update({
+          'likes': FieldValue.increment(-1)
+        });
+        await likedPostRef.delete();
+      } else {
+        // 좋아요 추가
+        await postRef.update({
+          'likes': FieldValue.increment(1)
+        });
+        await likedPostRef.set({
+          'timestamp': FieldValue.serverTimestamp()
+        });
+      }
+
+      // 상태 업데이트
+      if (mounted) {
+        setState(() {
+          _isLiked = !_isLiked;
+          widget.postData['likes'] = _isLiked 
+              ? (widget.postData['likes'] ?? 0) + 1 
+              : (widget.postData['likes'] ?? 1) - 1;
+        });
+      }
+    } catch (e) {
+      print('좋아요 토글 중 오류: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('좋아요 처리 중 오류가 발생했습니다. 다시 시도해주세요.'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -123,10 +209,7 @@ class _PostViewPageState extends State<PostViewPage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const PostListPage()),
-            );
+            Navigator.pop(context);
           },
         ),
         actions: [
@@ -236,7 +319,28 @@ class _PostViewPageState extends State<PostViewPage> {
                       const SizedBox(width: 8),
                       Text(widget.postData['nickname'] ?? '작성자', style: const TextStyle(fontSize: 16)),
                       const SizedBox(width: 16),
-                      const Icon(Icons.favorite, size: 24, color: Colors.red),
+                      GestureDetector(
+                        onTap: _toggleLike,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            _isLiked ? Icons.favorite : Icons.favorite_border,
+                            size: 24,
+                            color: _isLiked ? Colors.red : Colors.grey,
+                          ),
+                        ),
+                      ),
                       const SizedBox(width: 4),
                       Text('${widget.postData['likes'] ?? 0}', style: const TextStyle(fontSize: 15)),
                     ],

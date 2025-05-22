@@ -25,6 +25,7 @@ class _ScreenHomeState extends State<ScreenHome> {
   int _selectedIndex = 1;
   String _userName = '';
 
+
   @override
   void initState() {
     super.initState();
@@ -40,7 +41,7 @@ class _ScreenHomeState extends State<ScreenHome> {
             .collection('users')
             .doc(user.uid)
             .get();
-        
+
         if (mounted && userData.exists) {
           final nickname = userData.data()?['nickname'] ?? '';
           setState(() {
@@ -56,6 +57,13 @@ class _ScreenHomeState extends State<ScreenHome> {
         print('사용자 데이터 로드 중 오류 발생: $e');
       }
     }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 화면이 다시 표시될 때마다 사용자 데이터 새로고침
+    _loadUserData();
   }
 
   Future<void> _signOut() async {

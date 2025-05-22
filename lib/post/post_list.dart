@@ -32,6 +32,8 @@ class _PostListPageState extends State<PostListPage> {
   Set<Marker> _markers = {};
   List<Map<String, dynamic>> _filteredPosts = [];
   bool _isFiltered = false;
+  String _sortBy = 'distance'; // 'distance' 또는 'likes'
+  Set<String> _likedPosts = {}; // 좋아요한 게시글 ID 저장
 
   @override
   void initState() {
@@ -39,6 +41,13 @@ class _PostListPageState extends State<PostListPage> {
     print('PostListPage 초기화');
     _getCurrentLocation();
     _filteredPosts = _posts;
+    _loadLikedPosts(); // 좋아요한 게시글 로드
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _sortPosts(); // 화면이 다시 표시될 때 정렬 상태 유지
   }
 
   Future<void> _getCurrentLocation() async {
@@ -151,6 +160,13 @@ class _PostListPageState extends State<PostListPage> {
             data['nickname'] = userDoc.data()?['nickname'] ?? '알 수 없음';
           }
         }
+
+        // 운동 시작점 좌표 계산
+        if (data['routePoints'] != null && (data['routePoints'] as List).isNotEmpty) {
+          final firstPoint = (data['routePoints'] as List).first;
+          data['startLatitude'] = firstPoint['latitude'];
+          data['startLongitude'] = firstPoint['longitude'];
+        }
         
         newPosts.add(data);
         print('게시글 데이터: $data');
@@ -162,14 +178,14 @@ class _PostListPageState extends State<PostListPage> {
           double distanceA = _calculateDistance(
             _currentPosition!.latitude,
             _currentPosition!.longitude,
-            a['latitude'] ?? 0,
-            a['longitude'] ?? 0
+            a['startLatitude'] ?? 0,
+            a['startLongitude'] ?? 0
           );
           double distanceB = _calculateDistance(
             _currentPosition!.latitude,
             _currentPosition!.longitude,
-            b['latitude'] ?? 0,
-            b['longitude'] ?? 0
+            b['startLatitude'] ?? 0,
+            b['startLongitude'] ?? 0
           );
           return distanceA.compareTo(distanceB); // 거리가 가까운 순으로 정렬
         });
@@ -194,13 +210,16 @@ class _PostListPageState extends State<PostListPage> {
       print('게시글을 불러오는데 실패했습니다: $e');
       setState(() {
         _isLoading = false;
-        _hasMore = false; // 에러 발생 시 더 이상 로딩하지 않도록 설정
+        _hasMore = false;
       });
     }
   }
 
   double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    return Geolocator.distanceBetween(lat1, lon1, lat2, lon2);
+    // 두 지점 간의 거리를 미터 단위로 계산
+    double distanceInMeters = Geolocator.distanceBetween(lat1, lon1, lat2, lon2);
+    // 미터를 킬로미터로 변환하고 소수점 첫째 자리까지 반올림
+    return (distanceInMeters / 1000).roundToDouble();
   }
 
   void _filterPostsByTags() async {
@@ -236,6 +255,132 @@ class _PostListPageState extends State<PostListPage> {
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _loadLikedPosts() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final likedPostsDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('LikedPosts')
+          .get();
+
+      setState(() {
+        _likedPosts = likedPostsDoc.docs.map((doc) => doc.id).toSet();
+      });
+    } catch (e) {
+      print('좋아요한 게시글 로드 중 오류: $e');
+    }
+  }
+
+  Future<void> _toggleLike(String postId, String userId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final postRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('Post_Data')
+          .doc(postId);
+
+      final likedPostRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('LikedPosts')
+          .doc(postId);
+
+      // 트랜잭션을 사용하여 좋아요 처리
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final postDoc = await transaction.get(postRef);
+        if (!postDoc.exists) {
+          throw Exception('게시물을 찾을 수 없습니다.');
+        }
+
+        final currentLikes = postDoc.data()?['likes'] ?? 0;
+        
+        if (_likedPosts.contains(postId)) {
+          // 좋아요 취소
+          transaction.update(postRef, {
+            'likes': currentLikes - 1
+          });
+          transaction.delete(likedPostRef);
+        } else {
+          // 좋아요 추가
+          transaction.update(postRef, {
+            'likes': currentLikes + 1
+          });
+          transaction.set(likedPostRef, {
+            'timestamp': FieldValue.serverTimestamp()
+          });
+        }
+      });
+
+      // 상태 업데이트
+      setState(() {
+        if (_likedPosts.contains(postId)) {
+          _likedPosts.remove(postId);
+          // 게시물의 좋아요 수 업데이트
+          final postIndex = _posts.indexWhere((post) => post['id'] == postId);
+          if (postIndex != -1) {
+            _posts[postIndex]['likes'] = (_posts[postIndex]['likes'] ?? 1) - 1;
+            if (!_isFiltered) {
+              _filteredPosts[postIndex]['likes'] = _posts[postIndex]['likes'];
+            }
+          }
+        } else {
+          _likedPosts.add(postId);
+          // 게시물의 좋아요 수 업데이트
+          final postIndex = _posts.indexWhere((post) => post['id'] == postId);
+          if (postIndex != -1) {
+            _posts[postIndex]['likes'] = (_posts[postIndex]['likes'] ?? 0) + 1;
+            if (!_isFiltered) {
+              _filteredPosts[postIndex]['likes'] = _posts[postIndex]['likes'];
+            }
+          }
+        }
+      });
+    } catch (e) {
+      print('좋아요 토글 중 오류: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('좋아요 처리 중 오류가 발생했습니다. 다시 시도해주세요.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  void _sortPosts() {
+    setState(() {
+      if (_sortBy == 'distance') {
+        _filteredPosts.sort((a, b) {
+          if (_currentPosition == null) return 0;
+          double distanceA = _calculateDistance(
+            _currentPosition!.latitude,
+            _currentPosition!.longitude,
+            a['startLatitude'] ?? 0,
+            a['startLongitude'] ?? 0
+          );
+          double distanceB = _calculateDistance(
+            _currentPosition!.latitude,
+            _currentPosition!.longitude,
+            b['startLatitude'] ?? 0,
+            b['startLongitude'] ?? 0
+          );
+          return distanceA.compareTo(distanceB);
+        });
+      } else {
+        _filteredPosts.sort((a, b) {
+          int likesA = a['likes'] ?? 0;
+          int likesB = b['likes'] ?? 0;
+          return likesB.compareTo(likesA); // 좋아요 많은 순
+        });
+      }
+    });
   }
 
   @override
@@ -299,104 +444,142 @@ class _PostListPageState extends State<PostListPage> {
           ),
           Padding(
             padding: EdgeInsets.all(padding),
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: padding),
-              height: searchBarHeight,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(searchBarHeight / 2),
-                border: Border.all(color: Colors.grey[400]!),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () async {
-                        final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => TagListPage(
-                              onTagsSelected: (tags) {
-                                setState(() {
-                                  selectedTags = tags;
-                                });
-                              },
-                              initialSelectedTags: selectedTags, // 기존 선택된 태그 전달
-                            ),
-                          ),
-                        );
-                        if (result != null) {
-                          setState(() {
-                            selectedTags = result;
-                          });
-                          _filterPostsByTags(); // 태그 선택 후 필터링 실행
-                        }
+            child: Column(
+              children: [
+                // 정렬 버튼 추가
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _sortBy = 'distance';
+                        });
+                        _sortPosts();
                       },
-                      child: selectedTags.isEmpty
-                          ? Text(
-                              '원하는 태그를 추가하세요',
-                              style: TextStyle(
-                                color: Colors.grey,
-                                fontSize: subtitleFontSize,
-                              ),
-                            )
-                          : SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                children: selectedTags.map((tag) {
-                                  return Padding(
-                                    padding: EdgeInsets.only(right: screenWidth * 0.02),
-                                    child: Container(
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: screenWidth * 0.02,
-                                        vertical: screenHeight * 0.005,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFE7EFA2),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            tag.name,
-                                            style: TextStyle(fontSize: tagFontSize),
-                                          ),
-                                          SizedBox(width: screenWidth * 0.01),
-                                          GestureDetector(
-                                            onTap: () {
-                                              setState(() {
-                                                selectedTags.remove(tag);
-                                              });
-                                              _filterPostsByTags(); // 태그 제거 후 필터링 실행
-                                            },
-                                            child: Icon(
-                                              Icons.close,
-                                              size: tagFontSize,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: _filterPostsByTags,
-                    child: Padding(
-                      padding: EdgeInsets.only(left: screenWidth * 0.02),
-                      child: Icon(
-                        Icons.search,
-                        color: Colors.grey,
-                        size: subtitleFontSize * 1.2,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _sortBy == 'distance' ? const Color(0xFF764BA2) : Colors.grey[300],
+                        foregroundColor: _sortBy == 'distance' ? Colors.white : Colors.black,
                       ),
+                      child: const Text('거리순'),
                     ),
+                    const SizedBox(width: 16),
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _sortBy = 'likes';
+                        });
+                        _sortPosts();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _sortBy == 'likes' ? const Color(0xFF764BA2) : Colors.grey[300],
+                        foregroundColor: _sortBy == 'likes' ? Colors.white : Colors.black,
+                      ),
+                      child: const Text('좋아요순'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: padding),
+                  height: searchBarHeight,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(searchBarHeight / 2),
+                    border: Border.all(color: Colors.grey[400]!),
                   ),
-                ],
-              ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () async {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => TagListPage(
+                                  onTagsSelected: (tags) {
+                                    setState(() {
+                                      selectedTags = tags;
+                                    });
+                                  },
+                                  initialSelectedTags: selectedTags, // 기존 선택된 태그 전달
+                                ),
+                              ),
+                            );
+                            if (result != null) {
+                              setState(() {
+                                selectedTags = result;
+                              });
+                              _filterPostsByTags(); // 태그 선택 후 필터링 실행
+                            }
+                          },
+                          child: selectedTags.isEmpty
+                              ? Text(
+                                  '원하는 태그를 추가하세요',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: subtitleFontSize,
+                                  ),
+                                )
+                              : SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: Row(
+                                    children: selectedTags.map((tag) {
+                                      return Padding(
+                                        padding: EdgeInsets.only(right: screenWidth * 0.02),
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: screenWidth * 0.02,
+                                            vertical: screenHeight * 0.005,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFE7EFA2),
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                tag.name,
+                                                style: TextStyle(fontSize: tagFontSize),
+                                              ),
+                                              SizedBox(width: screenWidth * 0.01),
+                                              GestureDetector(
+                                                onTap: () {
+                                                  setState(() {
+                                                    selectedTags.remove(tag);
+                                                  });
+                                                  _filterPostsByTags(); // 태그 제거 후 필터링 실행
+                                                },
+                                                child: Icon(
+                                                  Icons.close,
+                                                  size: tagFontSize,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                ),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: _filterPostsByTags,
+                        child: Padding(
+                          padding: EdgeInsets.only(left: screenWidth * 0.02),
+                          child: Icon(
+                            Icons.search,
+                            color: Colors.grey,
+                            size: subtitleFontSize * 1.2,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
           Expanded(
@@ -434,14 +617,14 @@ class _PostListPageState extends State<PostListPage> {
                                     color: Colors.grey[600],
                                   ),
                                 ),
-                                if (_currentPosition != null && post['latitude'] != null && post['longitude'] != null)
+                                if (_currentPosition != null && post['startLatitude'] != null && post['startLongitude'] != null)
                                   Text(
-                                    '거리: ${(_calculateDistance(
+                                    '시작점까지 거리: ${_calculateDistance(
                                       _currentPosition!.latitude,
                                       _currentPosition!.longitude,
-                                      post['latitude'],
-                                      post['longitude']
-                                    ) / 1000).toStringAsFixed(1)}km',
+                                      post['startLatitude'],
+                                      post['startLongitude']
+                                    ).toStringAsFixed(1)}km',
                                     style: TextStyle(
                                       fontSize: subtitleFontSize,
                                       color: Colors.blue[700],
@@ -453,11 +636,15 @@ class _PostListPageState extends State<PostListPage> {
                                     Icon(Icons.route, size: subtitleFontSize),
                                     SizedBox(width: screenWidth * 0.01),
                                     Text(
-                                      '${(post['distance'] ?? 0).toStringAsFixed(1)}km',
+                                      '운동 거리: ${(post['distance'] ?? 0).toStringAsFixed(1)}km',
                                       style: TextStyle(fontSize: subtitleFontSize),
                                     ),
                                     SizedBox(width: screenWidth * 0.04),
-                                    Icon(Icons.favorite, size: subtitleFontSize, color: Colors.red),
+                                    Icon(
+                                      Icons.favorite,
+                                      size: subtitleFontSize,
+                                      color: Colors.red,
+                                    ),
                                     SizedBox(width: screenWidth * 0.01),
                                     Text(
                                       '${post['likes'] ?? 0}',
@@ -520,7 +707,9 @@ class _PostListPageState extends State<PostListPage> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => PostViewPage(postData: post),
+                                  builder: (context) => PostViewPage(
+                                    postData: post,
+                                  ),
                                 ),
                               );
                             },

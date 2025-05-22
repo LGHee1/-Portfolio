@@ -41,7 +41,7 @@ class Menu extends StatelessWidget {
         if (context.mounted) {
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (context) => const LoginScreen()),
-            (route) => false,
+                (route) => false,
           );
         }
       } catch (e) {
@@ -92,12 +92,12 @@ class Menu extends StatelessWidget {
                           borderRadius: BorderRadius.circular(20),
                           child: userProvider.photoUrl != null
                               ? Image.network(
-                                  userProvider.photoUrl!,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return const Icon(Icons.account_circle, size: 36, color: Colors.grey);
-                                  },
-                                )
+                            userProvider.photoUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Icon(Icons.account_circle, size: 36, color: Colors.grey);
+                            },
+                          )
                               : const Icon(Icons.account_circle, size: 36, color: Colors.grey),
                         );
                       },
@@ -127,7 +127,7 @@ class Menu extends StatelessWidget {
           _buildMenuItem(
             context,
             '랭킹',
-            () => Navigator.push(
+                () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => RankingScreen()),
             ),
@@ -135,7 +135,7 @@ class Menu extends StatelessWidget {
           _buildMenuItem(
             context,
             '기록',
-            () => Navigator.push(
+                () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => CalendarScreen()),
             ),
@@ -143,7 +143,7 @@ class Menu extends StatelessWidget {
           _buildMenuItem(
             context,
             '친구관리',
-            () => Navigator.push(
+                () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const FriendsScreen()),
             ),

@@ -6,6 +6,8 @@ import 'Auth/login_screen.dart';
 import 'Auth/signup_screen.dart';
 import 'package:provider/provider.dart';
 import 'user_provider.dart';
+import 'home_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,8 +56,36 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         scaffoldBackgroundColor: Colors.white,
       ),
-      home: const StartScreen(), // 시작화면
+      home: const AuthWrapper(), // AuthWrapper로 변경
       debugShowCheckedModeBanner: false,
+    );
+  }
+}
+
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        
+        if (snapshot.hasData) {
+          // 로그인된 상태에서 사용자 데이터 초기화
+          final userProvider = Provider.of<UserProvider>(context, listen: false);
+          if (!userProvider.isInitialized) {
+            userProvider.initializeUserData();
+          }
+          return const ScreenHome();
+        }
+        
+        // 로그인되지 않은 상태
+        return const StartScreen();
+      },
     );
   }
 }

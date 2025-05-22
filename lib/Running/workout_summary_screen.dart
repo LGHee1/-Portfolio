@@ -16,6 +16,7 @@ class WorkoutSummaryScreen extends StatefulWidget {
   final int cadence;
   final int calories;
   final List<LatLng> routePoints;
+  final bool isRecommendedCourse;
 
   const WorkoutSummaryScreen({
     Key? key,
@@ -25,6 +26,7 @@ class WorkoutSummaryScreen extends StatefulWidget {
     required this.cadence,
     required this.calories,
     required this.routePoints,
+    this.isRecommendedCourse = false,
   }) : super(key: key);
 
   @override
@@ -287,37 +289,37 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
                       ),
                     ],
                   ),
-                  // 좋아요 버튼 지도 아래 오른쪽에 위치
-                  Positioned(
-                    top: MediaQuery.of(context).size.height / 3 - 30, // 지도 아래쪽
-                    right: 24,
-                    child: GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          isLiked = !isLiked;
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          isLiked ? Icons.favorite : Icons.favorite_border,
-                          color: isLiked ? Colors.red : Colors.grey,
-                          size: 24,
+                  if (widget.isRecommendedCourse)
+                    Positioned(
+                      top: MediaQuery.of(context).size.height / 3 - 30,
+                      right: 24,
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            isLiked = !isLiked;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            isLiked ? Icons.favorite : Icons.favorite_border,
+                            color: isLiked ? Colors.red : Colors.grey,
+                            size: 24,
+                          ),
                         ),
                       ),
                     ),
-                  ),
                 ],
               ),
       ),

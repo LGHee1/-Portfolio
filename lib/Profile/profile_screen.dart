@@ -575,7 +575,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                       style: TextStyle(fontSize: contentFontSize * 0.9),
                                                     ),
                                                     SizedBox(width: spacing * 0.4),
-                                                    Icon(Icons.favorite, size: contentFontSize, color: Colors.purple),
+                                                    Icon(
+                                                      Icons.favorite,
+                                                      size: contentFontSize,
+                                                      color: Colors.red,
+                                                    ),
                                                     Text(
                                                       ' ${post['likes'] ?? 0}',
                                                       style: TextStyle(fontSize: contentFontSize * 0.9),
