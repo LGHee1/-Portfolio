@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'post_view.dart';
 import 'tag_list.dart';
 import '../models/tag.dart';
@@ -26,7 +27,7 @@ class _PostListPageState extends State<PostListPage> {
         backgroundColor: const Color(0xFFCBF6FF),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: Icon(Icons.arrow_back, size: 24.sp),
           onPressed: () {
             Navigator.pushReplacement(
               context,
@@ -38,30 +39,32 @@ class _PostListPageState extends State<PostListPage> {
       body: Column(
         children: [
           Container(
-            height: 300,
+            height: 300.h,
             color: Colors.grey[300],
-            child: const Center(
-              child: Text('Google Maps will be displayed here'),
+            child: Center(
+              child: Text('Google Maps will be displayed here', style: TextStyle(fontSize: 16.sp)),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16.w),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              height: 50,
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              height: 50.h,
               decoration: BoxDecoration(
                 color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(25),
+                borderRadius: BorderRadius.circular(25.r),
                 border: Border.all(color: Colors.grey[400]!),
               ),
               child: Row(
                 children: [
                   if (selectedTags.isEmpty)
-                    const Expanded(
+                    Expanded(
                       child: Text(
                         '원하는 태그를 추가하세요',
                         style: TextStyle(
-                          color: Colors.grey),
+                          color: Colors.grey,
+                          fontSize: 14.sp,
+                        ),
                       ),
                     )
                   else
@@ -71,27 +74,28 @@ class _PostListPageState extends State<PostListPage> {
                         child: Row(
                           children: selectedTags.map((tag) {
                             return Padding(
-                              padding: const EdgeInsets.only(right: 8),
+                              padding: EdgeInsets.only(right: 8.w),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFE7EFA2),
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(12.r),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
-                                      tag.name, style: const TextStyle(fontSize: 14),
+                                      tag.name,
+                                      style: TextStyle(fontSize: 14.sp),
                                     ),
-                                    const SizedBox(width: 4),
+                                    SizedBox(width: 4.w),
                                     GestureDetector(
                                       onTap: () {
                                         setState(() {
                                           selectedTags.remove(tag);
                                         });
                                       },
-                                      child: const Icon(Icons.close, size: 16),
+                                      child: Icon(Icons.close, size: 16.sp),
                                     ),
                                   ],
                                 ),
@@ -116,11 +120,12 @@ class _PostListPageState extends State<PostListPage> {
                         ),
                       );
                     },
-                    child: const Padding(
-                      padding: EdgeInsets.only(left: 8),
+                    child: Padding(
+                      padding: EdgeInsets.only(left: 8.w),
                       child: Icon(
                         Icons.search,
                         color: Colors.grey,
+                        size: 24.sp,
                       ),
                     ),
                   ),
@@ -130,89 +135,87 @@ class _PostListPageState extends State<PostListPage> {
           ),
           Expanded(
             child: ListView.builder(
-              itemCount: 10, // 임시 데이터
-              padding: const EdgeInsets.symmetric(horizontal: 18),
+              itemCount: 10,
+              padding: EdgeInsets.symmetric(horizontal: 18.w),
               itemBuilder: (context, index) {
                 return Column(
                   children: [
-                    const Divider(
+                    Divider(
                       thickness: 1,
-                      color: Color(0xFFACE3FF),
-                      height: 1,
+                      color: const Color(0xFFACE3FF),
+                      height: 1.h,
                     ),
                     ListTile(
-                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                      contentPadding: EdgeInsets.symmetric(vertical: 8.h),
                       title: Text(
                         '게시글 ${index + 1}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 20,
+                          fontSize: 20.sp,
                         ),
                       ),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4.h),
                           Row(
                             children: [
-                              const Icon(Icons.route, size: 16),
-                              const SizedBox(width: 4),
-                              Text('${((index + 1) * 2.0).toStringAsFixed(1)}km'),
-                              const SizedBox(width: 16),
-                              const Icon(Icons.favorite, size: 16, color: Colors.red),
-                              const SizedBox(width: 4),
+                              Icon(Icons.route, size: 16.sp),
+                              SizedBox(width: 4.w),
+                              Text('${((index + 1) * 2.0).toStringAsFixed(1)}km', style: TextStyle(fontSize: 14.sp)),
+                              SizedBox(width: 16.w),
+                              Icon(Icons.favorite, size: 16.sp, color: Colors.red),
+                              SizedBox(width: 4.w),
                               Text(
                                 '${(index + 1) * 10}',
+                                style: TextStyle(fontSize: 14.sp),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4.h),
                           Wrap(
-                            spacing: 4,
+                            spacing: 4.w,
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 8.w,
+                                  vertical: 2.h,
                                 ),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFE7EFA2),
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(12.r),
                                 ),
-                                child: const Text('태그길이에대응', style: TextStyle(fontSize: 14),
-                                ),
+                                child: Text('태그길이에대응', style: TextStyle(fontSize: 14.sp)),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFE7EFA2),
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(12.r),
                                 ),
-                                child: const Text('태그2', style: TextStyle(fontSize: 14),
-                                ),
+                                child: Text('태그2', style: TextStyle(fontSize: 14.sp)),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFE7EFA2),
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(12.r),
                                 ),
-                                child: const Text('태그3', style: TextStyle(fontSize: 14),
-                                ),
+                                child: Text('태그3', style: TextStyle(fontSize: 14.sp)),
                               ),
                             ],
                           ),
                         ],
                       ),
                       trailing: Container(
-                        width: 80,
-                        height: 80,
+                        width: 80.w,
+                        height: 80.h,
                         decoration: BoxDecoration(
                           color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(8.r),
                         ),
-                        child: const Center(
-                          child: Icon(Icons.image, color: Colors.grey),
+                        child: Center(
+                          child: Icon(Icons.image, color: Colors.grey, size: 24.sp),
                         ),
                       ),
                       onTap: () {

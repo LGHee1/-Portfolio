@@ -174,9 +174,9 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
             ),
           ),
           Expanded(
-            child: Container(
-              padding: EdgeInsets.all(20.w),
-              child: SingleChildScrollView(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20.w),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -190,6 +190,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                     ),
                     SizedBox(height: 16.h),
                     _buildStatsGrid(),
+                    SizedBox(height: 20.h),
                   ],
                 ),
               ),
@@ -225,18 +226,23 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
   }
 
   Widget _buildStatsGrid() {
-    return GridView.count(
-      shrinkWrap: true,
-      crossAxisCount: 2,
-      childAspectRatio: 2,
-      mainAxisSpacing: 16.h,
-      crossAxisSpacing: 16.w,
+    return Column(
       children: [
-        _buildStatItem('거리', '${widget.record.distance.toStringAsFixed(2)} km'),
-        _buildStatItem('시간', '${widget.record.duration.inMinutes} 분'),
-        _buildStatItem('케이던스', '${widget.record.cadence} spm'),
-        _buildStatItem('평균 페이스', '${widget.record.pace.toStringAsFixed(2)} /km'),
-        _buildStatItem('칼로리', '${widget.record.calories} kcal'),
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          childAspectRatio: 2,
+          mainAxisSpacing: 16.h,
+          crossAxisSpacing: 16.w,
+          children: [
+            _buildStatItem('거리', '${widget.record.distance.toStringAsFixed(2)} km'),
+            _buildStatItem('시간', '${widget.record.duration.inMinutes} 분'),
+            _buildStatItem('케이던스', '${widget.record.cadence} spm'),
+            _buildStatItem('평균 페이스', '${widget.record.pace.toStringAsFixed(2)} /km'),
+            _buildStatItem('칼로리', '${widget.record.calories} kcal'),
+          ],
+        ),
       ],
     );
   }

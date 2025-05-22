@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../../models/workout_record.dart';
 import '../../utils/theme.dart';
+import '../Widgets/bottom_bar.dart';
 import 'workout_detail_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../Widgets/bottom_bar.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class CalendarScreen extends StatefulWidget {
@@ -128,10 +128,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
         children: [
           SizedBox(height: 16.h),
           _buildUserSelector(),
-          SizedBox(height: 24.h),
+          SizedBox(height: 12.h),
           Container(
             height: 80.h,
-            margin: EdgeInsets.only(bottom: 24.h),
+            margin: EdgeInsets.only(bottom: 12.h),
             child: _selectedDayRecords.isNotEmpty
                 ? _buildWorkoutSummary()
                 : _buildEmptyWorkoutSummary(),
@@ -270,7 +270,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             '${record.distance.toStringAsFixed(1)}km',
                             style: TextStyle(
                               color: AppTheme.darkTextColor,
-                              fontSize: 14,
+                              fontSize: 14.sp,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -282,7 +282,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             '${record.duration.inMinutes}분',
                             style: TextStyle(
                               color: AppTheme.darkTextColor,
-                              fontSize: 14,
+                              fontSize: 14.sp,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -294,40 +294,48 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             '${record.pace.toStringAsFixed(2)}분/km',
                             style: TextStyle(
                               color: AppTheme.darkTextColor,
-                              fontSize: 14,
+                              fontSize: 14.sp,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
                     ),
-                     TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => WorkoutDetailScreen(record: record),
-                          ),
-                        );
-                      },
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '상세보기',
-                            style: TextStyle(
-                              color: AppTheme.darkTextColor,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
+                    Container(
+                      margin: EdgeInsets.only(left: 8.w),
+                      child: TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => WorkoutDetailScreen(record: record),
                             ),
-                          ),
-                          SizedBox(width: 4),
-                          Icon(
-                            Icons.arrow_forward_ios,
-                            size: 14,
-                            color: AppTheme.darkTextColor,
-                          ),
-                        ],
+                          );
+                        },
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '상세보기',
+                              style: TextStyle(
+                                color: AppTheme.darkTextColor,
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            SizedBox(width: 4.w),
+                            Icon(
+                              Icons.arrow_forward_ios,
+                              size: 14.sp,
+                              color: AppTheme.darkTextColor,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -376,39 +384,53 @@ class _CalendarScreenState extends State<CalendarScreen> {
         titleTextFormatter: (date, locale) {
           return '${date.year}년 ${date.month}월';
         },
-        leftChevronIcon: 
-        Icon(Icons.chevron_left, color: AppTheme.darkTextColor),
-        rightChevronIcon: 
-        Icon(Icons.chevron_right, color: AppTheme.darkTextColor),
+        leftChevronIcon: Icon(Icons.chevron_left, color: AppTheme.darkTextColor, size: 24.sp),
+        rightChevronIcon: Icon(Icons.chevron_right, color: AppTheme.darkTextColor, size: 24.sp),
+        titleTextStyle: TextStyle(
+          fontSize: 18.sp,
+          fontWeight: FontWeight.bold,
+          color: AppTheme.darkTextColor,
+        ),
+        headerPadding: EdgeInsets.symmetric(vertical: 6.h),
       ),
       calendarStyle: CalendarStyle(
         outsideDaysVisible: false,
-        weekendTextStyle: TextStyle(color: Colors.red),
-        holidayTextStyle: TextStyle(color: Colors.red),
+        weekendTextStyle: TextStyle(color: Colors.red, fontSize: 14.sp),
+        holidayTextStyle: TextStyle(color: Colors.red, fontSize: 14.sp),
         todayDecoration: BoxDecoration(
           border: Border.all(color: AppTheme.primaryColor, width: 2),
           shape: BoxShape.circle,
         ),
-        todayTextStyle: const TextStyle(color: AppTheme.darkTextColor,
+        todayTextStyle: TextStyle(
+          color: AppTheme.darkTextColor,
+          fontSize: 14.sp,
         ),
         selectedDecoration: BoxDecoration(
           color: AppTheme.primaryColor,
           shape: BoxShape.circle,
         ),
-        selectedTextStyle: TextStyle(color: Colors.white),
-        defaultTextStyle: TextStyle(color: AppTheme.darkTextColor),
+        selectedTextStyle: TextStyle(
+          color: Colors.white,
+          fontSize: 14.sp,
+        ),
+        defaultTextStyle: TextStyle(
+          color: AppTheme.darkTextColor,
+          fontSize: 14.sp,
+        ),
         markerSize: 0,
         markersAlignment: AlignmentDirectional.center,
-        cellMargin: const EdgeInsets.all(4),
+        cellMargin: EdgeInsets.all(4.w),
         rangeHighlightScale: 1.0,
+        cellPadding: EdgeInsets.symmetric(vertical: 4.h),
       ),
+      rowHeight: 60.h,
       calendarBuilders: CalendarBuilders(
         defaultBuilder: (context, day, focusedDay) {
           final hasWorkout = _workoutRecords.any((record) => isSameDay(record.date, day));
 
           if (hasWorkout) {
             return Container(
-              margin: const EdgeInsets.all(4),
+              margin: EdgeInsets.all(4.w),
               decoration: BoxDecoration(
                 color: AppTheme.primaryColor.withOpacity(0.5),
                 shape: BoxShape.circle,
@@ -416,7 +438,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
               child: Center(
                 child: Text(
                   '${day.day}',
-                  style: TextStyle(color: AppTheme.darkTextColor),
+                  style: TextStyle(
+                    color: AppTheme.darkTextColor,
+                    fontSize: 14.sp,
+                  ),
                 ),
               ),
             );

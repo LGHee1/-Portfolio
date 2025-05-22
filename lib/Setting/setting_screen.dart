@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../Auth/login_screen.dart';
+import '../Widgets/bottom_bar.dart';
+import '../home_screen.dart';
+import '../post/post_list.dart';
+import '../Running/workout_screen.dart';
+import '../profile/profile_screen.dart';
 
 class SettingScreen extends StatefulWidget {
   const SettingScreen({super.key});
@@ -11,24 +17,37 @@ class SettingScreen extends StatefulWidget {
 
 class _SettingScreenState extends State<SettingScreen> {
   bool _isNotificationEnabled = true;
+  int _selectedIndex = 1;
 
   Future<void> _signOut(BuildContext context) async {
     final shouldLogout = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('로그아웃'),
-          content: const Text('정말 로그아웃 하시겠습니까?'),
+          title: Text(
+            '로그아웃',
+            style: TextStyle(fontSize: 18.sp),
+          ),
+          content: Text(
+            '정말 로그아웃 하시겠습니까?',
+            style: TextStyle(fontSize: 16.sp),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('취소'),
+              child: Text(
+                '취소',
+                style: TextStyle(fontSize: 16.sp),
+              ),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text(
+              child: Text(
                 '확인',
-                style: TextStyle(color: Colors.red),
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  color: Colors.red,
+                ),
               ),
             ),
           ],
@@ -55,12 +74,15 @@ class _SettingScreenState extends State<SettingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('환경 설정'),
+        title: Text(
+          '환경 설정',
+          style: TextStyle(fontSize: 18.sp),
+        ),
         backgroundColor: const Color(0xFFE5FBFF),
       ),
       body: ListView(
         children: [
-          const SizedBox(height: 16),
+          SizedBox(height: 16.h),
           _buildSwitchTile(
             '알림 수신',
             _isNotificationEnabled,
@@ -108,12 +130,37 @@ class _SettingScreenState extends State<SettingScreen> {
           _buildLogoutTile(),
         ],
       ),
+      bottomNavigationBar: BottomBar(
+        selectedIndex: _selectedIndex,
+        onTabSelected: (index) {
+          setState(() => _selectedIndex = index);
+          if (index == 0) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const WorkoutScreen()),
+            );
+          } else if (index == 1) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const ScreenHome()),
+            );
+          } else if (index == 2) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const ProfileScreen()),
+            );
+          }
+        },
+      ),
     );
   }
 
   Widget _buildSwitchTile(String title, bool value, Function(bool) onChanged) {
     return SwitchListTile(
-      title: Text(title),
+      title: Text(
+        title,
+        style: TextStyle(fontSize: 16.sp),
+      ),
       value: value,
       onChanged: onChanged,
       activeColor: Colors.blue,
@@ -122,27 +169,39 @@ class _SettingScreenState extends State<SettingScreen> {
 
   Widget _buildNavigationTile(String title, VoidCallback onTap) {
     return ListTile(
-      title: Text(title),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+      title: Text(
+        title,
+        style: TextStyle(fontSize: 16.sp),
+      ),
+      trailing: Icon(Icons.arrow_forward_ios, size: 16.sp),
       onTap: onTap,
     );
   }
 
   Widget _buildInfoTile(String title, String subtitle) {
     return ListTile(
-      title: Text(title),
+      title: Text(
+        title,
+        style: TextStyle(fontSize: 16.sp),
+      ),
       trailing: Text(
         subtitle,
-        style: const TextStyle(color: Colors.grey),
+        style: TextStyle(
+          fontSize: 14.sp,
+          color: Colors.grey,
+        ),
       ),
     );
   }
 
   Widget _buildLogoutTile() {
     return ListTile(
-      title: const Text(
+      title: Text(
         '로그아웃',
-        style: TextStyle(color: Colors.red),
+        style: TextStyle(
+          fontSize: 16.sp,
+          color: Colors.red,
+        ),
       ),
       onTap: () => _signOut(context),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../user_provider.dart';
 import '../Auth/login_screen.dart';
 import '../Profile/profile_screen.dart';
@@ -54,20 +55,20 @@ class Menu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      width: 240,
+      width: 240.w,
       backgroundColor: const Color(0xFFE5FBFF),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 16),
+          SizedBox(height: 16.h),
           Padding(
-            padding: const EdgeInsets.only(left: 16.0),
+            padding: EdgeInsets.only(left: 16.w),
             child: IconButton(
-              icon: const Icon(Icons.menu, color: Colors.black),
+              icon: Icon(Icons.menu, color: Colors.black, size: 24.sp),
               onPressed: () => Navigator.of(context).pop(),
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8.h),
           Center(
             child: GestureDetector(
               onTap: () {
@@ -80,31 +81,31 @@ class Menu extends StatelessWidget {
               child: Column(
                 children: [
                   Container(
-                    width: 100,
-                    height: 100,
+                    width: 100.w,
+                    height: 100.h,
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(20.r),
                       border: Border.all(color: Colors.black26),
                     ),
                     child: Consumer<UserProvider>(
                       builder: (context, userProvider, child) {
                         return ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(20.r),
                           child: userProvider.photoUrl != null
                               ? Image.network(
                                   userProvider.photoUrl!,
                                   fit: BoxFit.cover,
                                   errorBuilder: (context, error, stackTrace) {
-                                    return const Icon(Icons.account_circle, size: 36, color: Colors.grey);
+                                    return Icon(Icons.account_circle, size: 36.sp, color: Colors.grey);
                                   },
                                 )
-                              : const Icon(Icons.account_circle, size: 36, color: Colors.grey),
+                              : Icon(Icons.account_circle, size: 36.sp, color: Colors.grey),
                         );
                       },
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8.h),
                   Consumer<UserProvider>(
                     builder: (context, userProvider, child) {
                       return Row(
@@ -112,10 +113,13 @@ class Menu extends StatelessWidget {
                         children: [
                           Text(
                             userProvider.nickname,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16.sp,
+                            ),
                           ),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
+                          SizedBox(width: 4.w),
+                          Icon(Icons.arrow_forward_ios, size: 12.sp, color: Colors.grey),
                         ],
                       );
                     },
@@ -124,7 +128,7 @@ class Menu extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20.h),
           _buildMenuItem(
             context,
             '랭킹',
@@ -160,17 +164,17 @@ class Menu extends StatelessWidget {
           ),
           const Spacer(),
           Padding(
-            padding: const EdgeInsets.only(left: 16.0, bottom: 12),
+            padding: EdgeInsets.only(left: 16.w, bottom: 12.h),
             child: InkWell(
               onTap: () => _signOut(context),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.logout, color: Colors.red),
-                  SizedBox(width: 8),
+                  Icon(Icons.logout, color: Colors.red, size: 24.sp),
+                  SizedBox(width: 8.w),
                   Text(
                     '로그아웃',
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 16.sp,
                       fontWeight: FontWeight.bold,
                       color: Colors.red,
                     ),
@@ -186,7 +190,7 @@ class Menu extends StatelessWidget {
 
   Widget _buildMenuItem(BuildContext context, String title, VoidCallback onTap) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 20),
+      padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 20.w),
       child: InkWell(
         onTap: () {
           Navigator.pop(context);
@@ -194,7 +198,10 @@ class Menu extends StatelessWidget {
         },
         child: Text(
           title,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 16.sp,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );

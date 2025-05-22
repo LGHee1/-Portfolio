@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class RunningCardSwiper extends StatefulWidget {
   const RunningCardSwiper({super.key});
@@ -49,7 +50,7 @@ class _RunningCardSwiperState extends State<RunningCardSwiper> {
     return Column(
       children: [
         SizedBox(
-          height: 300,
+          height: 400.h,
           child: PageView.builder(
             controller: _pageController,
             itemCount: _dataList.length,
@@ -61,11 +62,11 @@ class _RunningCardSwiperState extends State<RunningCardSwiper> {
             itemBuilder: (context, index) {
               final item = _dataList[index];
               return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                padding: const EdgeInsets.all(24),
+                margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 24.h),
+                padding: EdgeInsets.all(32.w),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.8),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(20.r),
                   border: Border.all(color: Colors.blueAccent),
                   boxShadow: [
                     BoxShadow(
@@ -78,17 +79,17 @@ class _RunningCardSwiperState extends State<RunningCardSwiper> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _infoText('러닝 거리', item['거리']!, 16),
-                    const SizedBox(height: 12),
-                    _infoText('러닝 시간', item['시간']!, 16),
-                    const SizedBox(height: 12),
-                    _infoText('소모 칼로리', item['칼로리']!, 16),
-                    const SizedBox(height: 24),
+                    _infoText('러닝 거리', item['거리']!, 20.sp),
+                    SizedBox(height: 24.h),
+                    _infoText('러닝 시간', item['시간']!, 20.sp),
+                    SizedBox(height: 24.h),
+                    _infoText('소모 칼로리', item['칼로리']!, 20.sp),
+                    SizedBox(height: 32.h),
                     Text(
                       item['메시지']!,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.blue,
-                        fontSize: 16,
+                        fontSize: 20.sp,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -98,18 +99,18 @@ class _RunningCardSwiperState extends State<RunningCardSwiper> {
             },
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 16.h),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(_dataList.length, (index) {
             return AnimatedContainer(
               duration: const Duration(milliseconds: 300),
-              width: _currentPage == index ? 12 : 6,
-              height: 6,
-              margin: const EdgeInsets.symmetric(horizontal: 4),
+              width: _currentPage == index ? 12.w : 6.w,
+              height: 6.h,
+              margin: EdgeInsets.symmetric(horizontal: 4.w),
               decoration: BoxDecoration(
                 color: _currentPage == index ? Colors.black : Colors.grey,
-                borderRadius: BorderRadius.circular(3),
+                borderRadius: BorderRadius.circular(3.r),
               ),
             );
           }),
@@ -122,7 +123,7 @@ class _RunningCardSwiperState extends State<RunningCardSwiper> {
     return Text(
       '$label : $value',
       style: TextStyle(
-        fontSize: 16,
+        fontSize: fontSize,
         color: Colors.blue,
         fontWeight: FontWeight.w500,
       ),
