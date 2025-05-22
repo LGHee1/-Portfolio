@@ -19,11 +19,13 @@ class Tag {
 
 class RegionTag extends Tag {
   final int level;  // 지역 레벨 (1: 시/도, 2: 시/군/구, 3: 읍/면/동)
+  final String? code;  // 법정동 코드
 
   const RegionTag({
     required String name,
     required this.level,
     String? parentRegion,
+    this.code,
   }) : super(
     name: name,
     category: TagCategory.location,

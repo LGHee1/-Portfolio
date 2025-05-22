@@ -14,42 +14,61 @@ class RegionService {
       final String data = await rootBundle.loadString('assets/data/region_20240805.csv');
       List<List<dynamic>> csvTable = const CsvToListConverter().convert(data);
       
-      _cachedRegions = csvTable.where((row) => row[2] == '존재').map((row) {
+      _cachedRegions = [];
+      Map<String, String> sidoMap = {};  // 시도 코드 -> 시도 이름
+      Map<String, String> sigunguMap = {};  // 시군구 코드 -> 시군구 이름
+      
+      // 먼저 존재하는 지역만 필터링
+      var validRows = csvTable.where((row) => row[2] == '존재').toList();
+      
+      // 시도 레벨 처리 (2자리 코드)
+      for (var row in validRows) {
         String code = row[0].toString();
         String name = row[1].toString();
         
-        // 법정동코드로 레벨 판단 (앞 2자리가 시도, 5자리가 시군구)
-        int level = 3; // 기본값은 읍/면/동
-        if (code.length >= 2) {
-          if (code.substring(2) == '00000000') {
-            level = 1; // 시도
-          } else if (code.substring(5) == '00000') {
-            level = 2; // 시군구
-          }
+        if (code.length == 2) {
+          sidoMap[code] = name;
+          _cachedRegions!.add(RegionTag(
+            name: name,
+            level: 1,
+            parentRegion: null,
+            code: code,
+          ));
         }
-
-        // 상위 지역명 찾기
-        String? parentRegion;
-        if (level > 1) {
-          String parentCode = level == 2 
-              ? code.substring(0, 2) + '00000000'  // 시도 코드
-              : code.substring(0, 5) + '00000';    // 시군구 코드
-          
-          var parentRow = csvTable.firstWhere(
-            (r) => r[0].toString() == parentCode && r[2] == '존재',
-            orElse: () => ['', '', ''],
-          );
-          if (parentRow[1] != '') {
-            parentRegion = parentRow[1].toString();
-          }
+      }
+      
+      // 시군구 레벨 처리 (5자리 코드)
+      for (var row in validRows) {
+        String code = row[0].toString();
+        String name = row[1].toString();
+        
+        if (code.length == 5) {
+          String sidoCode = code.substring(0, 2);
+          sigunguMap[code] = name;
+          _cachedRegions!.add(RegionTag(
+            name: name,
+            level: 2,
+            parentRegion: sidoMap[sidoCode],
+            code: code,
+          ));
         }
-
-        return RegionTag(
-          name: name,
-          level: level,
-          parentRegion: parentRegion,
-        );
-      }).toList();
+      }
+      
+      // 읍면동 레벨 처리 (10자리 코드)
+      for (var row in validRows) {
+        String code = row[0].toString();
+        String name = row[1].toString();
+        
+        if (code.length == 10) {
+          String sigunguCode = code.substring(0, 5);
+          _cachedRegions!.add(RegionTag(
+            name: name,
+            level: 3,
+            parentRegion: sigunguMap[sigunguCode],
+            code: code,
+          ));
+        }
+      }
 
       return _cachedRegions!;
     } catch (e) {
