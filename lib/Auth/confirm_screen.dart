@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'login_screen.dart';
 
 class ConfirmScreen extends StatelessWidget {
@@ -8,22 +9,25 @@ class ConfirmScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('회원가입 완료'),
+        title: Text(
+          '회원가입 완료',
+          style: TextStyle(fontSize: 18.sp),
+        ),
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
+            Text(
               '회원가입이 완료되었습니다!',
-              style: TextStyle(fontSize: 24),
+              style: TextStyle(fontSize: 24.sp, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 20),
-            const Text(
+            SizedBox(height: 20.h),
+            Text(
               '로그인 후 서비스를 이용해주세요.',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
+              style: TextStyle(fontSize: 16.sp, color: Colors.grey),
             ),
-            const SizedBox(height: 30),
+            SizedBox(height: 30.h),
             ElevatedButton(
               onPressed: () {
                 Navigator.pushAndRemoveUntil(
@@ -35,12 +39,15 @@ class ConfirmScreen extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                padding: EdgeInsets.symmetric(horizontal: 50.w, vertical: 15.h),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
+                  borderRadius: BorderRadius.circular(30.r),
                 ),
               ),
-              child: const Text('로그인하기'),
+              child: Text(
+                '로그인하기',
+                style: TextStyle(fontSize: 16.sp),
+              ),
             ),
           ],
         ),
