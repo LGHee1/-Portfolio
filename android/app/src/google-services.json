@@ -1,14 +1,13 @@
 {
   "project_info": {
-    "project_number": "953976850661",
-    "firebase_url": "https://appproject-766c3-default-rtdb.firebaseio.com",
-    "project_id": "appproject-766c3",
-    "storage_bucket": "appproject-766c3.firebasestorage.app"
+    "project_number": "179409607890",
+    "project_id": "hodadak-99442",
+    "storage_bucket": "hodadak-99442.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:953976850661:android:8c6d3662f775ef586c2c0c",
+        "mobilesdk_app_id": "1:179409607890:android:cb94d4a7c079e5b099210b",
         "android_client_info": {
           "package_name": "com.example.app_project"
         }
@@ -16,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBJVY59L-2wqT61ZyzQP2kroqGTEIKor9g"
+          "current_key": "AIzaSyDjX2S6_xXnE6EwNl-ugN_hFftASvbrnQs"
         }
       ],
       "services": {

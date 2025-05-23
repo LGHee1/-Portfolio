@@ -18,14 +18,8 @@ class BottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        // 뒤로가기 시 홈 화면으로 이동하고 selectedIndex를 1로 설정
-        onTabSelected(1);
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const ScreenHome()),
-          (route) => false,
-        );
-        return false;
+        // 일반적인 뒤로가기 동작을 허용
+        return true;
       },
       child: Container(
         height: 80.h,
@@ -52,7 +46,8 @@ class BottomBar extends StatelessWidget {
                         onTabSelected(0);
                         Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(builder: (context) => const WorkoutScreen()),
+                          MaterialPageRoute(
+                              builder: (context) => const WorkoutScreen()),
                         );
                       },
                     ),
@@ -66,7 +61,8 @@ class BottomBar extends StatelessWidget {
                         onTabSelected(2);
                         Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(builder: (context) => const PostListPage()),
+                          MaterialPageRoute(
+                              builder: (context) => const PostListPage()),
                         );
                       },
                     ),
@@ -86,7 +82,8 @@ class BottomBar extends StatelessWidget {
                     onTabSelected(1);
                     Navigator.pushAndRemoveUntil(
                       context,
-                      MaterialPageRoute(builder: (context) => const ScreenHome()),
+                      MaterialPageRoute(
+                          builder: (context) => const ScreenHome()),
                       (route) => false,
                     );
                   },
@@ -103,4 +100,4 @@ class BottomBar extends StatelessWidget {
       ),
     );
   }
-} 
+}

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter/services.dart';
 import 'Auth/login_screen.dart';
 import 'Auth/signup_screen.dart';
@@ -11,21 +10,15 @@ import 'home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   try {
     // Firebase 초기화
     await Firebase.initializeApp();
     print('Firebase 초기화 성공');
-    // ✅ App Check 활성화 (디버그 모드)
-    await FirebaseAppCheck.instance.activate(
-      androidProvider: AndroidProvider.debug,
-      appleProvider: AppleProvider.debug,
-    );
-    print('Firebase App Check 활성화 완료');
   } catch (e) {
     print('Firebase 초기화 실패: $e');
   }
-  
+
   // 시스템 UI 설정
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -33,7 +26,7 @@ void main() async {
       statusBarIconBrightness: Brightness.dark, // 아이콘은 어두운 색
     ),
   );
-  
+
   runApp(
     MultiProvider(
       providers: [
@@ -61,7 +54,7 @@ class MyApp extends StatelessWidget {
             useMaterial3: true,
             scaffoldBackgroundColor: Colors.white,
           ),
-          home: const ScreenHome(), // 홈 화면으로 변경
+          home: const StartScreen(), // 홈 화면으로 변경
           debugShowCheckedModeBanner: false,
         );
       },

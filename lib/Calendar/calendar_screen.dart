@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../../models/workout_record.dart';
 import '../../utils/theme.dart';
-import '../Widgets/bottom_bar.dart';
 import 'workout_detail_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../Widgets/bottom_bar.dart';
 
 class CalendarScreen extends StatefulWidget {
   @override
@@ -66,9 +65,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
           print('운동 데이터: ${data['date']} - 거리: ${data['distance']}km');
 
           final List<Map<String, double>> routePoints =
-          (data['routePoints'] as List)
-              .map((point) => Map<String, double>.from(point))
-              .toList();
+              (data['routePoints'] as List)
+                  .map((point) => Map<String, double>.from(point))
+                  .toList();
 
           // Convert pace string (e.g., "5'30"") to double
           String paceStr = data['pace'] as String;
@@ -118,28 +117,48 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 화면 크기 정보 가져오기
+    final screenSize = MediaQuery.of(context).size;
+    final screenWidth = screenSize.width;
+    final screenHeight = screenSize.height;
+
+    // 동적 크기 계산
+    final titleFontSize = screenWidth * 0.06; // 화면 너비의 6%
+    final subtitleFontSize = screenWidth * 0.04; // 화면 너비의 4%
+    final padding = screenWidth * 0.04; // 화면 너비의 4%
+    final spacing = screenHeight * 0.015; // 화면 높이의 1.5%
+    final userSelectorHeight = screenHeight * 0.06; // 화면 높이의 6%
+    final summaryHeight = screenHeight * 0.1; // 화면 높이의 10%
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('캘린더'),
+        title: Text(
+          '캘린더',
+          style: TextStyle(fontSize: titleFontSize),
+        ),
         centerTitle: true,
       ),
       body: Column(
         children: [
-          SizedBox(height: 16.h),
-          _buildUserSelector(),
-          SizedBox(height: 12.h),
+          SizedBox(height: spacing * 0.5),
+          _buildUserSelector(userSelectorHeight),
+          SizedBox(height: spacing * 1.5),
           Container(
-            height: 80.h,
-            margin: EdgeInsets.only(bottom: 12.h),
-            child: _selectedDayRecords.isNotEmpty
-                ? _buildWorkoutSummary()
-                : _buildEmptyWorkoutSummary(),
+            height: MediaQuery.of(context).size.height *
+                0.12, // 항상 인디케이터가 있을 때의 높이로 고정
+            margin: EdgeInsets.only(bottom: spacing * 0.2),
+            child: Stack(
+              children: [
+                _selectedDayRecords.isNotEmpty
+                    ? _buildWorkoutSummary(subtitleFontSize)
+                    : _buildEmptyWorkoutSummary(subtitleFontSize),
+              ],
+            ),
           ),
           Expanded(
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: _buildCalendar(),
+              padding: EdgeInsets.symmetric(horizontal: padding),
+              child: _buildCalendar(subtitleFontSize),
             ),
           ),
         ],
@@ -155,11 +174,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildUserSelector() {
+  Widget _buildUserSelector(double height) {
     return Container(
-      height: 60.h,
-      padding: EdgeInsets.symmetric(vertical: 8.h),
-      margin: EdgeInsets.symmetric(horizontal: 16.w),
+      height: height,
+      padding: EdgeInsets.symmetric(vertical: height * 0.1),
+      margin: EdgeInsets.symmetric(
+          horizontal: MediaQuery.of(context).size.width * 0.04),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: _friends.length,
@@ -167,8 +187,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
           final friend = _friends[index];
           final isSelected = friend == _currentUser;
           return Container(
-            width: 80.w,
-            padding: EdgeInsets.symmetric(horizontal: 4.w),
+            width: (MediaQuery.of(context).size.width - 32) / 4,
+            padding: EdgeInsets.symmetric(horizontal: 4),
             child: GestureDetector(
               onTap: () {
                 setState(() {
@@ -178,7 +198,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
               },
               child: Container(
                 decoration: BoxDecoration(
-                  color: isSelected ? AppTheme.primaryColor : Colors.transparent,
+                  color:
+                      isSelected ? AppTheme.primaryColor : Colors.transparent,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: isSelected
@@ -194,7 +215,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       color: isSelected
                           ? AppTheme.darkTextColor
                           : AppTheme.lightTextColor,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontSize: MediaQuery.of(context).size.width * 0.035,
                     ),
                   ),
                 ),
@@ -206,43 +229,42 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildEmptyWorkoutSummary() {
+  Widget _buildEmptyWorkoutSummary(double fontSize) {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 20.w),
-      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+      height: MediaQuery.of(context).size.height * 0.08, // 운동 기록이 하나일 때와 동일한 높이
+      padding: EdgeInsets.symmetric(
+        vertical: MediaQuery.of(context).size.height * 0.01,
+        horizontal: MediaQuery.of(context).size.width * 0.05,
+      ),
+      margin: EdgeInsets.symmetric(
+        horizontal: MediaQuery.of(context).size.width * 0.04,
+        vertical: MediaQuery.of(context).size.height * 0.005,
+      ),
       decoration: BoxDecoration(
         color: AppTheme.primaryColor.withOpacity(0.3),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '날짜를 선택해 주세요',
-                  style: TextStyle(
-                    color: AppTheme.darkTextColor,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
+      child: Center(
+        child: Text(
+          '날짜를 선택해 주세요',
+          style: TextStyle(
+            color: AppTheme.darkTextColor,
+            fontSize: fontSize,
+            fontWeight: FontWeight.w500,
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildWorkoutSummary() {
-    if (_selectedDayRecords.isEmpty) return _buildEmptyWorkoutSummary();
+  Widget _buildWorkoutSummary(double fontSize) {
+    if (_selectedDayRecords.isEmpty) return _buildEmptyWorkoutSummary(fontSize);
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          height: 80.h,
+          height: MediaQuery.of(context).size.height * 0.08, // 운동 기록 컨테이너 높이 고정
           child: PageView.builder(
             controller: _pageController,
             itemCount: _selectedDayRecords.length,
@@ -254,8 +276,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
             itemBuilder: (context, index) {
               final record = _selectedDayRecords[index];
               return Container(
-                padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 20.w),
-                margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                padding: EdgeInsets.symmetric(
+                  vertical: MediaQuery.of(context).size.height * 0.01,
+                  horizontal: MediaQuery.of(context).size.width * 0.05,
+                ),
+                margin: EdgeInsets.symmetric(
+                  horizontal: MediaQuery.of(context).size.width * 0.04,
+                  vertical: MediaQuery.of(context).size.height * 0.005,
+                ),
                 decoration: BoxDecoration(
                   color: AppTheme.primaryColor.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(12),
@@ -263,6 +291,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 child: Row(
                   children: [
                     Expanded(
+                      flex: 3,
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -270,50 +299,57 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             '${record.distance.toStringAsFixed(1)}km',
                             style: TextStyle(
                               color: AppTheme.darkTextColor,
-                              fontSize: 14.sp,
+                              fontSize: fontSize,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 12),
-                            child: Text('•', style: TextStyle(color: Colors.grey)),
+                          Padding(
+                            padding: EdgeInsets.symmetric(
+                                horizontal:
+                                    MediaQuery.of(context).size.width * 0.03),
+                            child:
+                                Text('•', style: TextStyle(color: Colors.grey)),
                           ),
                           Text(
                             '${record.duration.inMinutes}분',
                             style: TextStyle(
                               color: AppTheme.darkTextColor,
-                              fontSize: 14.sp,
+                              fontSize: fontSize,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 12),
-                            child: Text('•', style: TextStyle(color: Colors.grey)),
+                          Padding(
+                            padding: EdgeInsets.symmetric(
+                                horizontal:
+                                    MediaQuery.of(context).size.width * 0.03),
+                            child:
+                                Text('•', style: TextStyle(color: Colors.grey)),
                           ),
                           Text(
                             '${record.pace.toStringAsFixed(2)}분/km',
                             style: TextStyle(
                               color: AppTheme.darkTextColor,
-                              fontSize: 14.sp,
+                              fontSize: fontSize,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    Container(
-                      margin: EdgeInsets.only(left: 8.w),
+                    Expanded(
+                      flex: 1,
                       child: TextButton(
                         onPressed: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => WorkoutDetailScreen(record: record),
+                              builder: (context) =>
+                                  WorkoutDetailScreen(record: record),
                             ),
                           );
                         },
                         style: TextButton.styleFrom(
-                          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                          padding: EdgeInsets.zero,
                           minimumSize: Size.zero,
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
@@ -324,14 +360,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               '상세보기',
                               style: TextStyle(
                                 color: AppTheme.darkTextColor,
-                                fontSize: 14.sp,
+                                fontSize: fontSize,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                            SizedBox(width: 4.w),
+                            SizedBox(
+                                width:
+                                    MediaQuery.of(context).size.width * 0.01),
                             Icon(
                               Icons.arrow_forward_ios,
-                              size: 14.sp,
+                              size: fontSize,
                               color: AppTheme.darkTextColor,
                             ),
                           ],
@@ -345,16 +383,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
           ),
         ),
         if (_selectedDayRecords.length > 1)
-          Padding(
-            padding: EdgeInsets.only(top: 8.h),
+          Container(
+            height: MediaQuery.of(context).size.height * 0.04, // 인디케이터 컨테이너 높이
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
                 _selectedDayRecords.length,
                 (index) => Container(
-                  width: 8.w,
-                  height: 8.h,
-                  margin: EdgeInsets.symmetric(horizontal: 4.w),
+                  width: MediaQuery.of(context).size.width * 0.015,
+                  height: MediaQuery.of(context).size.width * 0.015,
+                  margin: EdgeInsets.symmetric(
+                    horizontal: MediaQuery.of(context).size.width * 0.008,
+                  ),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: _currentRecordIndex == index
@@ -369,92 +409,109 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildCalendar() {
-    print('캘린더 빌드 - 현재 운동 기록 수: ${_workoutRecords.length}');
-    return TableCalendar(
-      firstDay: _firstDay,
-      lastDay: _lastDay,
-      focusedDay: _focusedDay,
-      selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-      calendarFormat: CalendarFormat.month,
-      startingDayOfWeek: StartingDayOfWeek.sunday,
-      headerStyle: HeaderStyle(
-        formatButtonVisible: false,
-        titleCentered: true,
-        titleTextFormatter: (date, locale) {
-          return '${date.year}년 ${date.month}월';
-        },
-        leftChevronIcon: Icon(Icons.chevron_left, color: AppTheme.darkTextColor, size: 24.sp),
-        rightChevronIcon: Icon(Icons.chevron_right, color: AppTheme.darkTextColor, size: 24.sp),
-        titleTextStyle: TextStyle(
-          fontSize: 18.sp,
-          fontWeight: FontWeight.bold,
-          color: AppTheme.darkTextColor,
+  Widget _buildCalendar(double fontSize) {
+    return Padding(
+      padding: EdgeInsets.only(top: fontSize * 1.5),
+      child: TableCalendar(
+        firstDay: _firstDay,
+        lastDay: _lastDay,
+        focusedDay: _focusedDay,
+        selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+        calendarFormat: CalendarFormat.month,
+        startingDayOfWeek: StartingDayOfWeek.sunday,
+        headerStyle: HeaderStyle(
+          formatButtonVisible: false,
+          titleCentered: true,
+          titleTextStyle: TextStyle(
+            fontSize: fontSize * 1.1,
+            fontWeight: FontWeight.bold,
+          ),
+          titleTextFormatter: (date, locale) {
+            return '${date.year}년 ${date.month}월';
+          },
+          leftChevronIcon: Icon(
+            Icons.chevron_left,
+            color: AppTheme.darkTextColor,
+            size: fontSize * 1.3,
+          ),
+          rightChevronIcon: Icon(
+            Icons.chevron_right,
+            color: AppTheme.darkTextColor,
+            size: fontSize * 1.3,
+          ),
+          headerPadding: EdgeInsets.symmetric(
+              vertical: MediaQuery.of(context).size.height * 0.005),
         ),
-        headerPadding: EdgeInsets.symmetric(vertical: 6.h),
-      ),
-      calendarStyle: CalendarStyle(
-        outsideDaysVisible: false,
-        weekendTextStyle: TextStyle(color: Colors.red, fontSize: 14.sp),
-        holidayTextStyle: TextStyle(color: Colors.red, fontSize: 14.sp),
-        todayDecoration: BoxDecoration(
-          border: Border.all(color: AppTheme.primaryColor, width: 2),
-          shape: BoxShape.circle,
+        calendarStyle: CalendarStyle(
+          outsideDaysVisible: false,
+          weekendTextStyle: TextStyle(
+            color: Colors.red,
+            fontSize: fontSize * 0.9,
+          ),
+          holidayTextStyle: TextStyle(
+            color: Colors.red,
+            fontSize: fontSize * 0.9,
+          ),
+          todayDecoration: BoxDecoration(
+            border: Border.all(color: AppTheme.primaryColor, width: 1.5),
+            shape: BoxShape.circle,
+          ),
+          todayTextStyle: TextStyle(
+            color: AppTheme.darkTextColor,
+            fontSize: fontSize * 0.9,
+          ),
+          selectedDecoration: BoxDecoration(
+            color: AppTheme.primaryColor,
+            shape: BoxShape.circle,
+          ),
+          selectedTextStyle: TextStyle(
+            color: Colors.white,
+            fontSize: fontSize * 0.9,
+          ),
+          defaultTextStyle: TextStyle(
+            color: AppTheme.darkTextColor,
+            fontSize: fontSize * 0.9,
+          ),
+          markerSize: 0,
+          markersAlignment: AlignmentDirectional.center,
+          cellMargin: EdgeInsets.all(MediaQuery.of(context).size.width * 0.003),
+          cellPadding: EdgeInsets.zero,
+          rangeHighlightScale: 1.0,
         ),
-        todayTextStyle: TextStyle(
-          color: AppTheme.darkTextColor,
-          fontSize: 14.sp,
-        ),
-        selectedDecoration: BoxDecoration(
-          color: AppTheme.primaryColor,
-          shape: BoxShape.circle,
-        ),
-        selectedTextStyle: TextStyle(
-          color: Colors.white,
-          fontSize: 14.sp,
-        ),
-        defaultTextStyle: TextStyle(
-          color: AppTheme.darkTextColor,
-          fontSize: 14.sp,
-        ),
-        markerSize: 0,
-        markersAlignment: AlignmentDirectional.center,
-        cellMargin: EdgeInsets.all(4.w),
-        rangeHighlightScale: 1.0,
-        cellPadding: EdgeInsets.symmetric(vertical: 4.h),
-      ),
-      rowHeight: 60.h,
-      calendarBuilders: CalendarBuilders(
-        defaultBuilder: (context, day, focusedDay) {
-          final hasWorkout = _workoutRecords.any((record) => isSameDay(record.date, day));
+        calendarBuilders: CalendarBuilders(
+          defaultBuilder: (context, day, focusedDay) {
+            final hasWorkout =
+                _workoutRecords.any((record) => isSameDay(record.date, day));
 
-          if (hasWorkout) {
-            return Container(
-              margin: EdgeInsets.all(4.w),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.5),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  '${day.day}',
-                  style: TextStyle(
-                    color: AppTheme.darkTextColor,
-                    fontSize: 14.sp,
+            if (hasWorkout) {
+              return Container(
+                margin:
+                    EdgeInsets.all(MediaQuery.of(context).size.width * 0.003),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withOpacity(0.5),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    '${day.day}',
+                    style: TextStyle(
+                      color: AppTheme.darkTextColor,
+                      fontSize: fontSize * 0.9,
+                    ),
                   ),
                 ),
-              ),
-            );
-          }
-          return null;
+              );
+            }
+            return null;
+          },
+        ),
+        onDaySelected: _onDaySelected,
+        onPageChanged: (focusedDay) {
+          setState(() {
+            _focusedDay = focusedDay;
+          });
         },
       ),
-      onDaySelected: _onDaySelected,
-      onPageChanged: (focusedDay) {
-        setState(() {
-          _focusedDay = focusedDay;
-        });
-      },
     );
   }
 

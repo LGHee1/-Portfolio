@@ -36,7 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
-      debugPrint('로그인 성공: ${userCredential.user?.uid}');
+      debugPrint('로그인 성공: ${userCredential.user?.uid ?? "UID 없음"}');
 
       if (!mounted) return;
 
