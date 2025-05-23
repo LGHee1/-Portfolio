@@ -6,6 +6,8 @@ import 'Auth/login_screen.dart';
 import 'Auth/signup_screen.dart';
 import 'package:provider/provider.dart';
 import 'user_provider.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,15 +49,22 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: '호다닥',
-      theme: ThemeData(
-        fontFamily: 'Pretendard',
-        useMaterial3: true,
-        scaffoldBackgroundColor: Colors.white,
-      ),
-      home: const StartScreen(), // 시작화면
-      debugShowCheckedModeBanner: false,
+    return ScreenUtilInit(
+      designSize: const Size(412, 915),
+      minTextAdapt: true,
+      splitScreenMode: true,
+      builder: (context, child) {
+        return MaterialApp(
+          title: '호다닥',
+          theme: ThemeData(
+            fontFamily: 'Pretendard',
+            useMaterial3: true,
+            scaffoldBackgroundColor: Colors.white,
+          ),
+          home: const ScreenHome(), // 홈 화면으로 변경
+          debugShowCheckedModeBanner: false,
+        );
+      },
     );
   }
 }
