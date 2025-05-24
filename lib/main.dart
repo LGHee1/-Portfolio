@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'Auth/login_screen.dart';
 import 'Auth/signup_screen.dart';
 import 'package:provider/provider.dart';
 import 'user_provider.dart';
 import 'home_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,15 +50,22 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: '호다닥',
-      theme: ThemeData(
-        fontFamily: 'Pretendard',
-        useMaterial3: true,
-        scaffoldBackgroundColor: Colors.white,
-      ),
-      home: const AuthWrapper(), // AuthWrapper로 변경
-      debugShowCheckedModeBanner: false,
+    return ScreenUtilInit(
+      designSize: const Size(412, 915),
+      minTextAdapt: true,
+      splitScreenMode: true,
+      builder: (context, child) {
+        return MaterialApp(
+          title: '호다닥',
+          theme: ThemeData(
+            fontFamily: 'Pretendard',
+            useMaterial3: true,
+            scaffoldBackgroundColor: Colors.white,
+          ),
+          home: const AuthWrapper(),
+          debugShowCheckedModeBanner: false,
+        );
+      },
     );
   }
 }
@@ -105,45 +113,61 @@ class StartScreen extends StatelessWidget {
             ),
           ),
           Positioned(
-            bottom: 60,
-            left: 32,
-            right: 32,
+            bottom: 60.h,
+            left: 32.w,
+            right: 32.w,
             child: Column(
               children: [
                 SizedBox(
-                  width: 320,
-                  height: 70,
+                  width: 320.w,
+                  height: 70.h,
                   child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15.r),
+                      ),
+                      elevation: 4,
+                    ),
                     onPressed: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const LoginScreen()),
                       );
                     },
-                    child: const Text(
+                    child: Text(
                       "로그인",
                       style: TextStyle(
-                        fontSize: 22,
+                        fontSize: 22.sp,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16.h),
                 SizedBox(
-                  width: 320,
-                  height: 70,
+                  width: 320.w,
+                  height: 70.h,
                   child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15.r),
+                      ),
+                      elevation: 4,
+                    ),
                     onPressed: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const SignUpScreen()),
                       );
                     },
-                    child: const Text(
+                    child: Text(
                       "회원가입",
                       style: TextStyle(
-                        fontSize: 22,
+                        fontSize: 22.sp,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

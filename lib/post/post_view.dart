@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import '../Running/workout_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class PostViewPage extends StatefulWidget {
   final Map<String, dynamic> postData;

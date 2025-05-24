@@ -3,6 +3,7 @@ import '../../models/ranking_data.dart';
 import '../../utils/theme.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class UserMedalsScreen extends StatefulWidget {
   final RankingData userData;

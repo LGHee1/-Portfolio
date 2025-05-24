@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class RunningCardSwiper extends StatefulWidget {
   const RunningCardSwiper({super.key});
@@ -89,29 +90,14 @@ class _RunningCardSwiperState extends State<RunningCardSwiper> {
       );
     }
 
-    // 화면 크기 정보 가져오기
-    final screenSize = MediaQuery.of(context).size;
-    final screenWidth = screenSize.width;
-    final screenHeight = screenSize.height;
-    
-    // 동적 크기 계산
-    final cardHeight = screenHeight * 0.5; // 화면 높이의 50%
-    final cardPadding = screenWidth * 0.06; // 화면 너비의 6%
-    final cardMargin = screenWidth * 0.05; // 화면 너비의 5%
-    final textFontSize = screenWidth * 0.04; // 화면 너비의 4%
-    final messageFontSize = screenWidth * 0.045; // 화면 너비의 4.5%
-    final spacing = screenHeight * 0.015; // 화면 높이의 1.5%
-    final dotSize = screenWidth * 0.015; // 화면 너비의 1.5%
-    final activeDotSize = screenWidth * 0.03; // 화면 너비의 3%
-
     if (_workoutData.isEmpty) {
       return Container(
-        height: cardHeight,
-        margin: EdgeInsets.symmetric(horizontal: cardMargin, vertical: spacing),
-        padding: EdgeInsets.all(cardPadding),
+        height: 400.h,
+        margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 24.h),
+        padding: EdgeInsets.all(32.w),
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.8),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(20.r),
           border: Border.all(color: Colors.blueAccent),
           boxShadow: [
             BoxShadow(
@@ -125,7 +111,7 @@ class _RunningCardSwiperState extends State<RunningCardSwiper> {
           child: Text(
             '최근 운동 기록이 없습니다',
             style: TextStyle(
-              fontSize: messageFontSize,
+              fontSize: 20.sp,
               color: Colors.grey[600],
               fontWeight: FontWeight.bold,
             ),
@@ -137,7 +123,7 @@ class _RunningCardSwiperState extends State<RunningCardSwiper> {
     return Column(
       children: [
         SizedBox(
-          height: cardHeight,
+          height: 400.h,
           child: PageView.builder(
             controller: _pageController,
             itemCount: _workoutData.length,
@@ -149,11 +135,11 @@ class _RunningCardSwiperState extends State<RunningCardSwiper> {
             itemBuilder: (context, index) {
               final item = _workoutData[index];
               return Container(
-                margin: EdgeInsets.symmetric(horizontal: cardMargin, vertical: spacing),
-                padding: EdgeInsets.all(cardPadding),
+                margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 24.h),
+                padding: EdgeInsets.all(32.w),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.8),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(20.r),
                   border: Border.all(color: Colors.blueAccent),
                   boxShadow: [
                     BoxShadow(
@@ -166,26 +152,26 @@ class _RunningCardSwiperState extends State<RunningCardSwiper> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _infoText('러닝 거리', item['거리']!, textFontSize),
-                    SizedBox(height: spacing),
-                    _infoText('러닝 시간', item['시간']!, textFontSize),
-                    SizedBox(height: spacing),
-                    _infoText('소모 칼로리', item['칼로리']!, textFontSize),
-                    SizedBox(height: spacing * 1.5),
+                    _infoText('러닝 거리', item['거리']!, 20.sp),
+                    SizedBox(height: 24.h),
+                    _infoText('러닝 시간', item['시간']!, 20.sp),
+                    SizedBox(height: 24.h),
+                    _infoText('소모 칼로리', item['칼로리']!, 20.sp),
+                    SizedBox(height: 32.h),
                     Text(
                       item['메시지']!,
                       style: TextStyle(
                         color: Colors.blue,
-                        fontSize: messageFontSize,
+                        fontSize: 20.sp,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(height: spacing),
+                    SizedBox(height: 16.h),
                     Text(
                       '${item['date'].year}년 ${item['date'].month}월 ${item['date'].day}일',
                       style: TextStyle(
                         color: Colors.grey[600],
-                        fontSize: textFontSize * 0.9,
+                        fontSize: 16.sp,
                       ),
                     ),
                   ],
@@ -194,18 +180,18 @@ class _RunningCardSwiperState extends State<RunningCardSwiper> {
             },
           ),
         ),
-        SizedBox(height: spacing),
+        SizedBox(height: 16.h),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(_workoutData.length, (index) {
             return AnimatedContainer(
               duration: const Duration(milliseconds: 300),
-              width: _currentPage == index ? activeDotSize : dotSize,
-              height: dotSize,
-              margin: EdgeInsets.symmetric(horizontal: dotSize * 0.3),
+              width: _currentPage == index ? 12.w : 6.w,
+              height: 6.h,
+              margin: EdgeInsets.symmetric(horizontal: 4.w),
               decoration: BoxDecoration(
                 color: _currentPage == index ? Colors.black : Colors.grey,
-                borderRadius: BorderRadius.circular(dotSize * 0.5),
+                borderRadius: BorderRadius.circular(3.r),
               ),
             );
           }),
