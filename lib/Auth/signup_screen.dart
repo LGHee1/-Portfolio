@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'login_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -157,12 +156,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
             left: 0,
             right: 0,
             child: Container(
-              padding: EdgeInsets.all(24.w),
-              decoration: BoxDecoration(
+              padding: const EdgeInsets.all(24),
+              decoration: const BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(40.r),
-                  topRight: Radius.circular(40.r),
+                  topLeft: Radius.circular(40),
+                  topRight: Radius.circular(40),
                 ),
               ),
               child: Form(
@@ -175,12 +174,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       controller: _emailController,
                       decoration: InputDecoration(
                         labelText: 'Email',
-                        labelStyle: TextStyle(fontSize: 16.sp),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12.r),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      style: TextStyle(fontSize: 16.sp),
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -192,7 +189,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         return null;
                       },
                     ),
-                    SizedBox(height: 24.h),
+                    const SizedBox(height: 24),
 
                     // Password
                     TextFormField(
@@ -200,12 +197,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       obscureText: true,
                       decoration: InputDecoration(
                         labelText: 'Password',
-                        labelStyle: TextStyle(fontSize: 16.sp),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12.r),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      style: TextStyle(fontSize: 16.sp),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return '비밀번호를 입력해주세요';
@@ -216,19 +211,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         return null;
                       },
                     ),
-                    SizedBox(height: 24.h),
+                    const SizedBox(height: 24),
 
                     // Name
                     TextFormField(
                       controller: _nameController,
                       decoration: InputDecoration(
                         labelText: 'Name',
-                        labelStyle: TextStyle(fontSize: 16.sp),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12.r),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      style: TextStyle(fontSize: 16.sp),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return '이름을 입력해주세요';
@@ -236,19 +229,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         return null;
                       },
                     ),
-                    SizedBox(height: 24.h),
+                    const SizedBox(height: 24),
 
                     // Nickname
                     TextFormField(
                       controller: _nicknameController,
                       decoration: InputDecoration(
                         labelText: 'Nickname',
-                        labelStyle: TextStyle(fontSize: 16.sp),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12.r),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      style: TextStyle(fontSize: 16.sp),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return '닉네임을 입력해주세요';
@@ -259,9 +250,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         return null;
                       },
                     ),
-                    SizedBox(height: 24.h),
+                    const SizedBox(height: 12),
 
-                    // 위치 정보 동의 체크박스
+                    // 위치정보 동의 체크박스
                     Row(
                       children: [
                         Checkbox(
@@ -272,54 +263,27 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             });
                           },
                         ),
-                        Expanded(
-                          child: Text(
-                            '위치 정보 수집에 동의합니다.',
-                            style: TextStyle(fontSize: 14.sp),
-                          ),
-                        ),
+                        const Text("위치 정보에 동의 하시겠습니까?")
                       ],
                     ),
-                    SizedBox(height: 24.h),
 
-                    // 회원가입 버튼
+                    const SizedBox(height: 12),
+
+                    // Sign Up 버튼
                     SizedBox(
                       width: double.infinity,
-                      height: 48.h,
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _signUp,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.black,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12.r),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
                         child: _isLoading
-                            ? CircularProgressIndicator(color: Colors.white, strokeWidth: 2.w)
-                            : Text(
-                                "Sign Up",
-                                style: TextStyle(fontSize: 16.sp),
-                              ),
-                      ),
-                    ),
-                    SizedBox(height: 16.h),
-
-                    // 로그인 화면으로 이동
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(builder: (context) => const LoginScreen()),
-                        );
-                      },
-                      child: Text(
-                        "Already have an account? Sign In",
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          color: Colors.black54,
-                          decoration: TextDecoration.underline,
-                        ),
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : const Text("Sign Up"),
                       ),
                     ),
                   ],

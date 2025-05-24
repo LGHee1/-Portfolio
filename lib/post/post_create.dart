@@ -8,7 +8,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:path/path.dart' as path;
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../Widgets/bottom_bar.dart';
 
 class PostCreatePage extends StatefulWidget {
@@ -48,6 +47,15 @@ class _PostCreatePageState extends State<PostCreatePage> {
       isEditMode = true;
       _titleController.text = widget.postData!['title'] ?? '';
       _contentController.text = widget.postData!['content'] ?? '';
+      
+      // 기존 태그 데이터 로드
+      if (widget.postData!['tags'] != null) {
+        final List<dynamic> tagNames = widget.postData!['tags'];
+        selectedTags = tagNames.map((tagName) => Tag(
+          name: tagName.toString(),
+          category: TagCategory.etc, // 기본 카테고리 설정
+        )).toList();
+      }
     }
     
     if (widget.workoutData != null) {
@@ -367,43 +375,34 @@ class _PostCreatePageState extends State<PostCreatePage> {
         backgroundColor: const Color(0xFFCBF6FF),
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, size: 24.sp),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () {
             Navigator.pop(context);
           },
         ),
-        title: Text(
-          isEditMode ? '게시글 수정' : '게시글 작성',
-          style: TextStyle(fontSize: 18.sp),
-        ),
+        title: Text(isEditMode ? '게시글 수정' : '게시글 작성'),
         actions: [
           if (isEditMode)
             TextButton(
               onPressed: _isLoading ? null : _updatePost,
               child: _isLoading
-                  ? SizedBox(
-                      width: 20.w,
-                      height: 20.h,
-                      child: CircularProgressIndicator(strokeWidth: 2.w),
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text(
-                      '수정',
-                      style: TextStyle(fontSize: 16.sp),
-                    ),
+                  : const Text('수정'),
             )
           else
             TextButton(
               onPressed: _isLoading ? null : _createPost,
               child: _isLoading
-                  ? SizedBox(
-                      width: 20.w,
-                      height: 20.h,
-                      child: CircularProgressIndicator(strokeWidth: 2.w),
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text(
-                      '게시',
-                      style: TextStyle(fontSize: 16.sp),
-                    ),
+                  : const Text('게시'),
             ),
         ],
       ),
@@ -414,31 +413,29 @@ class _PostCreatePageState extends State<PostCreatePage> {
           children: [
             // 제목 입력
             Padding(
-              padding: EdgeInsets.all(16.w),
+              padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     '제목',
                     style: TextStyle(
-                      fontSize: 18.sp,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 8.h),
+                  const SizedBox(height: 8),
                   Container(
                     width: double.infinity,
-                    padding: EdgeInsets.symmetric(horizontal: 12.w),
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(8.r),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: TextField(
                       controller: _titleController,
-                      style: TextStyle(fontSize: 16.sp),
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         hintText: '제목을 입력하세요',
-                        hintStyle: TextStyle(fontSize: 16.sp),
                         border: InputBorder.none,
                       ),
                       maxLines: 1,
@@ -449,40 +446,39 @@ class _PostCreatePageState extends State<PostCreatePage> {
             ),
             // 운동 코스 지도
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     '운동 코스',
                     style: TextStyle(
-                      fontSize: 18.sp,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 8.h),
+                  const SizedBox(height: 8),
                   Container(
                     width: double.infinity,
-                    height: 200.h,
+                    height: 200,
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(8.r),
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.grey.shade300),
                     ),
                     child: _isMapLoading
-                        ? Center(child: CircularProgressIndicator())
+                        ? const Center(child: CircularProgressIndicator())
                         : _routePoints.isEmpty
-                            ? Center(
+                            ? const Center(
                                 child: Text(
                                   '운동 기록이 없습니다',
                                   style: TextStyle(
                                     color: Colors.grey,
-                                    fontSize: 16.sp,
                                   ),
                                 ),
                               )
                             : ClipRRect(
-                                borderRadius: BorderRadius.circular(8.r),
+                                borderRadius: BorderRadius.circular(8),
                                 child: GoogleMap(
                                   initialCameraPosition: CameraPosition(
                                     target: _routePoints.first,
@@ -503,107 +499,134 @@ class _PostCreatePageState extends State<PostCreatePage> {
             ),
             // 태그 목록
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: Wrap(
-                spacing: 8.w,
-                runSpacing: 8.h,
-                children: selectedTags.map((tag) {
-                  return Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 3.h),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE7EFA2),
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          tag.name,
-                          style: TextStyle(fontSize: 16.sp),
-                        ),
-                        SizedBox(width: 4.w),
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              selectedTags.remove(tag);
-                            });
-                          },
-                          child: Icon(Icons.close, size: 16.sp),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => TagListPage(
-                        onTagsSelected: (tags) {
-                          setState(() {
-                            final merged = [...selectedTags, ...tags];
-                            final unique = <Tag>[];
-                            for (final tag in merged) {
-                              if (!unique.any((t) => t.name == tag.name)) {
-                                unique.add(tag);
-                              }
-                            }
-                            selectedTags = unique;
-                          });
-                        },
-                      ),
-                    ),
-                  );
-                },
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 3.h),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE7EFA2),
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: Text(
-                    '태그 추가',
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '태그',
                     style: TextStyle(
-                      fontSize: 16.sp,
-                      color: Colors.black,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(8.0),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (selectedTags.isNotEmpty)
+                          Wrap(
+                            spacing: 8.0,
+                            runSpacing: 8.0,
+                            children: selectedTags.map((tag) {
+                              return Container(
+                                margin: const EdgeInsets.only(right: 8, bottom: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE7EFA2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      tag.name,
+                                      style: const TextStyle(fontSize: 16),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          selectedTags.remove(tag);
+                                        });
+                                      },
+                                      child: const Icon(Icons.close, size: 16),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        GestureDetector(
+                          onTap: () async {
+                            print('태그 추가 버튼 클릭됨');
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => TagListPage(
+                                  onTagsSelected: (tags) {
+                                    print('TagListPage에서 태그 선택됨: $tags');
+                                    setState(() {
+                                      final merged = [...selectedTags, ...tags];
+                                      final unique = <Tag>[];
+                                      for (final tag in merged) {
+                                        if (!unique.any((t) => t.name == tag.name)) {
+                                          unique.add(tag);
+                                        }
+                                      }
+                                      selectedTags = unique;
+                                      print('Selected Tags after update: $selectedTags');
+                                    });
+                                  },
+                                ),
+                              ),
+                            );
+                            print('TagListPage에서 돌아옴, 결과: $result');
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE7EFA2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Text(
+                              '태그 추가',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
             // 내용 입력
             Padding(
-              padding: EdgeInsets.all(16.w),
+              padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     '내용',
                     style: TextStyle(
-                      fontSize: 18.sp,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 8.h),
+                  const SizedBox(height: 8),
                   Container(
                     width: double.infinity,
-                    padding: EdgeInsets.all(12.w),
+                    padding: const EdgeInsets.all(12.0),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(8.r),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: TextField(
                       controller: _contentController,
-                      style: TextStyle(fontSize: 16.sp),
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         hintText: '내용을 입력하세요',
-                        hintStyle: TextStyle(fontSize: 16.sp),
                         border: InputBorder.none,
                       ),
                       maxLines: 5,
@@ -614,18 +637,18 @@ class _PostCreatePageState extends State<PostCreatePage> {
             ),
             // 이미지 등록
             Padding(
-              padding: EdgeInsets.all(16.w),
+              padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     '이미지',
                     style: TextStyle(
-                      fontSize: 18.sp,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 8.h),
+                  const SizedBox(height: 8),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -634,31 +657,28 @@ class _PostCreatePageState extends State<PostCreatePage> {
                         backgroundColor: Colors.black,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8.r),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        padding: EdgeInsets.symmetric(vertical: 16.h),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
-                      child: Text(
-                        '사진 업로드',
-                        style: TextStyle(fontSize: 16.sp),
-                      ),
+                      child: const Text('사진 업로드'),
                     ),
                   ),
                   if (selectedImages.isNotEmpty)
                     Padding(
-                      padding: EdgeInsets.only(top: 12.h),
+                      padding: const EdgeInsets.only(top: 12.0),
                       child: Wrap(
-                        spacing: 8.w,
-                        runSpacing: 8.h,
+                        spacing: 8.0,
+                        runSpacing: 8.0,
                         children: List.generate(selectedImages.length, (index) {
                           return Stack(
                             children: [
                               ClipRRect(
-                                borderRadius: BorderRadius.circular(8.r),
+                                borderRadius: BorderRadius.circular(8),
                                 child: Image.file(
                                   selectedImages[index],
-                                  width: 120.w,
-                                  height: 120.h,
+                                  width: 120,
+                                  height: 120,
                                   fit: BoxFit.cover,
                                 ),
                               ),
@@ -674,9 +694,9 @@ class _PostCreatePageState extends State<PostCreatePage> {
                                   child: Container(
                                     decoration: BoxDecoration(
                                       color: Colors.black54,
-                                      borderRadius: BorderRadius.circular(12.r),
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
-                                    child: Icon(Icons.close, color: Colors.white, size: 18.sp),
+                                    child: const Icon(Icons.close, color: Colors.white, size: 18),
                                   ),
                                 ),
                               ),

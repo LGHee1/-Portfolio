@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../user_provider.dart';
 import '../Auth/login_screen.dart';
 import '../Profile/profile_screen.dart';
 import '../Rank/ranking_screen.dart';
 import '../Calendar/calendar_screen.dart';
 import '../Friends/friends_screen.dart';
-import '../Setting/setting_screen.dart';
 
 class Menu extends StatelessWidget {
   const Menu({super.key});
@@ -43,7 +41,7 @@ class Menu extends StatelessWidget {
         if (context.mounted) {
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (context) => const LoginScreen()),
-            (route) => false,
+                (route) => false,
           );
         }
       } catch (e) {
@@ -55,20 +53,20 @@ class Menu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      width: 240.w,
+      width: 240,
       backgroundColor: const Color(0xFFE5FBFF),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(height: 16.h),
+          const SizedBox(height: 16),
           Padding(
-            padding: EdgeInsets.only(left: 16.w),
+            padding: const EdgeInsets.only(left: 16.0),
             child: IconButton(
-              icon: Icon(Icons.menu, color: Colors.black, size: 24.sp),
+              icon: const Icon(Icons.menu, color: Colors.black),
               onPressed: () => Navigator.of(context).pop(),
             ),
           ),
-          SizedBox(height: 8.h),
+          const SizedBox(height: 8),
           Center(
             child: GestureDetector(
               onTap: () {
@@ -81,31 +79,31 @@ class Menu extends StatelessWidget {
               child: Column(
                 children: [
                   Container(
-                    width: 100.w,
-                    height: 100.h,
+                    width: 100,
+                    height: 100,
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(20.r),
+                      borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: Colors.black26),
                     ),
                     child: Consumer<UserProvider>(
                       builder: (context, userProvider, child) {
                         return ClipRRect(
-                          borderRadius: BorderRadius.circular(20.r),
+                          borderRadius: BorderRadius.circular(20),
                           child: userProvider.photoUrl != null
                               ? Image.network(
-                                  userProvider.photoUrl!,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Icon(Icons.account_circle, size: 36.sp, color: Colors.grey);
-                                  },
-                                )
-                              : Icon(Icons.account_circle, size: 36.sp, color: Colors.grey),
+                            userProvider.photoUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Icon(Icons.account_circle, size: 36, color: Colors.grey);
+                            },
+                          )
+                              : const Icon(Icons.account_circle, size: 36, color: Colors.grey),
                         );
                       },
                     ),
                   ),
-                  SizedBox(height: 8.h),
+                  const SizedBox(height: 8),
                   Consumer<UserProvider>(
                     builder: (context, userProvider, child) {
                       return Row(
@@ -113,13 +111,10 @@ class Menu extends StatelessWidget {
                         children: [
                           Text(
                             userProvider.nickname,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16.sp,
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          SizedBox(width: 4.w),
-                          Icon(Icons.arrow_forward_ios, size: 12.sp, color: Colors.grey),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
                         ],
                       );
                     },
@@ -128,11 +123,11 @@ class Menu extends StatelessWidget {
               ),
             ),
           ),
-          SizedBox(height: 20.h),
+          const SizedBox(height: 20),
           _buildMenuItem(
             context,
             '랭킹',
-            () => Navigator.push(
+                () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => RankingScreen()),
             ),
@@ -140,7 +135,7 @@ class Menu extends StatelessWidget {
           _buildMenuItem(
             context,
             '기록',
-            () => Navigator.push(
+                () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => CalendarScreen()),
             ),
@@ -148,33 +143,26 @@ class Menu extends StatelessWidget {
           _buildMenuItem(
             context,
             '친구관리',
-            () => Navigator.push(
+                () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const FriendsScreen()),
             ),
           ),
           _buildMenuItem(context, '문의', () {}),
-          _buildMenuItem(
-            context,
-            '환경 설정',
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const SettingScreen()),
-            ),
-          ),
+          _buildMenuItem(context, '환경 설정', () {}),
           const Spacer(),
           Padding(
-            padding: EdgeInsets.only(left: 16.w, bottom: 12.h),
+            padding: const EdgeInsets.only(left: 16.0, bottom: 12),
             child: InkWell(
               onTap: () => _signOut(context),
-              child: Row(
+              child: const Row(
                 children: [
-                  Icon(Icons.logout, color: Colors.red, size: 24.sp),
-                  SizedBox(width: 8.w),
+                  Icon(Icons.logout, color: Colors.red),
+                  SizedBox(width: 8),
                   Text(
                     '로그아웃',
                     style: TextStyle(
-                      fontSize: 16.sp,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: Colors.red,
                     ),
@@ -190,7 +178,7 @@ class Menu extends StatelessWidget {
 
   Widget _buildMenuItem(BuildContext context, String title, VoidCallback onTap) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 20.w),
+      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 20),
       child: InkWell(
         onTap: () {
           Navigator.pop(context);
@@ -198,10 +186,7 @@ class Menu extends StatelessWidget {
         },
         child: Text(
           title,
-          style: TextStyle(
-            fontSize: 16.sp,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),
     );

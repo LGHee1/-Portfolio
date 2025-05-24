@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'post_list.dart';
 import '../models/tag.dart';
 import '../Widgets/bottom_bar.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
+import '../Running/workout_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class PostViewPage extends StatefulWidget {
-  const PostViewPage({super.key});
+  final Map<String, dynamic> postData;
+  const PostViewPage({super.key, required this.postData});
 
   @override
   State<PostViewPage> createState() => _PostViewPageState();
@@ -13,6 +18,185 @@ class PostViewPage extends StatefulWidget {
 
 class _PostViewPageState extends State<PostViewPage> {
   int _selectedIndex = 2;
+  GoogleMapController? _mapController;
+  Set<Marker> _markers = {};
+  Set<Polyline> _polylines = {};
+  bool _isLiked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeMarkers();
+    _initializePolylines();
+    _checkIfLiked();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  void _initializeMarkers() {
+    if (widget.postData['routePoints'] != null && (widget.postData['routePoints'] as List).isNotEmpty) {
+      final routePoints = (widget.postData['routePoints'] as List).map((point) => LatLng(
+        point['latitude'] as double,
+        point['longitude'] as double,
+      )).toList();
+
+      // 시작점 마커
+      _markers.add(
+        Marker(
+          markerId: const MarkerId('startLocation'),
+          position: routePoints.first,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          infoWindow: const InfoWindow(title: '시작'),
+        ),
+      );
+
+      // 종료점 마커
+      _markers.add(
+        Marker(
+          markerId: const MarkerId('endLocation'),
+          position: routePoints.last,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          infoWindow: const InfoWindow(title: '종료'),
+        ),
+      );
+    }
+  }
+
+  void _initializePolylines() {
+    if (widget.postData['routePoints'] != null && (widget.postData['routePoints'] as List).isNotEmpty) {
+      final routePoints = (widget.postData['routePoints'] as List).map((point) => LatLng(
+        point['latitude'] as double,
+        point['longitude'] as double,
+      )).toList();
+
+      _polylines.add(
+        Polyline(
+          polylineId: const PolylineId('route'),
+          points: routePoints,
+          color: const Color(0xFF764BA2),
+          width: 8,
+          startCap: Cap.roundCap,
+          endCap: Cap.roundCap,
+          jointType: JointType.round,
+        ),
+      );
+    }
+  }
+
+  void _onMapCreated(GoogleMapController controller) {
+    _mapController = controller;
+    if (widget.postData['routePoints'] != null && (widget.postData['routePoints'] as List).isNotEmpty) {
+      final routePoints = (widget.postData['routePoints'] as List).map((point) => LatLng(
+        point['latitude'] as double,
+        point['longitude'] as double,
+      )).toList();
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _mapController!.animateCamera(
+          CameraUpdate.newLatLngBounds(
+            _getBoundsFromLatLngList(routePoints),
+            50.0,
+          ),
+        );
+      });
+    }
+  }
+
+  LatLngBounds _getBoundsFromLatLngList(List<LatLng> list) {
+    double? minLat, maxLat, minLng, maxLng;
+
+    for (LatLng latLng in list) {
+      if (minLat == null || latLng.latitude < minLat) minLat = latLng.latitude;
+      if (maxLat == null || latLng.latitude > maxLat) maxLat = latLng.latitude;
+      if (minLng == null || latLng.longitude < minLng) minLng = latLng.longitude;
+      if (maxLng == null || latLng.longitude > maxLng) maxLng = latLng.longitude;
+    }
+
+    return LatLngBounds(
+      southwest: LatLng(minLat!, minLng!),
+      northeast: LatLng(maxLat!, maxLng!),
+    );
+  }
+
+  Future<void> _checkIfLiked() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final likedPostDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('LikedPosts')
+          .doc(widget.postData['id'])
+          .get();
+
+      if (mounted) {
+        setState(() {
+          _isLiked = likedPostDoc.exists;
+        });
+      }
+    } catch (e) {
+      print('좋아요 상태 확인 중 오류: $e');
+    }
+  }
+
+  Future<void> _toggleLike() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final postRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.postData['userId'])
+          .collection('Post_Data')
+          .doc(widget.postData['id']);
+
+      final likedPostRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('LikedPosts')
+          .doc(widget.postData['id']);
+
+      if (_isLiked) {
+        // 좋아요 취소
+        await postRef.update({
+          'likes': FieldValue.increment(-1)
+        });
+        await likedPostRef.delete();
+      } else {
+        // 좋아요 추가
+        await postRef.update({
+          'likes': FieldValue.increment(1)
+        });
+        await likedPostRef.set({
+          'timestamp': FieldValue.serverTimestamp()
+        });
+      }
+
+      // 상태 업데이트
+      if (mounted) {
+        setState(() {
+          _isLiked = !_isLiked;
+          widget.postData['likes'] = _isLiked 
+              ? (widget.postData['likes'] ?? 0) + 1 
+              : (widget.postData['likes'] ?? 1) - 1;
+        });
+      }
+    } catch (e) {
+      print('좋아요 토글 중 오류: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('좋아요 처리 중 오류가 발생했습니다. 다시 시도해주세요.'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,47 +207,42 @@ class _PostViewPageState extends State<PostViewPage> {
         backgroundColor: const Color(0xFFCBF6FF),
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, size: 24.sp),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const PostListPage()),
-            );
+            Navigator.pop(context);
           },
         ),
         actions: [
           Padding(
-            padding: EdgeInsets.only(right: 8.w),
+            padding: const EdgeInsets.only(right: 8.0),
             child: ElevatedButton(
               onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return AlertDialog(
-                      title: const Text('코스 적용'),
-                      content: const Text('운동화면에 현재 코스의 동선이 표시됩니다.'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('확인'),
-                        ),
-                      ],
-                    );
-                  },
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => WorkoutScreen(
+                      isRecommendedCourse: true,
+                      recommendedRoutePoints: (widget.postData['routePoints'] as List).map((point) => LatLng(
+                        point['latitude'] as double,
+                        point['longitude'] as double,
+                      )).toList(),
+                      recommendedCourseName: widget.postData['title'] ?? '추천 코스',
+                    ),
+                  ),
                 );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF9800),
                 foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.r),
+                  borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: Text(
+              child: const Text(
                 '적용하기',
                 style: TextStyle(
-                  fontSize: 16.sp,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -77,145 +256,206 @@ class _PostViewPageState extends State<PostViewPage> {
           children: [
             // 지도 영역
             Container(
-              height: 300.h,
-              color: Colors.grey[300],
-              child: Center(
-                child: Text(
-                  'Google Maps will be displayed here',
-                  style: TextStyle(fontSize: 16.sp),
-                ),
+              height: 300,
+              margin: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: widget.postData['routePoints'] != null && (widget.postData['routePoints'] as List).isNotEmpty
+                    ? GoogleMap(
+                        initialCameraPosition: CameraPosition(
+                          target: LatLng(
+                            (widget.postData['routePoints'] as List).first['latitude'],
+                            (widget.postData['routePoints'] as List).first['longitude'],
+                          ),
+                          zoom: 15,
+                        ),
+                        onMapCreated: _onMapCreated,
+                        polylines: _polylines,
+                        markers: _markers,
+                        myLocationEnabled: false,
+                        myLocationButtonEnabled: false,
+                        zoomControlsEnabled: false,
+                        mapToolbarEnabled: false,
+                      )
+                    : Container(
+                        color: Colors.grey[300],
+                        child: const Center(
+                          child: Text('운동 경로가 없습니다'),
+                        ),
+                      ),
               ),
             ),
             // 제목 및 작성자 정보
             Padding(
-              padding: EdgeInsets.all(16.w),
+              padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '게시글 제목',
-                    style: TextStyle(
-                      fontSize: 24.sp,
+                    widget.postData['title'] ?? '제목 없음',
+                    style: const TextStyle(
+                      fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 8.h),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
-                      CircleAvatar(
-                        radius: 16.r,
+                      const CircleAvatar(
+                        radius: 16,
                         backgroundColor: Colors.grey,
-                        child: Icon(Icons.person, size: 24.sp, color: Colors.white),
+                        child: Icon(Icons.person, size: 24, color: Colors.white),
                       ),
-                      SizedBox(width: 8.w),
-                      Text('작성자닉네임', style: TextStyle(fontSize: 16.sp)),
-                      SizedBox(width: 16.w),
-                      Icon(Icons.favorite, size: 24.sp, color: Colors.red),
-                      SizedBox(width: 4.w),
-                      Text('10', style: TextStyle(fontSize: 15.sp)),
+                      const SizedBox(width: 8),
+                      Text(widget.postData['nickname'] ?? '작성자', style: const TextStyle(fontSize: 16)),
+                      const SizedBox(width: 16),
+                      GestureDetector(
+                        onTap: _toggleLike,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            _isLiked ? Icons.favorite : Icons.favorite_border,
+                            size: 24,
+                            color: _isLiked ? Colors.red : Colors.grey,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text('${widget.postData['likes'] ?? 0}', style: const TextStyle(fontSize: 15)),
                     ],
                   ),
                 ],
               ),
             ),
             // 태그 목록
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: Wrap(
-                spacing: 8.w,
-                runSpacing: 8.h,
-                children: [
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 3.h),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE7EFA2),
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                    child: Text('태그1', style: TextStyle(fontSize: 16.sp)),
-                  ),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 3.h),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE7EFA2),
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                    child: Text('태그2', style: TextStyle(fontSize: 16.sp)),
-                  ),
-                ],
+            if (widget.postData['tags'] != null && (widget.postData['tags'] as List).isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Wrap(
+                  spacing: 8.0,
+                  runSpacing: 8.0,
+                  children: (widget.postData['tags'] as List).map<Widget>((tag) =>
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE7EFA2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(tag.toString(), style: const TextStyle(fontSize: 16)),
+                    )
+                  ).toList(),
+                ),
               ),
-            ),
             // 세부 설명
             Padding(
-              padding: EdgeInsets.all(16.w),
+              padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     '세부 설명',
                     style: TextStyle(
-                      fontSize: 18.sp,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 8.h),
+                  const SizedBox(height: 8),
                   Container(
                     width: double.infinity,
-                    padding: EdgeInsets.all(12.w),
+                    padding: const EdgeInsets.all(12.0),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(8.r),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      '여기에 게시글의 세부 설명이 들어갑니다. 코스의 특징이나 주의사항 등을 자세히 설명할 수 있습니다. 좀더 길게 써야할 경우를 확인하는중입니다 한 몇줄은 거 길게 가야하는데 그냥 한단어로 가보게습니다 ㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇ',
-                      style: TextStyle(fontSize: 16.sp),
+                      widget.postData['description'] ?? '설명 없음',
+                      style: const TextStyle(fontSize: 16),
                     ),
                   ),
                 ],
               ),
             ),
             // 이미지 목록
-            Padding(
-              padding: EdgeInsets.all(16.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '등록된 이미지',
-                    style: TextStyle(
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.bold,
+            if (widget.postData['imageUrls'] != null && (widget.postData['imageUrls'] as List).isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '등록된 이미지',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 8.h),
-                  SizedBox(
-                    height: 125.h,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: 3,
-                      itemBuilder: (context, index) {
-                        return Padding(
-                          padding: EdgeInsets.only(right: 8.w),
-                          child: Container(
-                            width: 125.w,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[300],
-                              borderRadius: BorderRadius.circular(8.r),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8.r),
-                              child: Image.network(
-                                'https://picsum.photos/200/200?random=$index',
-                                fit: BoxFit.cover,
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 125,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: (widget.postData['imageUrls'] as List).length,
+                        itemBuilder: (context, index) {
+                          final imageUrl = widget.postData['imageUrls'][index];
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: GestureDetector(
+                              onTap: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (BuildContext context) {
+                                    return _FullScreenImageViewer(
+                                      images: List<String>.from(widget.postData['imageUrls']),
+                                      initialIndex: index,
+                                    );
+                                  },
+                                );
+                              },
+                              child: Container(
+                                width: 125,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[300],
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(
+                                    imageUrl,
+                                    fit: BoxFit.cover,
+                                    width: 125,
+                                    height: 125,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),
@@ -279,8 +519,8 @@ class _FullScreenImageViewerState extends State<_FullScreenImageViewer> {
                   child: Image.network(
                     widget.images[index],
                     fit: BoxFit.contain,
-                    width: 400.w,
-                    height: 600.h,
+                    width: MediaQuery.of(context).size.width,
+                    height: MediaQuery.of(context).size.height,
                   ),
                 );
               },
@@ -291,9 +531,9 @@ class _FullScreenImageViewerState extends State<_FullScreenImageViewer> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(widget.images.length, (index) {
                   return Container(
-                    margin: EdgeInsets.symmetric(horizontal: 4.w),
-                    width: 8.w,
-                    height: 8.h,
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    width: 8,
+                    height: 8,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: _currentIndex == index ? Colors.white : Colors.white38,
@@ -306,7 +546,7 @@ class _FullScreenImageViewerState extends State<_FullScreenImageViewer> {
               top: 40,
               right: 20,
               child: IconButton(
-                icon: Icon(Icons.close, color: Colors.white, size: 30.sp),
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ),

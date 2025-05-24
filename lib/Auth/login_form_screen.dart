@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'login_screen.dart';
 
 class LoginFormScreen extends StatelessWidget {
@@ -9,10 +8,7 @@ class LoginFormScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          '로그인',
-          style: TextStyle(fontSize: 18.sp),
-        ),
+        title: const Text('로그인'),
       ),
       body: Center(
         child: ElevatedButton(
@@ -22,16 +18,7 @@ class LoginFormScreen extends StatelessWidget {
               MaterialPageRoute(builder: (context) => const LoginScreen()),
             );
           },
-          style: ElevatedButton.styleFrom(
-            padding: EdgeInsets.symmetric(horizontal: 32.w, vertical: 16.h),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12.r),
-            ),
-          ),
-          child: Text(
-            '로그인 화면으로 이동',
-            style: TextStyle(fontSize: 16.sp),
-          ),
+          child: const Text('로그인 화면으로 이동'),
         ),
       ),
     );

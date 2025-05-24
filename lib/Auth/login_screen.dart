@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../home_screen.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -36,7 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
-      debugPrint('로그인 성공: ${userCredential.user?.uid ?? "UID 없음"}');
+      debugPrint('로그인 성공: ${userCredential.user?.uid}');
 
       if (!mounted) return;
 
@@ -102,12 +101,12 @@ class _LoginScreenState extends State<LoginScreen> {
             left: 0,
             right: 0,
             child: Container(
-              padding: EdgeInsets.all(24.w),
-              decoration: BoxDecoration(
+              padding: const EdgeInsets.all(24),
+              decoration: const BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(40.r),
-                  topRight: Radius.circular(40.r),
+                  topLeft: Radius.circular(40),
+                  topRight: Radius.circular(40),
                 ),
               ),
               child: Form(
@@ -120,12 +119,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       controller: _emailController,
                       decoration: InputDecoration(
                         labelText: 'Email',
-                        labelStyle: TextStyle(fontSize: 16.sp),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12.r),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      style: TextStyle(fontSize: 16.sp),
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -137,7 +134,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         return null;
                       },
                     ),
-                    SizedBox(height: 16.h),
+                    const SizedBox(height: 12),
 
                     // Password
                     TextFormField(
@@ -145,12 +142,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       obscureText: true,
                       decoration: InputDecoration(
                         labelText: 'Password',
-                        labelStyle: TextStyle(fontSize: 16.sp),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12.r),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      style: TextStyle(fontSize: 16.sp),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return '비밀번호를 입력해주세요';
@@ -158,40 +153,35 @@ class _LoginScreenState extends State<LoginScreen> {
                         return null;
                       },
                     ),
-                    SizedBox(height: 24.h),
+                    const SizedBox(height: 24),
 
                     // 로그인 버튼
                     SizedBox(
                       width: double.infinity,
-                      height: 48.h,
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _signIn,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.black,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12.r),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
                         child: _isLoading
-                            ? CircularProgressIndicator(color: Colors.white, strokeWidth: 2.w)
-                            : Text(
-                                "Sign In",
-                                style: TextStyle(fontSize: 16.sp),
-                              ),
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : const Text("Sign In"),
                       ),
                     ),
-                    SizedBox(height: 16.h),
+                    const SizedBox(height: 12),
 
                     // 비밀번호 찾기 텍스트
                     TextButton(
                       onPressed: () {
                         // 비밀번호 찾기 로직
                       },
-                      child: Text(
+                      child: const Text(
                         "Forgot password?",
                         style: TextStyle(
-                          fontSize: 14.sp,
                           color: Colors.black54,
                           decoration: TextDecoration.underline,
                         ),

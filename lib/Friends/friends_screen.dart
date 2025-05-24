@@ -16,7 +16,15 @@ class FriendsScreen extends StatefulWidget {
 
 class _FriendsScreenState extends State<FriendsScreen> {
   int _selectedIndex = 1;
-  String _selectedTab = 'friends'; // 'friends' 또는 'requests'
+
+  Future<void> showFriendSearchDialog(BuildContext context) async {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return _FriendSearchDialog();
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,23 +78,22 @@ class _FriendsScreenState extends State<FriendsScreen> {
                               width: MediaQuery.of(context).size.width * 0.25,
                               child: ElevatedButton(
                                 onPressed: () {
-                                  setState(() {
-                                    _selectedTab = 'friends';
-                                  });
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const FriendsListPage(),
+                                    ),
+                                  );
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: _selectedTab == 'friends'
-                                      ? const Color(0xFFB6F5E8)
-                                      : Colors.white,
+                                  backgroundColor: const Color(0xFFB6F5E8),
                                   foregroundColor: Colors.black,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 0),
+                                  padding: const EdgeInsets.symmetric(vertical: 0),
                                 ),
-                                child: const Text('친구',
-                                    style: TextStyle(fontSize: 14)),
+                                child: const Text('친구', style: TextStyle(fontSize: 14)),
                               ),
                             ),
                           ),
@@ -97,23 +104,22 @@ class _FriendsScreenState extends State<FriendsScreen> {
                               width: MediaQuery.of(context).size.width * 0.25,
                               child: ElevatedButton(
                                 onPressed: () {
-                                  setState(() {
-                                    _selectedTab = 'requests';
-                                  });
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const FriendsRequestPage(),
+                                    ),
+                                  );
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: _selectedTab == 'requests'
-                                      ? const Color(0xFFB6F5E8)
-                                      : Colors.white,
+                                  backgroundColor: const Color(0xFFB6F5E8),
                                   foregroundColor: Colors.black,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 0),
+                                  padding: const EdgeInsets.symmetric(vertical: 0),
                                 ),
-                                child: const Text('신청',
-                                    style: TextStyle(fontSize: 14)),
+                                child: const Text('신청', style: TextStyle(fontSize: 14)),
                               ),
                             ),
                           ),
@@ -122,21 +128,47 @@ class _FriendsScreenState extends State<FriendsScreen> {
                     ),
                     const SizedBox(width: 10),
                     GestureDetector(
-                      onTap: () {
-                        const FriendsListContent()
-                            .showFriendSearchDialog(context);
-                      },
-                      child: const Icon(Icons.person_add,
-                          size: 32, color: Colors.black54),
+                      onTap: () => showFriendSearchDialog(context),
+                      child: const Icon(Icons.person_add, size: 32, color: Colors.black54),
                     ),
                     const SizedBox(width: 18),
                   ],
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 40),
                 Expanded(
-                  child: _selectedTab == 'friends'
-                      ? const FriendsListContent()
-                      : const FriendsRequestContent(),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        '등록된 호닥 친구가 없습니다.',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        '닉네임으로 친구를 추가해보세요!',
+                        style: TextStyle(fontSize: 16, color: Colors.black54),
+                      ),
+                      const SizedBox(height: 32),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 32),
+                        child: SizedBox(
+                          height: 48,
+                          child: ElevatedButton.icon(
+                            onPressed: () => showFriendSearchDialog(context),
+                            icon: const Icon(Icons.search),
+                            label: const Text('친구 추가하기'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.black,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -151,410 +183,6 @@ class _FriendsScreenState extends State<FriendsScreen> {
           });
         },
       ),
-    );
-  }
-}
-
-class FriendsListContent extends StatelessWidget {
-  const FriendsListContent({super.key});
-
-  Future<void> showFriendSearchDialog(BuildContext context) async {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return _FriendSearchDialog();
-      },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    final friendsStream = FirebaseFirestore.instance
-        .collection('Friends_Data')
-        .doc(currentUser!.uid)
-        .collection('friends')
-        .orderBy('addedAt', descending: true)
-        .snapshots();
-
-    return StreamBuilder<QuerySnapshot>(
-      stream: friendsStream,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text(
-                  '등록된 호닥 친구가 없습니다.',
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  '닉네임으로 친구를 추가해보세요!',
-                  style: TextStyle(fontSize: 16, color: Colors.black54),
-                ),
-                const SizedBox(height: 32),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32),
-                  child: SizedBox(
-                    height: 48,
-                    child: ElevatedButton.icon(
-                      onPressed: () => showFriendSearchDialog(context),
-                      icon: const Icon(Icons.search),
-                      label: const Text('친구 추가하기'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        final friends = snapshot.data!.docs;
-        return ListView.builder(
-          itemCount: friends.length,
-          itemBuilder: (context, index) {
-            final doc = friends[index];
-            final friend = doc.data() as Map<String, dynamic>;
-            return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: ListTile(
-                leading: const CircleAvatar(
-                  child: Icon(Icons.person),
-                ),
-                title: Text(friend['nickname'] ?? '알 수 없음'),
-                subtitle: Text(friend['addedAt']?.toDate().toString() ?? ''),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  onPressed: () async {
-                    final shouldDelete = await showDialog<bool>(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return AlertDialog(
-                          title: const Text('친구 삭제'),
-                          content:
-                              Text('${friend['nickname']}님을 친구 목록에서 삭제하시겠습니까?'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.of(context).pop(false),
-                              child: const Text('취소'),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.of(context).pop(true),
-                              child: const Text('삭제',
-                                  style: TextStyle(color: Colors.red)),
-                            ),
-                          ],
-                        );
-                      },
-                    );
-
-                    if (shouldDelete == true) {
-                      try {
-                        final batch = FirebaseFirestore.instance.batch();
-                        batch.delete(doc.reference);
-                        batch.delete(FirebaseFirestore.instance
-                            .collection('Friends_Data')
-                            .doc(doc.id)
-                            .collection('friends')
-                            .doc(currentUser.uid));
-                        await batch.commit();
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('친구가 삭제되었습니다.')),
-                          );
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text('친구 삭제 중 오류가 발생했습니다.')),
-                          );
-                        }
-                      }
-                    }
-                  },
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-class FriendsRequestContent extends StatefulWidget {
-  const FriendsRequestContent({super.key});
-
-  @override
-  State<FriendsRequestContent> createState() => _FriendsRequestContentState();
-}
-
-class _FriendsRequestContentState extends State<FriendsRequestContent>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        TabBar(
-          controller: _tabController,
-          labelColor: Colors.black,
-          unselectedLabelColor: Colors.black54,
-          indicatorColor: Colors.black,
-          tabs: const [
-            Tab(text: '받은 요청'),
-            Tab(text: '보낸 요청'),
-          ],
-        ),
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _ReceivedRequestsTab(),
-              _SentRequestsTab(),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ReceivedRequestsTab extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final currentUser = FirebaseAuth.instance.currentUser;
-
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('Friends_Data')
-          .doc(currentUser!.uid)
-          .collection('friend_requests')
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final docs = snapshot.data?.docs ?? [];
-
-        if (docs.isEmpty) {
-          return const Center(
-            child: Text(
-              '받은 친구 요청이 없습니다.',
-              style: TextStyle(fontSize: 16, color: Colors.black54),
-            ),
-          );
-        }
-
-        return ListView.builder(
-          itemCount: docs.length,
-          itemBuilder: (context, index) {
-            final doc = docs[index];
-            final data = doc.data() as Map<String, dynamic>;
-            final fromUid = data['from'];
-            final fromNickname = data['fromNickname'];
-
-            return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: ListTile(
-                leading: const CircleAvatar(
-                  child: Icon(Icons.person),
-                ),
-                title: Text(fromNickname ?? '알 수 없음'),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.check, color: Colors.green),
-                      onPressed: () async {
-                        try {
-                          final batch = FirebaseFirestore.instance.batch();
-                          final myUid = currentUser.uid;
-
-                          // 내 친구 목록에 추가
-                          final myFriendRef = FirebaseFirestore.instance
-                              .collection('Friends_Data')
-                              .doc(myUid)
-                              .collection('friends')
-                              .doc(fromUid);
-
-                          batch.set(myFriendRef, {
-                            'nickname': fromNickname,
-                            'addedAt': FieldValue.serverTimestamp(),
-                          });
-
-                          // 상대방 친구 목록에 추가
-                          final theirFriendRef = FirebaseFirestore.instance
-                              .collection('Friends_Data')
-                              .doc(fromUid)
-                              .collection('friends')
-                              .doc(myUid);
-
-                          final myProfile = await FirebaseFirestore.instance
-                              .collection('users')
-                              .doc(myUid)
-                              .get();
-                          final myNickname =
-                              myProfile.data()?['nickname'] ?? '';
-
-                          batch.set(theirFriendRef, {
-                            'nickname': myNickname,
-                            'addedAt': FieldValue.serverTimestamp(),
-                          });
-
-                          // 친구 요청 삭제
-                          batch.delete(doc.reference);
-
-                          await batch.commit();
-
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('친구 요청을 수락했습니다.')),
-                            );
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('친구 요청 수락 중 오류가 발생했습니다.')),
-                            );
-                          }
-                        }
-                      },
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.red),
-                      onPressed: () async {
-                        try {
-                          await doc.reference.delete();
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('친구 요청을 거절했습니다.')),
-                            );
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('친구 요청 거절 중 오류가 발생했습니다.')),
-                            );
-                          }
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-class _SentRequestsTab extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final currentUser = FirebaseAuth.instance.currentUser;
-
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('Friends_Data')
-          .doc(currentUser!.uid)
-          .collection('sent_requests')
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final docs = snapshot.data?.docs ?? [];
-
-        if (docs.isEmpty) {
-          return const Center(
-            child: Text(
-              '보낸 친구 요청이 없습니다.',
-              style: TextStyle(fontSize: 16, color: Colors.black54),
-            ),
-          );
-        }
-
-        return ListView.builder(
-          itemCount: docs.length,
-          itemBuilder: (context, index) {
-            final doc = docs[index];
-            final data = doc.data() as Map<String, dynamic>;
-
-            final toNickname = data['toNickname'] ?? data['to'] ?? '알 수 없음';
-            final status = data['status'] ?? 'pending';
-
-            return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: ListTile(
-                leading: const CircleAvatar(
-                  child: Icon(Icons.person),
-                ),
-                title: Text(toNickname),
-                subtitle: Text(status == 'pending' ? '대기 중' : '수락됨'),
-                trailing: status == 'pending'
-                    ? IconButton(
-                        icon: const Icon(Icons.close, color: Colors.red),
-                        onPressed: () async {
-                          try {
-                            await doc.reference.delete();
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('친구 요청을 취소했습니다.')),
-                              );
-                            }
-                          } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('친구 요청 취소 중 오류가 발생했습니다.')),
-                              );
-                            }
-                          }
-                        },
-                      )
-                    : null,
-              ),
-            );
-          },
-        );
-      },
     );
   }
 }
@@ -663,9 +291,9 @@ class _FriendSearchDialogState extends State<_FriendSearchDialog> {
           .set({
         'from': myUid,
         'fromNickname': (await FirebaseFirestore.instance
-                .collection('users')
-                .doc(myUid)
-                .get())
+            .collection('users')
+            .doc(myUid)
+            .get())
             .data()?['nickname'],
         'to': targetUid,
         'createdAt': FieldValue.serverTimestamp(),
@@ -680,8 +308,7 @@ class _FriendSearchDialogState extends State<_FriendSearchDialog> {
           .doc(targetUid)
           .set({
         'to': targetUid,
-        'toNickname':
-            (_searchResult!.data() as Map<String, dynamic>)['nickname'],
+        'toNickname': (_searchResult!.data() as Map<String, dynamic>)['nickname'],
         'from': myUid,
         'createdAt': FieldValue.serverTimestamp(),
         'status': 'pending'
@@ -733,13 +360,11 @@ class _FriendSearchDialogState extends State<_FriendSearchDialog> {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.check, color: Colors.green),
-                    onPressed: () =>
-                        _handleFriendRequest(requests[index].id, true),
+                    onPressed: () => _handleFriendRequest(requests[index].id, true),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.red),
-                    onPressed: () =>
-                        _handleFriendRequest(requests[index].id, false),
+                    onPressed: () => _handleFriendRequest(requests[index].id, false),
                   ),
                 ],
               ),
@@ -787,9 +412,9 @@ class _FriendSearchDialogState extends State<_FriendSearchDialog> {
             .doc(currentUser.uid)
             .set({
           'nickname': (await FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(currentUser.uid)
-                  .get())
+              .collection('users')
+              .doc(currentUser.uid)
+              .get())
               .data()?['nickname'],
           'addedAt': FieldValue.serverTimestamp(),
         });
@@ -818,6 +443,7 @@ class _FriendSearchDialogState extends State<_FriendSearchDialog> {
           .collection('friend_requests')
           .doc(requestId)
           .delete();
+
     } catch (e) {
       debugPrint('친구 신청 처리 중 오류 발생: $e');
     }
@@ -838,10 +464,7 @@ class _FriendSearchDialogState extends State<_FriendSearchDialog> {
               alignment: Alignment.topLeft,
               child: Padding(
                 padding: const EdgeInsets.only(left: 8.0, bottom: 4),
-                child: Text('친구 추가',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.deepPurple.shade300)),
+                child: Text('친구 추가', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.deepPurple.shade300)),
               ),
             ),
             Row(
@@ -853,8 +476,7 @@ class _FriendSearchDialogState extends State<_FriendSearchDialog> {
                       hintText: '닉네임 입력',
                       isDense: true,
                       border: OutlineInputBorder(),
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     ),
                     onSubmitted: (_) => _searchNickname(),
                   ),
@@ -867,25 +489,20 @@ class _FriendSearchDialogState extends State<_FriendSearchDialog> {
             ),
             const SizedBox(height: 8),
             if (_isSearching) const CircularProgressIndicator(),
-            if (_error.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Text(_error, style: const TextStyle(color: Colors.red)),
-              ),
+            if (_error.isNotEmpty) Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Text(_error, style: const TextStyle(color: Colors.red)),
+            ),
             if (_searchResult != null)
               Card(
                 margin: const EdgeInsets.only(top: 8),
                 child: ListTile(
                   leading: const CircleAvatar(
-                    backgroundImage: AssetImage(
-                        'assets/img/runner_home.png'), // 프로필 이미지 없으면 기본 이미지
+                    backgroundImage: AssetImage('assets/img/runner_home.png'), // 프로필 이미지 없으면 기본 이미지
                   ),
-                  title: Text(((_searchResult?.data()
-                          as Map<String, dynamic>?)?['nickname'] ??
-                      '')),
+                  title: Text(((_searchResult?.data() as Map<String, dynamic>?)?['nickname'] ?? '')),
                   trailing: IconButton(
-                    icon:
-                        const Icon(Icons.add_circle, color: Colors.deepPurple),
+                    icon: const Icon(Icons.add_circle, color: Colors.deepPurple),
                     onPressed: _sendFriendRequest,
                   ),
                 ),
@@ -895,4 +512,4 @@ class _FriendSearchDialogState extends State<_FriendSearchDialog> {
       ),
     );
   }
-}
+} 

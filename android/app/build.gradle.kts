@@ -41,8 +41,6 @@ android {
 }
 
 dependencies {
-    implementation("com.google.gms:google-services:4.3.15")
-    implementation(kotlin("script-runtime"))
     implementation("com.google.firebase:firebase-auth:22.3.1")
     implementation("com.google.firebase:firebase-firestore:24.10.0")
     implementation("com.google.android.gms:play-services-maps:19.2.0")
