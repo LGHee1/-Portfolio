@@ -39,10 +39,8 @@ class _PostListPageState extends State<PostListPage> {
   @override
   void initState() {
     super.initState();
-    print('PostListPage 초기화');
     _getCurrentLocation();
-    _filteredPosts = _posts;
-    _loadLikedPosts(); // 좋아요한 게시글 로드
+    _loadLikedPosts();
   }
 
   @override
@@ -112,16 +110,14 @@ class _PostListPageState extends State<PostListPage> {
         _isLoading = true;
       });
 
-      print('게시글 로딩 시작');
-      
-      // 현재 로그인한 사용자 확인
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         print('사용자가 로그인되어 있지 않습니다');
         return;
       }
+      print('현재 로그인된 사용자: ${user.uid}');
 
-      // 모든 사용자의 Post_Data를 가져오기 위한 쿼리
+      // 모든 사용자의 Post_Data 컬렉션에서 게시글 가져오기
       Query query = FirebaseFirestore.instance
           .collectionGroup('Post_Data')
           .orderBy('createdAt', descending: true)
@@ -131,82 +127,78 @@ class _PostListPageState extends State<PostListPage> {
         query = query.startAfterDocument(_lastDocument!);
       }
 
-      final postsSnapshot = await query.get();
+      print('게시글 쿼리 실행 중...');
+      try {
+        final postsSnapshot = await query.get();
+        print('쿼리 결과: ${postsSnapshot.docs.length}개의 게시글 발견');
 
-      print('가져온 게시글 수: ${postsSnapshot.docs.length}');
-      
-      if (postsSnapshot.docs.isEmpty) {
+        if (postsSnapshot.docs.isEmpty) {
+          print('게시글이 없습니다');
+          setState(() {
+            _hasMore = false;
+            _isLoading = false;
+          });
+          return;
+        }
+
+        _lastDocument = postsSnapshot.docs.last;
+        
+        List<Map<String, dynamic>> newPosts = [];
+        for (var doc in postsSnapshot.docs) {
+          try {
+            final Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+            data['id'] = doc.id;
+            data['userId'] = doc.reference.parent.parent?.id;
+            print('게시글 처리 중: ID=${doc.id}, 작성자=${data['userId']}');
+            
+            if (data['userId'] != null) {
+              final userDoc = await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(data['userId'] as String)
+                  .get();
+              if (userDoc.exists) {
+                data['nickname'] = userDoc.data()?['nickname'] ?? '알 수 없음';
+                print('작성자 닉네임: ${data['nickname']}');
+              }
+            }
+
+            if (data['routePoints'] != null && (data['routePoints'] as List).isNotEmpty) {
+              final firstPoint = (data['routePoints'] as List).first;
+              data['startLatitude'] = firstPoint['latitude'];
+              data['startLongitude'] = firstPoint['longitude'];
+            }
+            
+            newPosts.add(data);
+          } catch (e) {
+            print('게시글 데이터 처리 중 오류 발생: $e');
+          }
+        }
+        
+        print('처리된 게시글 수: ${newPosts.length}');
         setState(() {
-          _hasMore = false;
+          if (isInitial) {
+            _posts = newPosts;
+            _filteredPosts = newPosts;
+          } else {
+            _posts.addAll(newPosts);
+            if (!_isFiltered) {
+              _filteredPosts.addAll(newPosts);
+            }
+          }
+          _hasMore = postsSnapshot.docs.length == (isInitial ? _initialLimit : _loadMoreLimit);
           _isLoading = false;
         });
-        return;
-      }
 
-      _lastDocument = postsSnapshot.docs.last;
-      
-      List<Map<String, dynamic>> newPosts = [];
-      for (var doc in postsSnapshot.docs) {
-        final Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-        data['id'] = doc.id;
-        data['userId'] = doc.reference.parent.parent?.id;
-        
-        // 작성자 정보 가져오기
-        if (data['userId'] != null) {
-          final userDoc = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(data['userId'] as String)
-              .get();
-          if (userDoc.exists) {
-            data['nickname'] = userDoc.data()?['nickname'] ?? '알 수 없음';
-          }
+        if (_currentPosition != null) {
+          _sortPosts();
         }
-
-        // 운동 시작점 좌표 계산
-        if (data['routePoints'] != null && (data['routePoints'] as List).isNotEmpty) {
-          final firstPoint = (data['routePoints'] as List).first;
-          data['startLatitude'] = firstPoint['latitude'];
-          data['startLongitude'] = firstPoint['longitude'];
-        }
-        
-        newPosts.add(data);
-        print('게시글 데이터: $data');
-      }
-
-      // 현재 위치가 있는 경우 거리순으로 정렬
-      if (_currentPosition != null) {
-        newPosts.sort((a, b) {
-          double distanceA = _calculateDistance(
-            _currentPosition!.latitude,
-            _currentPosition!.longitude,
-            a['startLatitude'] ?? 0,
-            a['startLongitude'] ?? 0
-          );
-          double distanceB = _calculateDistance(
-            _currentPosition!.latitude,
-            _currentPosition!.longitude,
-            b['startLatitude'] ?? 0,
-            b['startLongitude'] ?? 0
-          );
-          return distanceA.compareTo(distanceB); // 거리가 가까운 순으로 정렬
+      } catch (e) {
+        print('게시글을 불러오는데 실패했습니다: $e');
+        setState(() {
+          _isLoading = false;
+          _hasMore = false;
         });
       }
-
-      setState(() {
-        if (isInitial) {
-          _posts = newPosts;
-          _filteredPosts = newPosts;
-        } else {
-          _posts.addAll(newPosts);
-          if (!_isFiltered) {
-            _filteredPosts.addAll(newPosts);
-          }
-        }
-        _hasMore = postsSnapshot.docs.length == (isInitial ? _initialLimit : _loadMoreLimit);
-        _isLoading = false;
-      });
-      
-      print('게시글 로딩 완료: ${_posts.length}개');
     } catch (e) {
       print('게시글을 불러오는데 실패했습니다: $e');
       setState(() {

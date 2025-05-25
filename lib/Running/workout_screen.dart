@@ -78,7 +78,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
 
     if (status.isGranted) {
       debugPrint('위치 권한이 허용됨');
-      await _getCurrentLocation();
+      await _checkLocationPermission();
       _startLocationUpdates();
     } else {
       debugPrint('위치 권한이 거부됨');
@@ -90,66 +90,31 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     }
   }
 
-  Future<void> _getCurrentLocation() async {
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      debugPrint('위치 서비스 활성화 상태: $serviceEnabled');
+  Future<void> _checkLocationPermission() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return;
+    }
 
-      if (!serviceEnabled) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('위치 서비스를 활성화해주세요.')),
-          );
-        }
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
         return;
       }
+    }
 
-      LocationPermission permission = await Geolocator.checkPermission();
-      debugPrint('현재 위치 권한 상태: $permission');
+    if (permission == LocationPermission.deniedForever) {
+      return;
+    }
 
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        debugPrint('새로 요청한 위치 권한 상태: $permission');
-
-        if (permission == LocationPermission.denied) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('위치 권한이 거부되었습니다.')),
-            );
-          }
-          return;
-        }
-      }
-
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 10),
-      );
-
-      debugPrint('현재 위치: ${position.latitude}, ${position.longitude}');
-
+    try {
+      Position position = await Geolocator.getCurrentPosition();
       setState(() {
         _currentPosition = position;
       });
-
-      if (_controller.isCompleted) {
-        final GoogleMapController controller = await _controller.future;
-        controller.animateCamera(
-          CameraUpdate.newCameraPosition(
-            CameraPosition(
-              target: LatLng(position.latitude, position.longitude),
-              zoom: 17,
-            ),
-          ),
-        );
-      }
     } catch (e) {
-      debugPrint('위치 가져오기 오류: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('위치를 가져오는 중 오류가 발생했습니다.')),
-        );
-      }
+      print('위치 가져오기 오류: $e');
     }
   }
 
@@ -305,12 +270,12 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   }
 
   Future<void> _saveWorkoutData() async {
-    final user = _auth.currentUser;
-    if (user == null) return;
-
     try {
-      // 운동 데이터 저장
-      await _firestore.collection('users').doc(user.uid).collection('workouts').add({
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final workoutData = {
+        'date': Timestamp.now(),
         'distance': _distance,
         'duration': _duration.inSeconds,
         'pace': _pace,
@@ -323,16 +288,22 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
         'startTime': _workoutStartTime,
         'endTime': DateTime.now(),
         'nickname': _userNickname,
-      });
+      };
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('Running_Data')
+          .add(workoutData);
 
       // 사용자의 총 운동 거리 업데이트
-      await _firestore.collection('users').doc(user.uid).update({
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
         'totalDistance': FieldValue.increment(_distance),
         'totalWorkouts': FieldValue.increment(1),
       });
 
     } catch (e) {
-      debugPrint('운동 데이터 저장 중 오류 발생: $e');
+      print('운동 데이터 저장 중 오류 발생: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('운동 데이터 저장 중 오류가 발생했습니다.')),

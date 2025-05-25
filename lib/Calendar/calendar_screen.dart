@@ -38,7 +38,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     _lastDay = DateTime(_focusedDay.year + 1, 12, 31);
     _selectedDay = _focusedDay;
     _loadFriends();
-    _loadWorkoutData();
   }
 
   @override
@@ -49,12 +48,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Future<void> _loadFriends() async {
     final user = _auth.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      print('사용자가 로그인되어 있지 않습니다');
+      return;
+    }
 
     try {
+      print('현재 사용자 ID: ${user.uid}');
+      
       // 현재 사용자 정보 가져오기
       final userDoc = await _firestore.collection('users').doc(user.uid).get();
       if (userDoc.exists) {
+        print('현재 사용자 닉네임: ${userDoc.data()?['nickname']}');
         setState(() {
           _currentUserId = user.uid;
           _currentUserNickname = userDoc.data()?['nickname'] ?? '나';
@@ -63,11 +68,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
       // 친구 목록 가져오기
       final friendsSnapshot = await _firestore
-          .collection('Friends_Data')
+          .collection('users')
           .doc(user.uid)
-          .collection('friends')
+          .collection('Friends_Data')
           .get();
-
+      
+      print('Friends_Data 컬렉션 문서 수: ${friendsSnapshot.docs.length}');
+      
       List<Map<String, dynamic>> friendsList = [];
       
       // 현재 사용자 추가
@@ -79,20 +86,42 @@ class _CalendarScreenState extends State<CalendarScreen> {
       // 친구들의 정보 가져오기
       for (var friendDoc in friendsSnapshot.docs) {
         final friendId = friendDoc.id;
-        final friendData = await _firestore.collection('users').doc(friendId).get();
-        if (friendData.exists) {
+        final friendData = friendDoc.data();
+        
+        print('친구 ID: $friendId');
+        print('친구 데이터: $friendData');
+        
+        // 친구 상태 확인 -> 상태에 관계 없이 친구로 처리
+        print('친구 발견: $friendId');
+        final friendUserDoc = await _firestore.collection('users').doc(friendId).get();
+        if (friendUserDoc.exists) {
+          print('친구 사용자 정보: ${friendUserDoc.data()}');
           friendsList.add({
             'uid': friendId,
-            'nickname': friendData.data()?['nickname'] ?? '알 수 없음',
+            'nickname': friendUserDoc.data()?['nickname'] ?? '알 수 없음',
           });
+        } else {
+          print('친구 사용자 정보가 존재하지 않음: $friendId');
         }
       }
-
+      
+      print('최종 친구 목록: ${friendsList.map((f) => '${f['nickname']}(${f['uid']})').join(', ')}');
+      
       setState(() {
         _friends = friendsList;
       });
+
+      // 초기 운동 데이터 로드
+      _loadWorkoutData();
     } catch (e) {
       print('친구 목록 로드 중 오류 발생: $e');
+      // 오류 발생 시 현재 사용자만 표시
+      setState(() {
+        _friends = [{
+          'uid': user.uid,
+          'nickname': _currentUserNickname,
+        }];
+      });
     }
   }
 
@@ -102,7 +131,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     if (userId != null) {
       try {
-        print('운동 데이터 로드 시작 - 사용자: $userId');
         final snapshot = await _firestore
             .collection('users')
             .doc(userId)
@@ -110,18 +138,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
             .orderBy('date', descending: true)
             .get();
 
-        print('가져온 운동 데이터 수: ${snapshot.docs.length}');
-
         records.addAll(snapshot.docs.map((doc) {
           final data = doc.data();
-          print('운동 데이터: ${data['date']} - 거리: ${data['distance']}km');
-
           final List<Map<String, double>> routePoints =
           (data['routePoints'] as List)
               .map((point) => Map<String, double>.from(point))
               .toList();
 
-          // Convert pace string (e.g., "5'30"") to double
           String paceStr = data['pace'] as String;
           double pace = 0.0;
           if (paceStr.contains("'")) {
@@ -131,19 +154,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
             pace = minutes + (seconds / 60);
           }
 
-          final record = WorkoutRecord(
+          return WorkoutRecord(
             userId: userId,
             date: (data['date'] as Timestamp).toDate(),
             distance: (data['distance'] as num).toDouble(),
             duration: Duration(seconds: data['duration'] as int),
             pace: pace,
-            cadence: 0, // Not stored in Firebase yet
+            cadence: 0,
             calories: data['calories'] as int,
             routePoints: routePoints,
           );
-
-          print('변환된 운동 기록: ${record.date} - 거리: ${record.distance}km');
-          return record;
         }).toList());
       } catch (e) {
         print('운동 데이터 로드 중 오류 발생: $e');
@@ -224,7 +244,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           final friend = _friends[index];
           final isSelected = friend['uid'] == _currentUserId;
           return Container(
-            width: 80.w,
+            width: (MediaQuery.of(context).size.width - 32) / 4,
             padding: EdgeInsets.symmetric(horizontal: 4.w),
             child: GestureDetector(
               onTap: () {

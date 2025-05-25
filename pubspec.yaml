@@ -26,6 +26,7 @@ dependencies:
   sensors_plus: ^4.0.2
   firebase_app_check: ^0.2.2+7
   flutter_screenutil: ^5.9.0
+  profanity_filter: ^2.0.0
 
 dev_dependencies:
   flutter_test:

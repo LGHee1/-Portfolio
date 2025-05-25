@@ -20,6 +20,7 @@ class _RankingScreenState extends State<RankingScreen> {
   bool _isLoading = true;
   RankingData? _currentUser;
   int _selectedIndex = 1;
+  List<Map<String, dynamic>> _userData = [];
 
   @override
   void initState() {
@@ -28,158 +29,53 @@ class _RankingScreenState extends State<RankingScreen> {
   }
 
   Future<void> _loadRankingData() async {
-    setState(() {
-      _isLoading = true;
-    });
-
     try {
-      final currentUser = _auth.currentUser;
-      if (currentUser == null) {
-        throw Exception('사용자가 로그인되어 있지 않습니다.');
-      }
-
-      // 현재 달의 시작일과 종료일 계산
-      final now = DateTime.now();
-      final firstDayOfMonth = DateTime(now.year, now.month, 1);
-      final lastDayOfMonth = DateTime(now.year, now.month + 1, 0);
-
-      // Timestamp로 변환
-      final firstDayTimestamp = Timestamp.fromDate(firstDayOfMonth);
-      final lastDayTimestamp = Timestamp.fromDate(lastDayOfMonth);
-
-      // 모든 사용자 데이터 가져오기
-      final usersSnapshot = await _firestore.collection('users').get();
-      List<RankingData> rankingList = [];
+      final usersSnapshot = await FirebaseFirestore.instance.collection('users').get();
+      List<Map<String, dynamic>> userData = [];
 
       for (var userDoc in usersSnapshot.docs) {
         try {
-          print('사용자 ${userDoc.id}의 데이터 로드 시작'); // 디버깅용 로그
-
-          // 사용자의 이번 달 운동 데이터 가져오기
-          final workoutSnapshot = await _firestore
+          final workoutSnapshot = await FirebaseFirestore.instance
               .collection('users')
               .doc(userDoc.id)
               .collection('Running_Data')
-              .where('date', isGreaterThanOrEqualTo: firstDayTimestamp)
-              .where('date', isLessThanOrEqualTo: lastDayTimestamp)
               .get();
 
-          print(
-              '사용자 ${userDoc.id}의 운동 기록 수: ${workoutSnapshot.docs.length}'); // 디버깅용 로그
-
-          // 날짜별 거리 합산을 위한 Map
+          double totalDistance = 0;
           Map<String, double> dailyDistances = {};
 
-          // 총 거리 계산 (운동 기록이 없는 경우 0으로 설정)
-          double totalDistance = 0;
-          if (workoutSnapshot.docs.isNotEmpty) {
-            for (var workout in workoutSnapshot.docs) {
-              final workoutData = workout.data();
-              print('운동 기록 데이터: $workoutData'); // 디버깅용 로그
-
-              // date가 Timestamp인지 확인하고 적절히 처리
-              DateTime workoutDate;
-              if (workoutData['date'] is Timestamp) {
-                workoutDate = (workoutData['date'] as Timestamp).toDate();
-              } else if (workoutData['date'] is String) {
-                workoutDate = DateTime.parse(workoutData['date']);
-              } else {
-                print('알 수 없는 날짜 형식: ${workoutData['date']}');
-                continue;
-              }
-
-              // 이번 달 데이터인지 확인
-              if (workoutDate.year == now.year &&
-                  workoutDate.month == now.month) {
-                // 날짜를 문자열 키로 변환 (YYYY-MM-DD 형식)
-                final dateKey =
-                    '${workoutDate.year}-${workoutDate.month.toString().padLeft(2, '0')}-${workoutDate.day.toString().padLeft(2, '0')}';
-
-                // distance 값이 null이 아닌지 확인
-                if (workoutData['distance'] != null) {
-                  final distance = (workoutData['distance'] as num).toDouble();
-                  print('날짜: $dateKey, 거리: $distance'); // 디버깅용 로그
-
-                  // 해당 날짜의 거리를 누적
-                  dailyDistances[dateKey] =
-                      (dailyDistances[dateKey] ?? 0) + distance;
-                }
-              }
-            }
-
-            // 모든 날짜의 거리를 합산
-            totalDistance = dailyDistances.values
-                .fold(0.0, (sum, distance) => sum + distance);
-            print('사용자 ${userDoc.id}의 총 거리: $totalDistance'); // 디버깅용 로그
+          for (var workoutDoc in workoutSnapshot.docs) {
+            final workoutData = workoutDoc.data();
+            final date = (workoutData['date'] as Timestamp).toDate();
+            final dateKey = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+            final distance = (workoutData['distance'] as num).toDouble();
+            
+            totalDistance += distance;
+            dailyDistances[dateKey] = (dailyDistances[dateKey] ?? 0) + distance;
           }
 
-          // 레벨 결정 (운동 기록이 없는 경우 '초급자'로 설정)
-          String level;
-          if (totalDistance >= 60) {
-            level = '상급자';
-          } else if (totalDistance >= 30) {
-            level = '중급자';
-          } else {
-            level = '초급자';
-          }
-
-          final userData = RankingData(
-            userId: userDoc.id,
-            name: userDoc.data()['nickname'] ?? 'Unknown User',
-            totalDistance: totalDistance,
-            level: level,
-            rank: 0,
-            levelRank: 0,
-            monthlyMedals: {},
-          );
-
-          rankingList.add(userData);
-          print(
-              '사용자 ${userDoc.id}의 랭킹 데이터 추가 완료: ${userData.name}, 거리: ${userData.totalDistance}'); // 디버깅용 로그
-
-          // 현재 사용자 데이터 저장
-          if (userDoc.id == currentUser.uid) {
-            _currentUser = userData;
-          }
+          userData.add({
+            'userId': userDoc.id,
+            'nickname': userDoc.data()['nickname'] ?? '알 수 없음',
+            'totalDistance': totalDistance,
+            'dailyDistances': dailyDistances,
+          });
         } catch (e) {
           print('사용자 ${userDoc.id}의 데이터 로드 중 오류: $e');
-          // 오류가 발생한 사용자도 기본 데이터로 추가
-          final userData = RankingData(
-            userId: userDoc.id,
-            name: userDoc.data()['nickname'] ?? 'Unknown User',
-            totalDistance: 0,
-            level: '초급자',
-            rank: 0,
-            levelRank: 0,
-            monthlyMedals: {},
-          );
-          rankingList.add(userData);
-
-          if (userDoc.id == currentUser.uid) {
-            _currentUser = userData;
-          }
         }
       }
 
-      // 전체 순위 계산
-      rankingList.sort((a, b) => b.totalDistance.compareTo(a.totalDistance));
-      for (var i = 0; i < rankingList.length; i++) {
-        rankingList[i] = rankingList[i].copyWith(rank: i + 1);
-      }
-
-      print(
-          '최종 랭킹 데이터: ${rankingList.map((r) => '${r.name}: ${r.totalDistance}km').join(', ')}'); // 디버깅용 로그
-
       setState(() {
-        _rankingData = rankingList;
-        _isLoading = false;
+        _userData = userData;
+        _sortUserData();
       });
     } catch (e) {
       print('랭킹 데이터 로드 중 오류 발생: $e');
-      setState(() {
-        _isLoading = false;
-      });
     }
+  }
+
+  void _sortUserData() {
+    // Implementation of _sortUserData method
   }
 
   @override

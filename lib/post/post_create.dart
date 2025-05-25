@@ -10,6 +10,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../Widgets/bottom_bar.dart';
+import 'package:profanity_filter/profanity_filter.dart';
 
 class PostCreatePage extends StatefulWidget {
   final Map<String, dynamic>? postData;
@@ -40,6 +41,14 @@ class _PostCreatePageState extends State<PostCreatePage> {
   bool _isMapLoading = true;
   int _selectedIndex = 1;
   bool isEditMode = false;
+
+  // 욕설 필터 인스턴스 생성
+  final ProfanityFilter _profanityFilter = ProfanityFilter();
+
+  // 부적절한 단어 체크 함수
+  bool _containsInappropriateWords(String text) {
+    return _profanityFilter.hasProfanity(text);
+  }
 
   @override
   void initState() {
@@ -251,6 +260,18 @@ class _PostCreatePageState extends State<PostCreatePage> {
   }
 
   Future<void> _createPost() async {
+    // 제목과 내용에 부적절한 단어 체크
+    if (_containsInappropriateWords(_titleController.text) || 
+        _containsInappropriateWords(_contentController.text)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('부적절한 단어가 포함되어 있습니다.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
     if (_contentController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('내용을 입력해주세요')),
@@ -319,6 +340,18 @@ class _PostCreatePageState extends State<PostCreatePage> {
   }
 
   Future<void> _updatePost() async {
+    // 제목과 내용에 부적절한 단어 체크
+    if (_containsInappropriateWords(_titleController.text) || 
+        _containsInappropriateWords(_contentController.text)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('부적절한 단어가 포함되어 있습니다.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
     if (widget.postId == null) return;
     setState(() {
       _isLoading = true;
@@ -441,9 +474,21 @@ class _PostCreatePageState extends State<PostCreatePage> {
                         hintText: '제목을 입력하세요',
                         border: InputBorder.none,
                         hintStyle: TextStyle(fontSize: 16.sp),
+                        helperText: '부적절한 단어는 사용할 수 없습니다.',
+                        helperStyle: TextStyle(fontSize: 12.sp, color: Colors.grey),
                       ),
                       style: TextStyle(fontSize: 16.sp),
                       maxLines: 1,
+                      onChanged: (value) {
+                        if (_containsInappropriateWords(value)) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('부적절한 단어가 포함되어 있습니다.'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      },
                     ),
                   ),
                 ],
@@ -628,9 +673,21 @@ class _PostCreatePageState extends State<PostCreatePage> {
                         hintText: '내용을 입력하세요',
                         border: InputBorder.none,
                         hintStyle: TextStyle(fontSize: 16.sp),
+                        helperText: '부적절한 단어는 사용할 수 없습니다.',
+                        helperStyle: TextStyle(fontSize: 12.sp, color: Colors.grey),
                       ),
                       style: TextStyle(fontSize: 16.sp),
                       maxLines: 5,
+                      onChanged: (value) {
+                        if (_containsInappropriateWords(value)) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('부적절한 단어가 포함되어 있습니다.'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      },
                     ),
                   ),
                 ],

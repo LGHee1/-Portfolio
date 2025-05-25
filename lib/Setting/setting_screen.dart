@@ -7,6 +7,7 @@ import '../home_screen.dart';
 import '../post/post_list.dart';
 import '../Running/workout_screen.dart';
 import '../profile/profile_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SettingScreen extends StatefulWidget {
   const SettingScreen({super.key});
@@ -59,8 +60,38 @@ class _SettingScreenState extends State<SettingScreen> {
       try {
         final user = FirebaseAuth.instance.currentUser;
         if (user != null) {
-          // 사용자 데이터 삭제 로직 추가
+          final userId = user.uid;
+          final batch = FirebaseFirestore.instance.batch();
+          final userDoc = FirebaseFirestore.instance.collection('users').doc(userId);
+          
+          // 삭제할 하위 컬렉션 목록
+          final subCollections = [
+            'Friends_Data',
+            'Sent_Requests',
+            'Received_Requests',
+            'Running_Data',
+            'MyProfile',
+            'Post_Data',
+            'LikedPosts'
+          ];
+          
+          // 모든 하위 컬렉션의 문서 삭제
+          for (String collection in subCollections) {
+            final snapshot = await userDoc.collection(collection).get();
+            for (var doc in snapshot.docs) {
+              batch.delete(doc.reference);
+            }
+          }
+          
+          // 사용자 문서 삭제
+          batch.delete(userDoc);
+          
+          // 배치 작업 실행
+          await batch.commit();
+          
+          // Firebase Auth 계정 삭제
           await user.delete();
+          
           if (context.mounted) {
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -68,8 +99,20 @@ class _SettingScreenState extends State<SettingScreen> {
             );
           }
         }
+      } on FirebaseAuthException catch (e) {
+        String errorMessage = '회원 탈퇴 중 오류가 발생했습니다.';
+        if (e.code == 'requires-recent-login') {
+          errorMessage = '보안을 위해 다시 로그인해주세요.';
+        }
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
       } catch (e) {
-        print('회원 탈퇴 중 오류 발생: $e');
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
