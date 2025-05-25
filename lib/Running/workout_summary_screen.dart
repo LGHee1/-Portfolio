@@ -8,6 +8,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../Widgets/menu.dart';
 import '../Post/post_create.dart';
 import '../Widgets/bottom_bar.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class WorkoutSummaryScreen extends StatefulWidget {
   final double distance;
@@ -17,6 +19,8 @@ class WorkoutSummaryScreen extends StatefulWidget {
   final int calories;
   final List<LatLng> routePoints;
   final bool isRecommendedCourse;
+  final List<LatLng> recommendedRoutePoints;
+  final String recommendedCourseName;
 
   const WorkoutSummaryScreen({
     Key? key,
@@ -27,6 +31,8 @@ class WorkoutSummaryScreen extends StatefulWidget {
     required this.calories,
     required this.routePoints,
     this.isRecommendedCourse = false,
+    required this.recommendedRoutePoints,
+    required this.recommendedCourseName,
   }) : super(key: key);
 
   @override
@@ -35,6 +41,7 @@ class WorkoutSummaryScreen extends StatefulWidget {
 
 class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
   bool isLiked = false;
+  int likeCount = 0;
   late GoogleMapController _mapController;
   final Set<Polyline> _polylines = {};
   final Set<Marker> _markers = {};
@@ -49,6 +56,9 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
     _initializeMarkers();
     _determinePosition();
     _loadUserData();
+    if (widget.isRecommendedCourse) {
+      _loadLikeCount();
+    }
   }
 
   void _loadUserData() {
@@ -64,8 +74,8 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
         Polyline(
           polylineId: const PolylineId('route'),
           points: widget.routePoints,
-          color: const Color(0xFF764BA2),
-          width: 8,
+          color: Colors.blue,
+          width: 5,
           startCap: Cap.roundCap,
           endCap: Cap.roundCap,
           jointType: JointType.round,
@@ -160,6 +170,26 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
     return '$hours:$minutes:$seconds';
   }
 
+  Future<void> _loadLikeCount() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final postDoc = await FirebaseFirestore.instance
+          .collection('posts')
+          .where('courseName', isEqualTo: widget.recommendedCourseName)
+          .get();
+
+      if (postDoc.docs.isNotEmpty) {
+        setState(() {
+          likeCount = postDoc.docs.first.data()['likes'] ?? 0;
+        });
+      }
+    } catch (e) {
+      print('좋아요 개수 로드 중 오류 발생: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -186,14 +216,32 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
                       Expanded(
                         flex: 1,
                         child: GoogleMap(
+                          mapType: MapType.normal,
                           initialCameraPosition: CameraPosition(
                             target: widget.routePoints.isNotEmpty
-                                ? widget.routePoints.last
-                                : _initialPosition!,
+                                ? widget.routePoints.first
+                                : const LatLng(37.5665, 126.9780),
                             zoom: 15,
                           ),
                           onMapCreated: _onMapCreated,
-                          polylines: _polylines,
+                          polylines: {
+                            // 실제 달린 경로 (파란색)
+                            if (widget.routePoints.isNotEmpty)
+                              Polyline(
+                                polylineId: const PolylineId('route'),
+                                points: widget.routePoints,
+                                color: Colors.blue,
+                                width: 5,
+                              ),
+                            // 추천 코스 (초록색)
+                            if (widget.isRecommendedCourse && widget.recommendedRoutePoints.isNotEmpty)
+                              Polyline(
+                                polylineId: const PolylineId('recommendedRoute'),
+                                points: widget.recommendedRoutePoints,
+                                color: Colors.green,
+                                width: 5,
+                              ),
+                          },
                           markers: _markers,
                           myLocationEnabled: true,
                           myLocationButtonEnabled: false,
@@ -312,10 +360,23 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
                               ),
                             ],
                           ),
-                          child: Icon(
-                            isLiked ? Icons.favorite : Icons.favorite_border,
-                            color: isLiked ? Colors.red : Colors.grey,
-                            size: 24,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isLiked ? Icons.favorite : Icons.favorite_border,
+                                color: isLiked ? Colors.red : Colors.grey,
+                                size: 24,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                likeCount.toString(),
+                                style: TextStyle(
+                                  color: isLiked ? Colors.red : Colors.grey,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),

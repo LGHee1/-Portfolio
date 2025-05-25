@@ -218,6 +218,9 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                         cadence: _cadence,
                         calories: _calories,
                         routePoints: _routePoints,
+                        isRecommendedCourse: _isRecommendedCourse,
+                        recommendedRoutePoints: _recommendedRoutePoints,
+                        recommendedCourseName: _recommendedCourseName,
                       ),
                     ),
                   );
@@ -379,13 +382,40 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
             },
             myLocationEnabled: true,
             myLocationButtonEnabled: true,
+            markers: {
+              if (_isRecommendedCourse && _recommendedRoutePoints.isNotEmpty) ...[
+                // 추천 코스 시작점 마커
+                Marker(
+                  markerId: const MarkerId('recommendedStart'),
+                  position: _recommendedRoutePoints.first,
+                  icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+                  infoWindow: const InfoWindow(title: '추천 코스 시작점'),
+                ),
+                // 추천 코스 종료점 마커
+                Marker(
+                  markerId: const MarkerId('recommendedEnd'),
+                  position: _recommendedRoutePoints.last,
+                  icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+                  infoWindow: const InfoWindow(title: '추천 코스 종료점'),
+                ),
+              ],
+            },
             polylines: {
+              // 실제 달린 경로 (파란색)
               Polyline(
                 polylineId: const PolylineId('route'),
                 points: _routePoints,
                 color: Colors.blue,
                 width: 5,
               ),
+              // 추천 코스 (초록색)
+              if (_isRecommendedCourse)
+                Polyline(
+                  polylineId: const PolylineId('recommendedRoute'),
+                  points: _recommendedRoutePoints,
+                  color: Colors.green,
+                  width: 5,
+                ),
             },
           ),
 
@@ -393,8 +423,8 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
             Positioned(
               top: 16,
               left: 16,
-              right: 16,
               child: Container(
+                width: 250,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -418,6 +448,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -514,7 +545,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       startPoint.longitude,
     );
 
-    return distance <= 3000; // 3km 이내인지 체크
+    return distance <= 3000; // 500m 이내인지 체크
   }
 
   void _showDistanceWarningDialog() {
@@ -523,7 +554,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('거리 경고'),
-          content: const Text('추천 코스 시작점과 현재 위치가 3km 이상 떨어져 있습니다.\n추천 코스 시작점 근처로 이동해주세요.'),
+          content: const Text('추천 코스 시작점과 현재 위치가 500m 이상 떨어져 있습니다.\n추천 코스 시작점 근처로 이동해주세요.'),
           actions: [
             TextButton(
               onPressed: () {

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'Auth/login_screen.dart';
 import 'Auth/signup_screen.dart';
 import 'package:provider/provider.dart';
 import 'user_provider.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'home_screen.dart';
 
 void main() async {
@@ -54,9 +56,38 @@ class MyApp extends StatelessWidget {
             useMaterial3: true,
             scaffoldBackgroundColor: Colors.white,
           ),
-          home: const StartScreen(), // 홈 화면으로 변경
+          home: const AuthWrapper(), // StartScreen 대신 AuthWrapper 사용
           debugShowCheckedModeBanner: false,
         );
+      },
+    );
+  }
+}
+
+// 로그인 상태를 감지하는 AuthWrapper 클래스 추가
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        
+        if (snapshot.hasData) {
+          // 로그인된 상태에서 사용자 데이터 초기화
+          final userProvider = Provider.of<UserProvider>(context, listen: false);
+          if (!userProvider.isInitialized) {
+            userProvider.initializeUserData();
+          }
+          return const ScreenHome();
+        }
+        
+        // 로그인되지 않은 상태
+        return const StartScreen();
       },
     );
   }

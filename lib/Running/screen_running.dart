@@ -138,7 +138,7 @@ class _RunningScreenState extends State<RunningScreen> {
     _currentLocationMarker = Marker(
       markerId: const MarkerId('currentLocation'),
       position: LatLng(position.latitude, position.longitude),
-      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
       infoWindow: const InfoWindow(title: '현재 위치'),
       rotation: position.heading,
     );
@@ -369,6 +369,9 @@ class _RunningScreenState extends State<RunningScreen> {
           cadence: _cadence,
           calories: _calories,
           routePoints: _routePoints,
+          isRecommendedCourse: widget.isRecommendedCourse,
+          recommendedRoutePoints: widget.recommendedRoutePoints,
+          recommendedCourseName: widget.recommendedCourseName,
         ),
       ),
     );
