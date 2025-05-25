@@ -208,14 +208,14 @@ class _PostViewPageState extends State<PostViewPage> {
         backgroundColor: const Color(0xFFCBF6FF),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: Icon(Icons.arrow_back, size: 24.sp),
           onPressed: () {
             Navigator.pop(context);
           },
         ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 8.0),
+            padding: EdgeInsets.only(right: 8.w),
             child: ElevatedButton(
               onPressed: () {
                 Navigator.pushReplacement(
@@ -235,15 +235,15 @@ class _PostViewPageState extends State<PostViewPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF9800),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(8.r),
                 ),
               ),
-              child: const Text(
+              child: Text(
                 '적용하기',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 16.sp,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -255,12 +255,11 @@ class _PostViewPageState extends State<PostViewPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 지도 영역
             Container(
-              height: 300,
-              margin: const EdgeInsets.all(16),
+              height: 300.h,
+              margin: EdgeInsets.all(16.w),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(16.r),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
@@ -270,7 +269,7 @@ class _PostViewPageState extends State<PostViewPage> {
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(16.r),
                 child: widget.postData['routePoints'] != null && (widget.postData['routePoints'] as List).isNotEmpty
                     ? GoogleMap(
                         initialCameraPosition: CameraPosition(
@@ -290,43 +289,48 @@ class _PostViewPageState extends State<PostViewPage> {
                       )
                     : Container(
                         color: Colors.grey[300],
-                        child: const Center(
-                          child: Text('운동 경로가 없습니다'),
+                        child: Center(
+                          child: Text(
+                            '운동 경로가 없습니다',
+                            style: TextStyle(fontSize: 16.sp),
+                          ),
                         ),
                       ),
               ),
             ),
-            // 제목 및 작성자 정보
             Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: EdgeInsets.all(16.w),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     widget.postData['title'] ?? '제목 없음',
-                    style: const TextStyle(
-                      fontSize: 24,
+                    style: TextStyle(
+                      fontSize: 24.sp,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8.h),
                   Row(
                     children: [
-                      const CircleAvatar(
-                        radius: 16,
+                      CircleAvatar(
+                        radius: 16.r,
                         backgroundColor: Colors.grey,
-                        child: Icon(Icons.person, size: 24, color: Colors.white),
+                        child: Icon(Icons.person, size: 24.sp, color: Colors.white),
                       ),
-                      const SizedBox(width: 8),
-                      Text(widget.postData['nickname'] ?? '작성자', style: const TextStyle(fontSize: 16)),
-                      const SizedBox(width: 16),
+                      SizedBox(width: 8.w),
+                      Text(
+                        widget.postData['nickname'] ?? '작성자',
+                        style: TextStyle(fontSize: 16.sp),
+                      ),
+                      SizedBox(width: 16.w),
                       GestureDetector(
                         onTap: _toggleLike,
                         child: Container(
-                          padding: const EdgeInsets.all(6),
+                          padding: EdgeInsets.all(6.w),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(20.r),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.1),
@@ -337,90 +341,93 @@ class _PostViewPageState extends State<PostViewPage> {
                           ),
                           child: Icon(
                             _isLiked ? Icons.favorite : Icons.favorite_border,
-                            size: 24,
+                            size: 24.sp,
                             color: _isLiked ? Colors.red : Colors.grey,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      Text('${widget.postData['likes'] ?? 0}', style: const TextStyle(fontSize: 15)),
+                      SizedBox(width: 4.w),
+                      Text(
+                        '${widget.postData['likes'] ?? 0}',
+                        style: TextStyle(fontSize: 15.sp),
+                      ),
                     ],
                   ),
                 ],
               ),
             ),
-            // 태그 목록
             if (widget.postData['tags'] != null && (widget.postData['tags'] as List).isNotEmpty)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
                 child: Wrap(
-                  spacing: 8.0,
-                  runSpacing: 8.0,
+                  spacing: 8.w,
+                  runSpacing: 8.h,
                   children: (widget.postData['tags'] as List).map<Widget>((tag) =>
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+                      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 3.h),
                       decoration: BoxDecoration(
                         color: const Color(0xFFE7EFA2),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(12.r),
                       ),
-                      child: Text(tag.toString(), style: const TextStyle(fontSize: 16)),
+                      child: Text(
+                        tag.toString(),
+                        style: TextStyle(fontSize: 16.sp),
+                      ),
                     )
                   ).toList(),
                 ),
               ),
-            // 세부 설명
             Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: EdgeInsets.all(16.w),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     '세부 설명',
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: 18.sp,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8.h),
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(12.0),
+                    padding: EdgeInsets.all(12.w),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(8.r),
                     ),
                     child: Text(
                       widget.postData['description'] ?? '설명 없음',
-                      style: const TextStyle(fontSize: 16),
+                      style: TextStyle(fontSize: 16.sp),
                     ),
                   ),
                 ],
               ),
             ),
-            // 이미지 목록
             if (widget.postData['imageUrls'] != null && (widget.postData['imageUrls'] as List).isNotEmpty)
               Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: EdgeInsets.all(16.w),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       '등록된 이미지',
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 18.sp,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8.h),
                     SizedBox(
-                      height: 125,
+                      height: 125.h,
                       child: ListView.builder(
                         scrollDirection: Axis.horizontal,
                         itemCount: (widget.postData['imageUrls'] as List).length,
                         itemBuilder: (context, index) {
                           final imageUrl = widget.postData['imageUrls'][index];
                           return Padding(
-                            padding: const EdgeInsets.only(right: 8.0),
+                            padding: EdgeInsets.only(right: 8.w),
                             child: GestureDetector(
                               onTap: () {
                                 showDialog(
@@ -434,18 +441,18 @@ class _PostViewPageState extends State<PostViewPage> {
                                 );
                               },
                               child: Container(
-                                width: 125,
+                                width: 125.w,
                                 decoration: BoxDecoration(
                                   color: Colors.grey[300],
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius: BorderRadius.circular(8.r),
                                 ),
                                 child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius: BorderRadius.circular(8.r),
                                   child: Image.network(
                                     imageUrl,
                                     fit: BoxFit.cover,
-                                    width: 125,
-                                    height: 125,
+                                    width: 125.w,
+                                    height: 125.h,
                                   ),
                                 ),
                               ),
@@ -527,14 +534,14 @@ class _FullScreenImageViewerState extends State<_FullScreenImageViewer> {
               },
             ),
             Positioned(
-              bottom: 40,
+              bottom: 40.h,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(widget.images.length, (index) {
                   return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    width: 8,
-                    height: 8,
+                    margin: EdgeInsets.symmetric(horizontal: 4.w),
+                    width: 8.w,
+                    height: 8.w,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: _currentIndex == index ? Colors.white : Colors.white38,
@@ -544,10 +551,10 @@ class _FullScreenImageViewerState extends State<_FullScreenImageViewer> {
               ),
             ),
             Positioned(
-              top: 40,
-              right: 20,
+              top: 40.h,
+              right: 20.w,
               child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                icon: Icon(Icons.close, color: Colors.white, size: 30.sp),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ),

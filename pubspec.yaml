@@ -39,3 +39,4 @@ flutter:
     - assets/img/now_position.png
     - assets/img/runner_background.png
     - assets/img/runner_home.png
+    - assets/data/region_hierarchy.json

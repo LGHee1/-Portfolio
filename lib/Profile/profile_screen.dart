@@ -9,6 +9,8 @@ import '../Widgets/bottom_bar.dart';
 import '../Post/post_create.dart';
 import 'package:provider/provider.dart';
 import '../user_provider.dart';
+import '../Running/workout_screen.dart';
+import '../home_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -299,12 +301,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFFD8F9FF),
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black, size: 24.sp),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
         title: Text(
           '$nickname님의 프로필',
           style: TextStyle(color: Colors.black, fontSize: 18.sp),
@@ -336,11 +332,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           if (isEditing)
                             Positioned(
-                              top: -4.h,
-                              right: -4.w,
-                              child: IconButton(
-                                icon: Icon(Icons.edit, size: 18.sp),
-                                onPressed: _pickImage,
+                              bottom: 2.h,
+                              right: 2.w,
+                              child: Container(
+                                width: 24.w,
+                                height: 24.h,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: IconButton(
+                                  icon: Icon(Icons.edit, size: 18.sp, color: Colors.black87),
+                                  onPressed: _pickImage,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 24,
+                                    minHeight: 24,
+                                  ),
+                                ),
                               ),
                             ),
                         ],
@@ -632,85 +641,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                 ),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: Text('회원 탈퇴', style: TextStyle(fontSize: 17.sp)),
-                            content: Text(
-                              '정말로 탈퇴하시겠습니까?\n탈퇴 시 모든 데이터가 삭제되며 복구할 수 없습니다.',
-                              style: TextStyle(fontSize: 14.sp),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: Text('취소', style: TextStyle(fontSize: 14.sp)),
-                              ),
-                              TextButton(
-                                onPressed: () async {
-                                  Navigator.pop(context);
-                                  try {
-                                    final user = FirebaseAuth.instance.currentUser;
-                                    if (user == null) return;
-
-                                    await FirebaseFirestore.instance
-                                        .collection('users')
-                                        .doc(user.uid)
-                                        .delete();
-
-                                    await user.delete();
-
-                                    if (!mounted) return;
-
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('회원탈퇴가 완료되었습니다.'),
-                                        duration: Duration(seconds: 1),
-                                      ),
-                                    );
-
-                                    Navigator.of(context).pushNamedAndRemoveUntil(
-                                      '/',
-                                      (route) => false,
-                                    );
-                                  } catch (e) {
-                                    print('회원탈퇴 중 오류 발생: $e');
-                                    if (!mounted) return;
-                                    
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('회원탈퇴 중 오류가 발생했습니다: ${e.toString()}'),
-                                      ),
-                                    );
-                                  }
-                                },
-                                child: Text(
-                                  '탈퇴',
-                                  style: TextStyle(
-                                    fontSize: 14.sp,
-                                    color: Colors.red,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                      child: Text(
-                        '회원 탈퇴',
-                        style: TextStyle(
-                          color: Colors.red,
-                          fontSize: 14.sp,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
@@ -726,7 +656,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
       bottomNavigationBar: BottomBar(
         selectedIndex: _selectedIndex,
         onTabSelected: (index) {
-          setState(() => _selectedIndex = index);
+          setState(() {
+            _selectedIndex = index;
+          });
+          if (index == 0) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const WorkoutScreen()),
+            );
+          } else if (index == 1) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const ScreenHome()),
+            );
+          } else if (index == 2) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const ProfileScreen()),
+            );
+          }
         },
       ),
     );

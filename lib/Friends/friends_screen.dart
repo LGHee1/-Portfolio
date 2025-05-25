@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../user_provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../Widgets/bottom_bar.dart';
-import 'friends_list.dart';
-import 'friends_request.dart';
 
 class FriendsScreen extends StatefulWidget {
   const FriendsScreen({super.key});
@@ -38,7 +36,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
             padding: const EdgeInsets.only(right: 12.0),
             child: CircleAvatar(
               backgroundColor: Colors.grey.shade300,
-              child: Icon(Icons.person, color: Colors.black),
+              child: const Icon(Icons.person, color: Colors.black),
             ),
           ),
         ],
@@ -82,8 +80,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 0),
+                                  padding: const EdgeInsets.symmetric(vertical: 0),
                                 ),
                                 child: const Text('친구',
                                     style: TextStyle(fontSize: 14)),
@@ -109,8 +106,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 0),
+                                  padding: const EdgeInsets.symmetric(vertical: 0),
                                 ),
                                 child: const Text('신청',
                                     style: TextStyle(fontSize: 14)),
@@ -123,8 +119,10 @@ class _FriendsScreenState extends State<FriendsScreen> {
                     const SizedBox(width: 10),
                     GestureDetector(
                       onTap: () {
-                        const FriendsListContent()
-                            .showFriendSearchDialog(context);
+                        showDialog(
+                          context: context,
+                          builder: (context) => const _FriendSearchDialog(),
+                        );
                       },
                       child: const Icon(Icons.person_add,
                           size: 32, color: Colors.black54),
@@ -135,8 +133,8 @@ class _FriendsScreenState extends State<FriendsScreen> {
                 const SizedBox(height: 20),
                 Expanded(
                   child: _selectedTab == 'friends'
-                      ? const FriendsListContent()
-                      : const FriendsRequestContent(),
+                      ? const _FriendsListTab()
+                      : const _RequestsTab(),
                 ),
               ],
             ),
@@ -155,36 +153,33 @@ class _FriendsScreenState extends State<FriendsScreen> {
   }
 }
 
-class FriendsListContent extends StatelessWidget {
-  const FriendsListContent({super.key});
-
-  Future<void> showFriendSearchDialog(BuildContext context) async {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return _FriendSearchDialog();
-      },
-    );
-  }
+class _FriendsListTab extends StatelessWidget {
+  const _FriendsListTab();
 
   @override
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
-    final friendsStream = FirebaseFirestore.instance
-        .collection('Friends_Data')
-        .doc(currentUser!.uid)
-        .collection('friends')
-        .orderBy('addedAt', descending: true)
-        .snapshots();
+    if (currentUser == null) return const Center(child: Text('로그인이 필요합니다'));
 
     return StreamBuilder<QuerySnapshot>(
-      stream: friendsStream,
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .collection('Friends_Data')
+          .orderBy('addedAt', descending: true)
+          .snapshots(),
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text('오류가 발생했습니다: ${snapshot.error}'));
+        }
+
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+        final friends = snapshot.data?.docs ?? [];
+
+        if (friends.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -207,7 +202,12 @@ class FriendsListContent extends StatelessWidget {
                   child: SizedBox(
                     height: 48,
                     child: ElevatedButton.icon(
-                      onPressed: () => showFriendSearchDialog(context),
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => const _FriendSearchDialog(),
+                        );
+                      },
                       icon: const Icon(Icons.search),
                       label: const Text('친구 추가하기'),
                       style: ElevatedButton.styleFrom(
@@ -225,7 +225,6 @@ class FriendsListContent extends StatelessWidget {
           );
         }
 
-        final friends = snapshot.data!.docs;
         return ListView.builder(
           itemCount: friends.length,
           itemBuilder: (context, index) {
@@ -248,7 +247,7 @@ class FriendsListContent extends StatelessWidget {
                         return AlertDialog(
                           title: const Text('친구 삭제'),
                           content:
-                              Text('${friend['nickname']}님을 친구 목록에서 삭제하시겠습니까?'),
+                          Text('${friend['nickname']}님을 친구 목록에서 삭제하시겠습니까?'),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.of(context).pop(false),
@@ -269,9 +268,9 @@ class FriendsListContent extends StatelessWidget {
                         final batch = FirebaseFirestore.instance.batch();
                         batch.delete(doc.reference);
                         batch.delete(FirebaseFirestore.instance
-                            .collection('Friends_Data')
+                            .collection('users')
                             .doc(doc.id)
-                            .collection('friends')
+                            .collection('Friends_Data')
                             .doc(currentUser.uid));
                         await batch.commit();
                         if (context.mounted) {
@@ -299,14 +298,14 @@ class FriendsListContent extends StatelessWidget {
   }
 }
 
-class FriendsRequestContent extends StatefulWidget {
-  const FriendsRequestContent({super.key});
+class _RequestsTab extends StatefulWidget {
+  const _RequestsTab();
 
   @override
-  State<FriendsRequestContent> createState() => _FriendsRequestContentState();
+  State<_RequestsTab> createState() => _RequestsTabState();
 }
 
-class _FriendsRequestContentState extends State<FriendsRequestContent>
+class _RequestsTabState extends State<_RequestsTab>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
@@ -339,7 +338,7 @@ class _FriendsRequestContentState extends State<FriendsRequestContent>
         Expanded(
           child: TabBarView(
             controller: _tabController,
-            children: [
+            children: const [
               _ReceivedRequestsTab(),
               _SentRequestsTab(),
             ],
@@ -351,24 +350,31 @@ class _FriendsRequestContentState extends State<FriendsRequestContent>
 }
 
 class _ReceivedRequestsTab extends StatelessWidget {
+  const _ReceivedRequestsTab();
+
   @override
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return const Center(child: Text('로그인이 필요합니다'));
 
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('Friends_Data')
-          .doc(currentUser!.uid)
-          .collection('friend_requests')
+          .collection('users')
+          .doc(currentUser.uid)
+          .collection('Received_Requests')
           .snapshots(),
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text('오류가 발생했습니다: ${snapshot.error}'));
+        }
+
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final docs = snapshot.data?.docs ?? [];
+        final requests = snapshot.data?.docs ?? [];
 
-        if (docs.isEmpty) {
+        if (requests.isEmpty) {
           return const Center(
             child: Text(
               '받은 친구 요청이 없습니다.',
@@ -378,9 +384,9 @@ class _ReceivedRequestsTab extends StatelessWidget {
         }
 
         return ListView.builder(
-          itemCount: docs.length,
+          itemCount: requests.length,
           itemBuilder: (context, index) {
-            final doc = docs[index];
+            final doc = requests[index];
             final data = doc.data() as Map<String, dynamic>;
             final fromUid = data['from'];
             final fromNickname = data['fromNickname'];
@@ -404,9 +410,9 @@ class _ReceivedRequestsTab extends StatelessWidget {
 
                           // 내 친구 목록에 추가
                           final myFriendRef = FirebaseFirestore.instance
-                              .collection('Friends_Data')
+                              .collection('users')
                               .doc(myUid)
-                              .collection('friends')
+                              .collection('Friends_Data')
                               .doc(fromUid);
 
                           batch.set(myFriendRef, {
@@ -416,9 +422,9 @@ class _ReceivedRequestsTab extends StatelessWidget {
 
                           // 상대방 친구 목록에 추가
                           final theirFriendRef = FirebaseFirestore.instance
-                              .collection('Friends_Data')
+                              .collection('users')
                               .doc(fromUid)
-                              .collection('friends')
+                              .collection('Friends_Data')
                               .doc(myUid);
 
                           final myProfile = await FirebaseFirestore.instance
@@ -485,24 +491,31 @@ class _ReceivedRequestsTab extends StatelessWidget {
 }
 
 class _SentRequestsTab extends StatelessWidget {
+  const _SentRequestsTab();
+
   @override
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return const Center(child: Text('로그인이 필요합니다'));
 
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('Friends_Data')
-          .doc(currentUser!.uid)
-          .collection('sent_requests')
+          .collection('users')
+          .doc(currentUser.uid)
+          .collection('Sent_Requests')
           .snapshots(),
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text('오류가 발생했습니다: ${snapshot.error}'));
+        }
+
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final docs = snapshot.data?.docs ?? [];
+        final requests = snapshot.data?.docs ?? [];
 
-        if (docs.isEmpty) {
+        if (requests.isEmpty) {
           return const Center(
             child: Text(
               '보낸 친구 요청이 없습니다.',
@@ -512,9 +525,9 @@ class _SentRequestsTab extends StatelessWidget {
         }
 
         return ListView.builder(
-          itemCount: docs.length,
+          itemCount: requests.length,
           itemBuilder: (context, index) {
-            final doc = docs[index];
+            final doc = requests[index];
             final data = doc.data() as Map<String, dynamic>;
 
             final toNickname = data['toNickname'] ?? data['to'] ?? '알 수 없음';
@@ -530,25 +543,25 @@ class _SentRequestsTab extends StatelessWidget {
                 subtitle: Text(status == 'pending' ? '대기 중' : '수락됨'),
                 trailing: status == 'pending'
                     ? IconButton(
-                        icon: const Icon(Icons.close, color: Colors.red),
-                        onPressed: () async {
-                          try {
-                            await doc.reference.delete();
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('친구 요청을 취소했습니다.')),
-                              );
-                            }
-                          } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('친구 요청 취소 중 오류가 발생했습니다.')),
-                              );
-                            }
-                          }
-                        },
-                      )
+                  icon: const Icon(Icons.close, color: Colors.red),
+                  onPressed: () async {
+                    try {
+                      await doc.reference.delete();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('친구 요청을 취소했습니다.')),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text('친구 요청 취소 중 오류가 발생했습니다.')),
+                        );
+                      }
+                    }
+                  },
+                )
                     : null,
               ),
             );
@@ -560,6 +573,8 @@ class _SentRequestsTab extends StatelessWidget {
 }
 
 class _FriendSearchDialog extends StatefulWidget {
+  const _FriendSearchDialog();
+
   @override
   State<_FriendSearchDialog> createState() => _FriendSearchDialogState();
 }
@@ -626,9 +641,9 @@ class _FriendSearchDialogState extends State<_FriendSearchDialog> {
     try {
       // 이미 친구인지 확인
       final friendCheck = await FirebaseFirestore.instance
-          .collection('Friends_Data')
+          .collection('users')
           .doc(myUid)
-          .collection('friends')
+          .collection('Friends_Data')
           .doc(targetUid)
           .get();
 
@@ -641,9 +656,9 @@ class _FriendSearchDialogState extends State<_FriendSearchDialog> {
 
       // 이미 신청한 적이 있는지 확인 (보낸 요청에서 확인)
       final sentRequestCheck = await FirebaseFirestore.instance
-          .collection('Friends_Data')
+          .collection('users')
           .doc(myUid)
-          .collection('sent_requests')
+          .collection('Sent_Requests')
           .doc(targetUid)
           .get();
 
@@ -656,16 +671,16 @@ class _FriendSearchDialogState extends State<_FriendSearchDialog> {
 
       // 상대방의 받은 요청 컬렉션에 저장
       await FirebaseFirestore.instance
-          .collection('Friends_Data')
+          .collection('users')
           .doc(targetUid)
-          .collection('friend_requests')
+          .collection('Received_Requests')
           .doc(myUid)
           .set({
         'from': myUid,
         'fromNickname': (await FirebaseFirestore.instance
-                .collection('users')
-                .doc(myUid)
-                .get())
+            .collection('users')
+            .doc(myUid)
+            .get())
             .data()?['nickname'],
         'to': targetUid,
         'createdAt': FieldValue.serverTimestamp(),
@@ -674,14 +689,14 @@ class _FriendSearchDialogState extends State<_FriendSearchDialog> {
 
       // 내 보낸 요청 컬렉션에도 저장
       await FirebaseFirestore.instance
-          .collection('Friends_Data')
+          .collection('users')
           .doc(myUid)
-          .collection('sent_requests')
+          .collection('Sent_Requests')
           .doc(targetUid)
           .set({
         'to': targetUid,
         'toNickname':
-            (_searchResult!.data() as Map<String, dynamic>)['nickname'],
+        (_searchResult!.data() as Map<String, dynamic>)['nickname'],
         'from': myUid,
         'createdAt': FieldValue.serverTimestamp(),
         'status': 'pending'
@@ -694,132 +709,6 @@ class _FriendSearchDialogState extends State<_FriendSearchDialog> {
       setState(() {
         _error = '친구신청 중 오류가 발생했습니다.';
       });
-    }
-  }
-
-  // 친구 신청 목록을 보여주는 위젯
-  Widget _buildFriendRequests() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('Friends_Data')
-          .doc(FirebaseAuth.instance.currentUser?.uid)
-          .collection('friend_requests')
-          .where('status', isEqualTo: 'pending')
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return const Text('오류가 발생했습니다.');
-        }
-
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const CircularProgressIndicator();
-        }
-
-        final requests = snapshot.data?.docs ?? [];
-
-        if (requests.isEmpty) {
-          return const Text('받은 친구신청이 없습니다.');
-        }
-
-        return ListView.builder(
-          shrinkWrap: true,
-          itemCount: requests.length,
-          itemBuilder: (context, index) {
-            final request = requests[index].data() as Map<String, dynamic>;
-            return ListTile(
-              title: Text(request['fromNickname'] ?? '알 수 없음'),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.check, color: Colors.green),
-                    onPressed: () =>
-                        _handleFriendRequest(requests[index].id, true),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.red),
-                    onPressed: () =>
-                        _handleFriendRequest(requests[index].id, false),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  // 친구 신청 수락/거절 처리
-  Future<void> _handleFriendRequest(String requestId, bool accept) async {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) return;
-
-    try {
-      final requestDoc = await FirebaseFirestore.instance
-          .collection('Friends_Data')
-          .doc(currentUser.uid)
-          .collection('friend_requests')
-          .doc(requestId)
-          .get();
-
-      if (!requestDoc.exists) return;
-
-      final requestData = requestDoc.data() as Map<String, dynamic>;
-      final fromUid = requestData['from'];
-
-      if (accept) {
-        // 양방향 친구 관계 생성
-        await FirebaseFirestore.instance
-            .collection('Friends_Data')
-            .doc(currentUser.uid)
-            .collection('friends')
-            .doc(fromUid)
-            .set({
-          'nickname': requestData['fromNickname'],
-          'addedAt': FieldValue.serverTimestamp(),
-        });
-
-        await FirebaseFirestore.instance
-            .collection('Friends_Data')
-            .doc(fromUid)
-            .collection('friends')
-            .doc(currentUser.uid)
-            .set({
-          'nickname': (await FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(currentUser.uid)
-                  .get())
-              .data()?['nickname'],
-          'addedAt': FieldValue.serverTimestamp(),
-        });
-
-        // 보낸 요청의 상태를 'accepted'로 업데이트
-        await FirebaseFirestore.instance
-            .collection('Friends_Data')
-            .doc(fromUid)
-            .collection('sent_requests')
-            .doc(currentUser.uid)
-            .update({'status': 'accepted'});
-      } else {
-        // 거절된 경우 보낸 요청 삭제
-        await FirebaseFirestore.instance
-            .collection('Friends_Data')
-            .doc(fromUid)
-            .collection('sent_requests')
-            .doc(currentUser.uid)
-            .delete();
-      }
-
-      // 받은 요청 문서 삭제
-      await FirebaseFirestore.instance
-          .collection('Friends_Data')
-          .doc(currentUser.uid)
-          .collection('friend_requests')
-          .doc(requestId)
-          .delete();
-    } catch (e) {
-      debugPrint('친구 신청 처리 중 오류 발생: $e');
     }
   }
 
@@ -854,7 +743,7 @@ class _FriendSearchDialogState extends State<_FriendSearchDialog> {
                       isDense: true,
                       border: OutlineInputBorder(),
                       contentPadding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     ),
                     onSubmitted: (_) => _searchNickname(),
                   ),
@@ -881,11 +770,11 @@ class _FriendSearchDialogState extends State<_FriendSearchDialog> {
                         'assets/img/runner_home.png'), // 프로필 이미지 없으면 기본 이미지
                   ),
                   title: Text(((_searchResult?.data()
-                          as Map<String, dynamic>?)?['nickname'] ??
+                  as Map<String, dynamic>?)?['nickname'] ??
                       '')),
                   trailing: IconButton(
                     icon:
-                        const Icon(Icons.add_circle, color: Colors.deepPurple),
+                    const Icon(Icons.add_circle, color: Colors.deepPurple),
                     onPressed: _sendFriendRequest,
                   ),
                 ),
@@ -894,5 +783,11 @@ class _FriendSearchDialogState extends State<_FriendSearchDialog> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 }

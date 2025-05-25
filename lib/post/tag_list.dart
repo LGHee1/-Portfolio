@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/tag.dart';
+import 'dart:convert';
+import 'package:flutter/services.dart';
 
 class TagListPage extends StatefulWidget {
   final Function(List<Tag>) onTagsSelected;
@@ -23,12 +25,200 @@ class _TagListPageState extends State<TagListPage> {
     TagCategory.surrounding: true,
     TagCategory.etc: true,
   };
-  String? selectedRegion;  // 선택된 지역을 저장
+  
+  // 지역 선택 관련 상태
+  RegionTag? selectedLevel1;  // 시/도
+  RegionTag? selectedLevel2;  // 시/군/구
+  RegionTag? selectedLevel3;  // 읍/면/동
+  List<RegionTag>? level1Regions;  // 시/도 목록
+  List<RegionTag>? level2Regions;  // 시/군/구 목록
+  List<RegionTag>? level3Regions;  // 읍/면/동 목록
 
   @override
   void initState() {
     super.initState();
     selectedTags = List.from(widget.initialSelectedTags);
+    print('TagListPage 초기화');
+    _loadRegionData();
+  }
+
+  Future<void> _loadRegionData() async {
+    try {
+      print('지역 데이터 로드 시작');
+      final String jsonString = await rootBundle.loadString('assets/data/region_hierarchy.json');
+      print('JSON 문자열 로드 완료: ${jsonString.substring(0, 100)}...'); // 처음 100자만 출력
+      
+      final List<dynamic> regionsJson = json.decode(jsonString);
+      print('파싱된 지역 데이터 수: ${regionsJson.length}');
+      
+      setState(() {
+        level1Regions = regionsJson.map((json) => RegionTag.fromJson(json as Map<String, dynamic>)).toList();
+        print('시/도 목록 생성 완료: ${level1Regions!.length}개');
+      });
+    } catch (e, stackTrace) {
+      print('지역 데이터 로드 실패: $e');
+      print('스택 트레이스: $stackTrace');
+      setState(() {
+        level1Regions = [];
+      });
+    }
+  }
+
+  void _selectLevel1(RegionTag region) {
+    setState(() {
+      selectedLevel1 = region;
+      selectedLevel2 = null;
+      selectedLevel3 = null;
+      level2Regions = region.subRegions;
+      level3Regions = null;
+    });
+  }
+
+  void _selectLevel2(RegionTag region) {
+    setState(() {
+      selectedLevel2 = region;
+      selectedLevel3 = null;
+      level3Regions = region.subRegions;
+    });
+  }
+
+  void _selectLevel3(RegionTag region) {
+    setState(() {
+      selectedLevel3 = region;
+      // 선택된 지역을 태그로 추가
+      if (!selectedTags.contains(region)) {
+        selectedTags.add(region);
+      }
+    });
+  }
+
+  Widget _buildRegionSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 시/도 선택
+        const Padding(
+          padding: EdgeInsets.all(8.0),
+        ),
+        Container(
+          height: 50,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: level1Regions?.length ?? 0,
+            itemBuilder: (context, index) {
+              if (level1Regions == null) return Container();
+              final region = level1Regions![index];
+              final isSelected = selectedLevel1?.code == region.code;
+              return GestureDetector(
+                onTap: () => _selectLevel1(region),
+                child: Container(
+                  width: 100,
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(
+                    color: isSelected ? const Color(0xFFE7EFA2) : Colors.white,
+                    border: Border.all(
+                      color: isSelected ? const Color(0xFFE7EFA2) : Colors.grey,
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Center(
+                    child: Text(
+                      region.name,
+                      style: TextStyle(
+                        color: isSelected ? Colors.black : Colors.grey,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+
+        // 시/군/구 선택
+        if (level2Regions != null && level2Regions!.isNotEmpty) ...[
+          const Padding(
+            padding: EdgeInsets.all(8.0),
+          ),
+          Container(
+            height: 50,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: level2Regions!.length,
+              itemBuilder: (context, index) {
+                final region = level2Regions![index];
+                final isSelected = selectedLevel2?.code == region.code;
+                return GestureDetector(
+                  onTap: () => _selectLevel2(region),
+                  child: Container(
+                    width: 100,
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: isSelected ? const Color(0xFFE7EFA2) : Colors.white,
+                      border: Border.all(
+                        color: isSelected ? const Color(0xFFE7EFA2) : Colors.grey,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Text(
+                        region.name,
+                        style: TextStyle(
+                          color: isSelected ? Colors.black : Colors.grey,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+
+        // 읍/면/동 선택
+        if (level3Regions != null && level3Regions!.isNotEmpty) ...[
+          const Padding(
+            padding: EdgeInsets.all(8.0),
+          ),
+          Container(
+            height: 50,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: level3Regions!.length,
+              itemBuilder: (context, index) {
+                final region = level3Regions![index];
+                final isSelected = selectedLevel3?.code == region.code;
+                return GestureDetector(
+                  onTap: () => _selectLevel3(region),
+                  child: Container(
+                    width: 100,
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: isSelected ? const Color(0xFFE7EFA2) : Colors.white,
+                      border: Border.all(
+                        color: isSelected ? const Color(0xFFE7EFA2) : Colors.grey,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Text(
+                        region.name,
+                        style: TextStyle(
+                          color: isSelected ? Colors.black : Colors.grey,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ],
+    );
   }
 
   @override
@@ -50,7 +240,6 @@ class _TagListPageState extends State<TagListPage> {
             padding: const EdgeInsets.only(right: 8.0),
             child: ElevatedButton(
               onPressed: () {
-                print('TagListPage - 추가하기 버튼 클릭됨, 선택된 태그: $selectedTags');
                 widget.onTagsSelected(selectedTags);
                 Navigator.pop(context, selectedTags);
               },
@@ -75,11 +264,6 @@ class _TagListPageState extends State<TagListPage> {
       ),
       body: Column(
         children: [
-          const Divider(
-            thickness: 1,
-            color: Colors.grey,
-            height: 1,
-          ),
           // 선택된 태그들을 보여주는 부분
           Container(
             height: 60,
@@ -135,7 +319,6 @@ class _TagListPageState extends State<TagListPage> {
               ],
             ),
           ),
-          // 카테고리별 태그 목록
           Expanded(
             child: ListView.builder(
               itemCount: TagCategory.values.length,
@@ -146,11 +329,6 @@ class _TagListPageState extends State<TagListPage> {
                     .toList();
 
                 if (category == TagCategory.location) {
-                  // 지역 카테고리인 경우 가로 스크롤로 표시
-                  final regions = categoryTags
-                      .where((tag) => tag.parentRegion == null)
-                      .toList();
-                  
                   return Container(
                     decoration: const BoxDecoration(
                       color: Color(0xFFACE3FF),
@@ -170,93 +348,21 @@ class _TagListPageState extends State<TagListPage> {
                         ),
                       ),
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              height: 50,
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: regions.length,
-                                itemBuilder: (context, index) {
-                                  final region = regions[index];
-                                  final isSelected = selectedRegion == region.name;
-                                  return GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        selectedRegion = isSelected ? null : region.name;
-                                      });
-                                    },
-                                    child: Container(
-                                      width: 80,
-                                      decoration: BoxDecoration(
-                                        color: isSelected ? const Color(0xFFE7EFA2) : Colors.white,
-                                        border: Border.all(
-                                          color: isSelected ? const Color(0xFFE7EFA2) : Colors.grey,
-                                        ),
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          region.name,
-                                          style: TextStyle(
-                                            color: isSelected ? Colors.black : Colors.grey,
-                                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                            if (selectedRegion != null) ...[
-                              Container(
-                                color: const Color(0xFFCBF6FF),
-                                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 0, 16.0),
-                                width: double.infinity,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Wrap(
-                                      spacing: 8.0,
-                                      runSpacing: 8.0,
-                                      children: categoryTags
-                                          .where((tag) => tag.parentRegion == selectedRegion)
-                                          .map((tag) {
-                                        final isSelected = selectedTags.contains(tag);
-                                        return GestureDetector(
-                                          onTap: () {
-                                            setState(() {
-                                              if (isSelected) {
-                                                selectedTags.remove(tag);
-                                              } else {
-                                                selectedTags.add(tag);
-                                              }
-                                            });
-                                          },
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: isSelected ? const Color(0xFFE7EFA2) : const Color(0xFFE7EFA2),
-                                              borderRadius: BorderRadius.circular(12),
-                                            ),
-                                            child: Text(tag.name, style: const TextStyle(fontSize: 14)),
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                        Container(
+                          color: const Color(0xFFCBF6FF),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildRegionSelector(),
                             ],
-                          ],
+                          ),
                         ),
                       ],
                     ),
                   );
                 }
 
-                // 지역외 카테고리
+                // 지역 외 카테고리
                 return Container(
                   decoration: const BoxDecoration(
                     color: Color(0xFFACE3FF),

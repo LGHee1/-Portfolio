@@ -386,20 +386,6 @@ class _PostListPageState extends State<PostListPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 화면 크기 정보 가져오기
-    final screenSize = MediaQuery.of(context).size;
-    final screenWidth = screenSize.width;
-    final screenHeight = screenSize.height;
-    
-    // 동적 크기 계산
-    final mapHeight = screenHeight * 0.35; // 화면 높이의 35%
-    final searchBarHeight = screenHeight * 0.06; // 화면 높이의 6%
-    final padding = screenWidth * 0.04; // 화면 너비의 4%
-    final titleFontSize = screenWidth * 0.05; // 화면 너비의 5%
-    final subtitleFontSize = screenWidth * 0.035; // 화면 너비의 3.5%
-    final tagFontSize = screenWidth * 0.035; // 화면 너비의 3.5%
-    final thumbnailSize = screenWidth * 0.2; // 화면 너비의 20%
-
     return Scaffold(
       backgroundColor: const Color(0xFFCBF6FF),
       appBar: AppBar(
@@ -407,7 +393,7 @@ class _PostListPageState extends State<PostListPage> {
         backgroundColor: const Color(0xFFCBF6FF),
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, size: screenWidth * 0.06),
+          icon: Icon(Icons.arrow_back, size: 24.sp),
           onPressed: () {
             Navigator.pushReplacement(
               context,
@@ -419,12 +405,15 @@ class _PostListPageState extends State<PostListPage> {
       body: Column(
         children: [
           Container(
-            height: mapHeight,
+            height: 250.h,
             child: _currentPosition == null
                 ? Container(
                     color: Colors.grey[300],
-                    child: const Center(
-                      child: Text('위치 정보를 가져오는 중...'),
+                    child: Center(
+                      child: Text(
+                        '위치 정보를 가져오는 중...',
+                        style: TextStyle(fontSize: 16.sp),
+                      ),
                     ),
                   )
                 : GoogleMap(
@@ -444,10 +433,9 @@ class _PostListPageState extends State<PostListPage> {
                   ),
           ),
           Padding(
-            padding: EdgeInsets.all(padding),
+            padding: EdgeInsets.all(16.w),
             child: Column(
               children: [
-                // 정렬 버튼 추가
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -461,10 +449,11 @@ class _PostListPageState extends State<PostListPage> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _sortBy == 'distance' ? const Color(0xFF764BA2) : Colors.grey[300],
                         foregroundColor: _sortBy == 'distance' ? Colors.white : Colors.black,
+                        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                       ),
-                      child: const Text('거리순'),
+                      child: Text('거리순', style: TextStyle(fontSize: 16.sp)),
                     ),
-                    const SizedBox(width: 16),
+                    SizedBox(width: 16.w),
                     ElevatedButton(
                       onPressed: () {
                         setState(() {
@@ -475,18 +464,19 @@ class _PostListPageState extends State<PostListPage> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _sortBy == 'likes' ? const Color(0xFF764BA2) : Colors.grey[300],
                         foregroundColor: _sortBy == 'likes' ? Colors.white : Colors.black,
+                        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                       ),
-                      child: const Text('좋아요순'),
+                      child: Text('좋아요순', style: TextStyle(fontSize: 16.sp)),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16.h),
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: padding),
-                  height: searchBarHeight,
+                  padding: EdgeInsets.symmetric(horizontal: 16.w),
+                  height: 48.h,
                   decoration: BoxDecoration(
                     color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(searchBarHeight / 2),
+                    borderRadius: BorderRadius.circular(24.r),
                     border: Border.all(color: Colors.grey[400]!),
                   ),
                   child: Row(
@@ -503,7 +493,7 @@ class _PostListPageState extends State<PostListPage> {
                                       selectedTags = tags;
                                     });
                                   },
-                                  initialSelectedTags: selectedTags, // 기존 선택된 태그 전달
+                                  initialSelectedTags: selectedTags,
                                 ),
                               ),
                             );
@@ -511,7 +501,7 @@ class _PostListPageState extends State<PostListPage> {
                               setState(() {
                                 selectedTags = result;
                               });
-                              _filterPostsByTags(); // 태그 선택 후 필터링 실행
+                              _filterPostsByTags();
                             }
                           },
                           child: selectedTags.isEmpty
@@ -519,7 +509,7 @@ class _PostListPageState extends State<PostListPage> {
                                   '원하는 태그를 추가하세요',
                                   style: TextStyle(
                                     color: Colors.grey,
-                                    fontSize: subtitleFontSize,
+                                    fontSize: 16.sp,
                                   ),
                                 )
                               : SingleChildScrollView(
@@ -527,34 +517,34 @@ class _PostListPageState extends State<PostListPage> {
                                   child: Row(
                                     children: selectedTags.map((tag) {
                                       return Padding(
-                                        padding: EdgeInsets.only(right: screenWidth * 0.02),
+                                        padding: EdgeInsets.only(right: 8.w),
                                         child: Container(
                                           padding: EdgeInsets.symmetric(
-                                            horizontal: screenWidth * 0.02,
-                                            vertical: screenHeight * 0.005,
+                                            horizontal: 8.w,
+                                            vertical: 4.h,
                                           ),
                                           decoration: BoxDecoration(
                                             color: const Color(0xFFE7EFA2),
-                                            borderRadius: BorderRadius.circular(12),
+                                            borderRadius: BorderRadius.circular(12.r),
                                           ),
                                           child: Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
                                               Text(
                                                 tag.name,
-                                                style: TextStyle(fontSize: tagFontSize),
+                                                style: TextStyle(fontSize: 14.sp),
                                               ),
-                                              SizedBox(width: screenWidth * 0.01),
+                                              SizedBox(width: 4.w),
                                               GestureDetector(
                                                 onTap: () {
                                                   setState(() {
                                                     selectedTags.remove(tag);
                                                   });
-                                                  _filterPostsByTags(); // 태그 제거 후 필터링 실행
+                                                  _filterPostsByTags();
                                                 },
                                                 child: Icon(
                                                   Icons.close,
-                                                  size: tagFontSize,
+                                                  size: 14.sp,
                                                 ),
                                               ),
                                             ],
@@ -569,11 +559,11 @@ class _PostListPageState extends State<PostListPage> {
                       GestureDetector(
                         onTap: _filterPostsByTags,
                         child: Padding(
-                          padding: EdgeInsets.only(left: screenWidth * 0.02),
+                          padding: EdgeInsets.only(left: 8.w),
                           child: Icon(
                             Icons.search,
                             color: Colors.grey,
-                            size: subtitleFontSize * 1.2,
+                            size: 20.sp,
                           ),
                         ),
                       ),
@@ -589,7 +579,7 @@ class _PostListPageState extends State<PostListPage> {
                 Expanded(
                   child: ListView.builder(
                     itemCount: _filteredPosts.length,
-                    padding: EdgeInsets.symmetric(horizontal: padding),
+                    padding: EdgeInsets.symmetric(horizontal: 16.w),
                     itemBuilder: (context, index) {
                       final post = _filteredPosts[index];
                       return Column(
@@ -600,12 +590,12 @@ class _PostListPageState extends State<PostListPage> {
                             height: 1,
                           ),
                           ListTile(
-                            contentPadding: EdgeInsets.symmetric(vertical: screenHeight * 0.01),
+                            contentPadding: EdgeInsets.symmetric(vertical: 8.h),
                             title: Text(
                               post['title'] ?? '제목 없음',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                fontSize: titleFontSize,
+                                fontSize: 18.sp,
                               ),
                             ),
                             subtitle: Column(
@@ -614,7 +604,7 @@ class _PostListPageState extends State<PostListPage> {
                                 Text(
                                   post['nickname'] ?? '작성자',
                                   style: TextStyle(
-                                    fontSize: subtitleFontSize,
+                                    fontSize: 14.sp,
                                     color: Colors.grey[600],
                                   ),
                                 ),
@@ -627,49 +617,49 @@ class _PostListPageState extends State<PostListPage> {
                                       post['startLongitude']
                                     ).toStringAsFixed(1)}km',
                                     style: TextStyle(
-                                      fontSize: subtitleFontSize,
+                                      fontSize: 14.sp,
                                       color: Colors.blue[700],
                                     ),
                                   ),
-                                SizedBox(height: screenHeight * 0.005),
+                                SizedBox(height: 4.h),
                                 Row(
                                   children: [
-                                    Icon(Icons.route, size: subtitleFontSize),
-                                    SizedBox(width: screenWidth * 0.01),
+                                    Icon(Icons.route, size: 14.sp),
+                                    SizedBox(width: 4.w),
                                     Text(
                                       '운동 거리: ${(post['distance'] ?? 0).toStringAsFixed(1)}km',
-                                      style: TextStyle(fontSize: subtitleFontSize),
+                                      style: TextStyle(fontSize: 14.sp),
                                     ),
-                                    SizedBox(width: screenWidth * 0.04),
+                                    SizedBox(width: 16.w),
                                     Icon(
                                       Icons.favorite,
-                                      size: subtitleFontSize,
+                                      size: 14.sp,
                                       color: Colors.red,
                                     ),
-                                    SizedBox(width: screenWidth * 0.01),
+                                    SizedBox(width: 4.w),
                                     Text(
                                       '${post['likes'] ?? 0}',
-                                      style: TextStyle(fontSize: subtitleFontSize),
+                                      style: TextStyle(fontSize: 14.sp),
                                     ),
                                   ],
                                 ),
-                                SizedBox(height: screenHeight * 0.005),
+                                SizedBox(height: 4.h),
                                 if (post['tags'] != null && (post['tags'] as List).isNotEmpty)
                                   Wrap(
-                                    spacing: screenWidth * 0.01,
+                                    spacing: 4.w,
                                     children: (post['tags'] as List).map<Widget>((tag) =>
                                       Container(
                                         padding: EdgeInsets.symmetric(
-                                          horizontal: screenWidth * 0.02,
-                                          vertical: screenHeight * 0.005,
+                                          horizontal: 8.w,
+                                          vertical: 2.h,
                                         ),
                                         decoration: BoxDecoration(
                                           color: const Color(0xFFE7EFA2),
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(12.r),
                                         ),
                                         child: Text(
                                           tag.toString(),
-                                          style: TextStyle(fontSize: tagFontSize),
+                                          style: TextStyle(fontSize: 12.sp),
                                         ),
                                       )
                                     ).toList(),
@@ -677,15 +667,15 @@ class _PostListPageState extends State<PostListPage> {
                               ],
                             ),
                             trailing: Container(
-                              width: thumbnailSize,
-                              height: thumbnailSize,
+                              width: 80.w,
+                              height: 80.h,
                               decoration: BoxDecoration(
                                 color: Colors.grey[300],
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(8.r),
                               ),
                               child: post['imageUrls'] != null && (post['imageUrls'] as List).isNotEmpty
                                   ? ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius: BorderRadius.circular(8.r),
                                       child: Image.network(
                                         post['imageUrls'][0],
                                         fit: BoxFit.cover,
@@ -693,7 +683,7 @@ class _PostListPageState extends State<PostListPage> {
                                           return Icon(
                                             Icons.image,
                                             color: Colors.grey,
-                                            size: thumbnailSize * 0.4,
+                                            size: 32.sp,
                                           );
                                         },
                                       ),
@@ -701,7 +691,7 @@ class _PostListPageState extends State<PostListPage> {
                                   : Icon(
                                       Icons.image,
                                       color: Colors.grey,
-                                      size: thumbnailSize * 0.4,
+                                      size: 32.sp,
                                     ),
                             ),
                             onTap: () {
@@ -722,17 +712,17 @@ class _PostListPageState extends State<PostListPage> {
                 ),
                 if (_hasMore)
                   Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: EdgeInsets.all(16.w),
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : () => _loadPosts(isInitial: false),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFD8F9FF),
                         foregroundColor: Colors.black,
-                        minimumSize: const Size(double.infinity, 50),
+                        minimumSize: Size(double.infinity, 50.h),
                       ),
                       child: _isLoading
-                          ? const CircularProgressIndicator()
-                          : const Text('더보기'),
+                          ? CircularProgressIndicator()
+                          : Text('더보기', style: TextStyle(fontSize: 16.sp)),
                     ),
                   ),
               ],

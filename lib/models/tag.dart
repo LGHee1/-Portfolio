@@ -19,21 +19,48 @@ class Tag {
 
 class RegionTag extends Tag {
   final int level;  // 지역 레벨 (1: 시/도, 2: 시/군/구, 3: 읍/면/동)
-  final String? code;  // 법정동 코드
+  final String code;  // 법정동 코드
+  final List<RegionTag>? subRegions;  // 하위 지역 목록
 
   const RegionTag({
     required String name,
     required this.level,
+    required this.code,
     String? parentRegion,
-    this.code,
+    this.subRegions,
   }) : super(
     name: name,
     category: TagCategory.location,
     parentRegion: parentRegion,
   );
+
+  // JSON에서 RegionTag 객체로 변환하는 팩토리 메서드
+  factory RegionTag.fromJson(Map<String, dynamic> json) {
+    return RegionTag(
+      name: json['name'] as String,
+      level: json['level'] as int,
+      code: json['code'] as String,
+      parentRegion: json['parent'] as String?,
+      subRegions: json['subRegions'] != null
+          ? (json['subRegions'] as List)
+              .map((e) => RegionTag.fromJson(e as Map<String, dynamic>))
+              .toList()
+          : null,
+    );
+  }
+
+  // RegionTag 객체를 JSON으로 변환하는 메서드
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'level': level,
+      'code': code,
+      'parentRegion': parentRegion,
+      'subRegions': subRegions?.map((e) => e.toJson()).toList(),
+    };
+  }
 }
 
-// 샘플 태그 데이터
 final List<Tag> sampleTags = [
   // 운동환경 태그
   const Tag(name: '트랙', category: TagCategory.exercise),
