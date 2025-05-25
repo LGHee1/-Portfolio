@@ -30,13 +30,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   Future<bool> _isNicknameAvailable(String nickname) async {
-    final QuerySnapshot result = await FirebaseFirestore.instance
-        .collection('users')
-        .where('nickname', isEqualTo: nickname)
-        .limit(1)
-        .get();
-    
-    return result.docs.isEmpty;
+    try {
+      final QuerySnapshot result = await FirebaseFirestore.instance
+          .collection('users')
+          .where('nickname', isEqualTo: nickname)
+          .get();
+
+      return result.docs.isEmpty;
+    } catch (e) {
+      debugPrint('닉네임 중복 체크 오류: $e');
+      return false;
+    }
   }
 
   Future<void> _signUp() async {
@@ -54,7 +58,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     try {
       debugPrint('회원가입 시도: ${_emailController.text.trim()}');
-      
+
       // 닉네임 중복 체크
       final bool isNicknameAvailable = await _isNicknameAvailable(_nicknameController.text.trim());
       if (!isNicknameAvailable) {
@@ -298,9 +302,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         child: _isLoading
                             ? CircularProgressIndicator(color: Colors.white, strokeWidth: 2.w)
                             : Text(
-                                "Sign Up",
-                                style: TextStyle(fontSize: 16.sp),
-                              ),
+                          "Sign Up",
+                          style: TextStyle(fontSize: 16.sp),
+                        ),
                       ),
                     ),
                     SizedBox(height: 16.h),
@@ -331,4 +335,4 @@ class _SignUpScreenState extends State<SignUpScreen> {
       ),
     );
   }
-} 
+}

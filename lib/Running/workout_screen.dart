@@ -545,7 +545,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       startPoint.longitude,
     );
 
-    return distance <= 200; // 500m 이내인지 체크
+    return distance <= 200; // 200m 이내인지 체크
   }
 
   void _showDistanceWarningDialog() {
@@ -554,7 +554,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('거리 경고'),
-          content: const Text('추천 코스 시작점과 현재 위치가 500m 이상 떨어져 있습니다.\n추천 코스 시작점 근처로 이동해주세요.'),
+          content: const Text('추천 코스 시작점과 현재 위치가 200m 이상 떨어져 있습니다.\n추천 코스 시작점 근처로 이동해주세요.'),
           actions: [
             TextButton(
               onPressed: () {
