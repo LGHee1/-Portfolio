@@ -149,33 +149,47 @@ class _PostViewPageState extends State<PostViewPage> {
     if (user == null) return;
 
     try {
+      // 게시글 작성자의 Post_Data 컬렉션 참조
       final postRef = FirebaseFirestore.instance
           .collection('users')
           .doc(widget.postData['userId'])
           .collection('Post_Data')
           .doc(widget.postData['id']);
 
+      // 현재 사용자의 LikedPosts 컬렉션 참조
       final likedPostRef = FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .collection('LikedPosts')
           .doc(widget.postData['id']);
 
-      if (_isLiked) {
-        // 좋아요 취소
-        await postRef.update({
-          'likes': FieldValue.increment(-1)
-        });
-        await likedPostRef.delete();
-      } else {
-        // 좋아요 추가
-        await postRef.update({
-          'likes': FieldValue.increment(1)
-        });
-        await likedPostRef.set({
-          'timestamp': FieldValue.serverTimestamp()
-        });
-      }
+      // 트랜잭션을 사용하여 좋아요 처리
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final postDoc = await transaction.get(postRef);
+        if (!postDoc.exists) {
+          throw Exception('게시물을 찾을 수 없습니다.');
+        }
+
+        final currentLikes = postDoc.data()?['likes'] ?? 0;
+        
+        if (_isLiked) {
+          // 좋아요 취소
+          if (currentLikes > 0) {
+            transaction.update(postRef, {
+              'likes': currentLikes - 1
+            });
+            transaction.delete(likedPostRef);
+          }
+        } else {
+          // 좋아요 추가
+          transaction.update(postRef, {
+            'likes': currentLikes + 1
+          });
+          transaction.set(likedPostRef, {
+            'timestamp': FieldValue.serverTimestamp()
+          });
+        }
+      });
 
       // 상태 업데이트
       if (mounted) {
@@ -184,6 +198,11 @@ class _PostViewPageState extends State<PostViewPage> {
           widget.postData['likes'] = _isLiked 
               ? (widget.postData['likes'] ?? 0) + 1 
               : (widget.postData['likes'] ?? 1) - 1;
+          
+          // 좋아요 수가 음수가 되지 않도록 보장
+          if (widget.postData['likes'] < 0) {
+            widget.postData['likes'] = 0;
+          }
         });
       }
     } catch (e) {

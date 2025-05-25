@@ -442,6 +442,14 @@ class _ReceivedRequestsTab extends StatelessWidget {
                           // 친구 요청 삭제
                           batch.delete(doc.reference);
 
+                          // 보낸 요청도 삭제
+                          final sentRequestRef = FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(fromUid)
+                              .collection('Sent_Requests')
+                              .doc(myUid);
+                          batch.delete(sentRequestRef);
+
                           await batch.commit();
 
                           if (context.mounted) {
