@@ -545,7 +545,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       startPoint.longitude,
     );
 
-    return distance <= 3000; // 500m 이내인지 체크
+    return distance <= 200; // 500m 이내인지 체크
   }
 
   void _showDistanceWarningDialog() {
