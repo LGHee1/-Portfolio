@@ -106,7 +106,15 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
         ),
       );
     } else if (_initialPosition != null) {
-      // 운동을 하지 않았을 때도 종료 마커 표시
+      // 운동 거리가 없을 때 현재 위치에 시작점과 종료점 마커 표시
+      _markers.add(
+        Marker(
+          markerId: const MarkerId('startLocation'),
+          position: _initialPosition!,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          infoWindow: const InfoWindow(title: '시작'),
+        ),
+      );
       _markers.add(
         Marker(
           markerId: const MarkerId('endLocation'),
@@ -149,6 +157,13 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
             _getBoundsFromLatLngList(widget.routePoints),
             50.0,
           ),
+        );
+      });
+    } else if (_initialPosition != null) {
+      // 운동 거리가 없을 때 현재 위치로 카메라 이동
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _mapController.animateCamera(
+          CameraUpdate.newLatLngZoom(_initialPosition!, 15),
         );
       });
     }
@@ -220,7 +235,7 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
                           initialCameraPosition: CameraPosition(
                             target: widget.routePoints.isNotEmpty
                                 ? widget.routePoints.first
-                                : const LatLng(37.5665, 126.9780),
+                                : (_initialPosition ?? const LatLng(37.5665, 126.9780)),
                             zoom: 15,
                           ),
                           onMapCreated: _onMapCreated,
