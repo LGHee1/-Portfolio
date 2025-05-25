@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../Auth/login_screen.dart';
 import '../Widgets/bottom_bar.dart';
 import '../home_screen.dart';
+import '../main.dart';
 import '../post/post_list.dart';
 import '../Running/workout_screen.dart';
 import '../profile/profile_screen.dart';
@@ -94,7 +95,7 @@ class _SettingScreenState extends State<SettingScreen> {
           
           if (context.mounted) {
             Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (context) => const LoginScreen()),
+              MaterialPageRoute(builder: (context) => const StartScreen()),
               (route) => false,
             );
           }
