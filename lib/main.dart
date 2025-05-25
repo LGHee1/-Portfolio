@@ -1,32 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'Auth/login_screen.dart';
 import 'Auth/signup_screen.dart';
 import 'package:provider/provider.dart';
 import 'user_provider.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   try {
     // Firebase 초기화
     await Firebase.initializeApp();
     print('Firebase 초기화 성공');
-    // ✅ App Check 활성화 (디버그 모드)
-    await FirebaseAppCheck.instance.activate(
-      androidProvider: AndroidProvider.debug,
-      appleProvider: AppleProvider.debug,
-    );
-    print('Firebase App Check 활성화 완료');
   } catch (e) {
     print('Firebase 초기화 실패: $e');
   }
-  
+
   // 시스템 UI 설정
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -34,7 +26,7 @@ void main() async {
       statusBarIconBrightness: Brightness.dark, // 아이콘은 어두운 색
     ),
   );
-  
+
   runApp(
     MultiProvider(
       providers: [
@@ -62,37 +54,9 @@ class MyApp extends StatelessWidget {
             useMaterial3: true,
             scaffoldBackgroundColor: Colors.white,
           ),
-          home: const AuthWrapper(),
+          home: const StartScreen(), // 홈 화면으로 변경
           debugShowCheckedModeBanner: false,
         );
-      },
-    );
-  }
-}
-
-class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        
-        if (snapshot.hasData) {
-          // 로그인된 상태에서 사용자 데이터 초기화
-          final userProvider = Provider.of<UserProvider>(context, listen: false);
-          if (!userProvider.isInitialized) {
-            userProvider.initializeUserData();
-          }
-          return const ScreenHome();
-        }
-        
-        // 로그인되지 않은 상태
-        return const StartScreen();
       },
     );
   }
@@ -113,61 +77,45 @@ class StartScreen extends StatelessWidget {
             ),
           ),
           Positioned(
-            bottom: 60.h,
-            left: 32.w,
-            right: 32.w,
+            bottom: 60,
+            left: 32,
+            right: 32,
             child: Column(
               children: [
                 SizedBox(
-                  width: 320.w,
-                  height: 70.h,
+                  width: 320,
+                  height: 70,
                   child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15.r),
-                      ),
-                      elevation: 4,
-                    ),
                     onPressed: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const LoginScreen()),
                       );
                     },
-                    child: Text(
+                    child: const Text(
                       "로그인",
                       style: TextStyle(
-                        fontSize: 22.sp,
+                        fontSize: 22,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                 ),
-                SizedBox(height: 16.h),
+                const SizedBox(height: 16),
                 SizedBox(
-                  width: 320.w,
-                  height: 70.h,
+                  width: 320,
+                  height: 70,
                   child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15.r),
-                      ),
-                      elevation: 4,
-                    ),
                     onPressed: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const SignUpScreen()),
                       );
                     },
-                    child: Text(
+                    child: const Text(
                       "회원가입",
                       style: TextStyle(
-                        fontSize: 22.sp,
+                        fontSize: 22,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

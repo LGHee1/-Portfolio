@@ -193,6 +193,59 @@ class _RunningScreenState extends State<RunningScreen> {
     );
   }
 
+  Future<double> calculateCalories() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return 0.0;
+
+    try {
+      // 사용자 정보 가져오기
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      final userData = userDoc.data();
+      if (userData == null) return 0.0;
+
+      final weight = userData['weight'] as double;
+      final gender = userData['gender'] as String;
+      final age = userData['age'] as int;
+
+      // MET 값 계산 (속도 기반)
+      double speed = _distance / (_seconds / 3600); // km/h
+      double met = 9.8; // 기본값
+
+      if (speed < 6.4) {
+        met = 6.0; // 걷기
+      } else if (speed < 8.0) {
+        met = 8.3; // 천천히 달리기
+      } else if (speed < 9.7) {
+        met = 9.8; // 보통 속도 달리기
+      } else {
+        met = 11.0; // 빠르게 달리기
+      }
+
+      // 칼로리 계산
+      double hours = _seconds / 3600;
+      double calories = met * weight * hours;
+
+      // 성별과 나이에 따른 보정
+      if (gender == 'female') {
+        calories *= 0.9; // 여성은 남성보다 약 10% 적은 칼로리 소모
+      }
+      
+      // 나이에 따른 보정 (20대 기준)
+      if (age > 30) {
+        calories *= 0.95; // 30대 이상은 약 5% 감소
+      }
+
+      return calories;
+    } catch (e) {
+      print('칼로리 계산 중 오류 발생: $e');
+      return 0.0;
+    }
+  }
+
   void _updatePace() {
     if (_distance > 0 && _seconds > 0) {
       double minutesPerKm = (_seconds / 60) / _distance;
@@ -200,8 +253,14 @@ class _RunningScreenState extends State<RunningScreen> {
       int seconds = ((minutesPerKm - minutes) * 60).round();
       _pace = '$minutes\'${seconds.toString().padLeft(2, '0')}"';
       
-      // 칼로리 계산 (1km당 약 60kcal로 가정)
-      _calories = (_distance * 60).floor();
+      // 칼로리 계산
+      calculateCalories().then((calories) {
+        if (mounted) {
+          setState(() {
+            _calories = calories.round();
+          });
+        }
+      });
       
       // 케이던스 계산 (임시로 랜덤값 사용, 실제로는 가속도계 데이터 필요)
       _cadence = 150 + DateTime.now().second % 20;
@@ -248,12 +307,15 @@ class _RunningScreenState extends State<RunningScreen> {
       };
     }).toList();
 
+    // 칼로리 계산
+    final calories = await calculateCalories();
+
     final runningData = {
       'date': DateTime.now(),
       'distance': _distance,
       'duration': _seconds,
       'pace': _pace,
-      'calories': _calories,
+      'calories': calories,
       'routePoints': routePointsData,
       'nickname': _userNickname,
     };

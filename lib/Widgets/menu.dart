@@ -9,6 +9,7 @@ import '../Rank/ranking_screen.dart';
 import '../Calendar/calendar_screen.dart';
 import '../Friends/friends_screen.dart';
 import '../Setting/setting_screen.dart';
+import '../main.dart';
 
 class Menu extends StatelessWidget {
   const Menu({super.key});
@@ -42,7 +43,7 @@ class Menu extends StatelessWidget {
         await FirebaseAuth.instance.signOut();
         if (context.mounted) {
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const LoginScreen()),
+            MaterialPageRoute(builder: (context) => const StartScreen()),
             (route) => false,
           );
         }
