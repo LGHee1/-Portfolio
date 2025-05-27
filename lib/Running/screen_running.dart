@@ -68,6 +68,11 @@ class _RunningScreenState extends State<RunningScreen> {
 
   List<Polyline> _polylines = [];
 
+  // 속도 제한 상수 추가
+  static const double MAX_SPEED_KMH = 30.0; // 최대 속도 제한 (km/h)
+  static const double MAX_AVG_SPEED_KMH = 20.0; // 최대 평균 속도 제한 (km/h)
+  bool _isSpeedValid = true;
+
   String get formattedTime {
     final duration = Duration(seconds: _seconds);
     final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
@@ -161,6 +166,43 @@ class _RunningScreenState extends State<RunningScreen> {
             position.longitude,
           );
           _distance += newDistance / 1000;
+
+          // 현재 속도 계산 (km/h)
+          double currentSpeed = (newDistance / 1000) / (1/3600); // km/h
+          
+          // 평균 속도 계산 (km/h)
+          double avgSpeed = _seconds > 0 ? (_distance / (_seconds / 3600)) : 0;
+
+          if (currentSpeed > MAX_SPEED_KMH || avgSpeed > MAX_AVG_SPEED_KMH) {
+            if (_isSpeedValid) {
+              _isSpeedValid = false;
+              _pauseTimer();
+              
+              if (mounted) {
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      title: Text('속도 제한 초과'),
+                      content: Text('비정상적인 속도가 감지되어 일시정지되었습니다.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            _pauseTimer();
+                          },
+                          child: Text('확인'),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              }
+            }
+          } else {
+            _isSpeedValid = true;
+          }
         }
         _currentPosition = position;
         _routePoints.add(LatLng(position.latitude, position.longitude));

@@ -30,6 +30,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String email = '';
   String message = '';
   String? photoUrl;
+  int age = 0;
+  double height = 0.0;
+  double weight = 0.0;
   File? _imageFile;
   List<String> postUids = [];
   int _selectedIndex = 1;
@@ -39,6 +42,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _messageController = TextEditingController();
+  final TextEditingController _heightController = TextEditingController();
+  final TextEditingController _weightController = TextEditingController();
+  final TextEditingController _ageController = TextEditingController();
+
 
   // 욕설 필터 인스턴스 생성
   final ProfanityFilter _profanityFilter = ProfanityFilter();
@@ -49,6 +56,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadUserData();
     _loadMyPosts();
     _loadInappropriateWords(); // 부적절한 단어 목록 로드
+    _ageController.text = age.toString();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _messageController.dispose();
+    _heightController.dispose();
+    _weightController.dispose();
+    _ageController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadUserData() async {
@@ -56,14 +74,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
       if (userDoc.exists) {
         setState(() {
           nickname = userDoc.data()?['nickname'] ?? '';
           name = userDoc.data()?['name'] ?? '';
           email = userDoc.data()?['email'] ?? '';
           photoUrl = userDoc.data()?['photoUrl'];
+          age = userDoc.data()?['age'] ?? 0;
+          height = (userDoc.data()?['height'] ?? 0.0).toDouble();
+          weight = (userDoc.data()?['weight'] ?? 0.0).toDouble();
           _nameController.text = name;
+          _heightController.text = height.toString();
+          _weightController.text = weight.toString();
+          _ageController.text = age.toString();
         });
       }
     } catch (e) {
@@ -103,7 +130,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       maxHeight: 800,
       imageQuality: 85,
     );
-    
+
     if (pickedFile != null) {
       setState(() {
         _imageFile = File(pickedFile.path);
@@ -153,7 +180,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       if (snapshot.exists) {
         setState(() {
-          _inappropriateWords = List<String>.from(snapshot.data()?['words'] ?? []);
+          _inappropriateWords =
+              List<String>.from(snapshot.data()?['words'] ?? []);
         });
       }
     } catch (e) {
@@ -180,16 +208,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    
+
     String? uploadedUrl = photoUrl;
-    
+
     // 이미지가 선택되었다면 업로드
     if (_imageFile != null) {
       try {
         setState(() {
           isUploading = true;
         });
-        
+
         // Firebase Storage에 이미지 업로드
         final storageRef = FirebaseStorage.instance
             .ref()
@@ -198,7 +226,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
         final uploadTask = await storageRef.putFile(_imageFile!);
         uploadedUrl = await uploadTask.ref.getDownloadURL();
-        
+
         if (uploadedUrl == null) {
           throw Exception('이미지 URL을 가져오는데 실패했습니다.');
         }
@@ -231,8 +259,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
+      // 사용자의 키와 몸무게 정보 업데이트
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({
+        'height': double.tryParse(_heightController.text) ?? height,
+        'weight': double.tryParse(_weightController.text) ?? weight,
+        'age': int.tryParse(_ageController.text) ?? age,
+
+      });
+
       // UserProvider 업데이트
-      Provider.of<UserProvider>(context, listen: false).setPhotoUrl(uploadedUrl);
+      Provider.of<UserProvider>(context, listen: false)
+          .setPhotoUrl(uploadedUrl);
 
       setState(() {
         message = _messageController.text;
@@ -242,6 +282,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         isEditingPhoto = false;
         _imageFile = null;
         isUploading = false;
+        height = double.tryParse(_heightController.text) ?? height;
+        weight = double.tryParse(_weightController.text) ?? weight;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -286,9 +328,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: const Color(0xFFD8F9FF),
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.black, size: 24.sp),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: Text(
           '$nickname님의 프로필',
-          style: TextStyle(color: Colors.black, fontSize: 18.sp),
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 18.sp,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.3,
+          ),
         ),
       ),
       body: Stack(
@@ -301,50 +354,73 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   width: double.infinity,
                   child: Column(
                     children: [
-                      SizedBox(height: 16.h),
+                      SizedBox(height: 20.h),
                       Stack(
                         alignment: Alignment.center,
                         children: [
-                          CircleAvatar(
-                            radius: 48.r,
-                            backgroundColor: Colors.grey.shade300,
-                            backgroundImage: _imageFile != null
-                                ? FileImage(_imageFile!)
-                                : (photoUrl != null ? NetworkImage(photoUrl!) : null) as ImageProvider?,
-                            child: (photoUrl == null && _imageFile == null)
-                                ? Icon(Icons.account_circle, size: 36.sp, color: Colors.grey)
-                                : null,
+                          Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: CircleAvatar(
+                              radius: 48.r,
+                              backgroundColor: Colors.grey.shade300,
+                              backgroundImage: _imageFile != null
+                                  ? FileImage(_imageFile!)
+                                  : (photoUrl != null
+                                      ? NetworkImage(photoUrl!)
+                                      : null) as ImageProvider?,
+                              child: (photoUrl == null && _imageFile == null)
+                                  ? Icon(Icons.account_circle,
+                                      size: 36.sp, color: Colors.grey)
+                                  : null,
+                            ),
                           ),
                           if (isEditing)
                             Positioned(
-                              bottom: 2.h,
-                              right: 2.w,
+                              top: -4.h,
+                              right: -4.w,
                               child: Container(
-                                width: 24.w,
-                                height: 24.h,
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 1),
+                                    ),
+                                  ],
                                 ),
                                 child: IconButton(
-                                  icon: Icon(Icons.edit, size: 18.sp, color: Colors.black87),
+                                  icon: Icon(Icons.edit,
+                                      size: 18.sp, color: Colors.black87),
                                   onPressed: _pickImage,
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(
-                                    minWidth: 24,
-                                    minHeight: 24,
-                                  ),
+                                  padding: EdgeInsets.all(8.r),
+                                  constraints: const BoxConstraints(),
                                 ),
                               ),
                             ),
                         ],
                       ),
-                      SizedBox(height: 8.h),
+                      SizedBox(height: 12.h),
                       Text(
                         nickname,
-                        style: TextStyle(fontSize: 24.sp, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 24.sp,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                          letterSpacing: -0.5,
+                        ),
                       ),
-                      SizedBox(height: 16.h),
+                      SizedBox(height: 20.h),
                     ],
                   ),
                 ),
@@ -352,93 +428,242 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   color: Colors.white,
                   child: SingleChildScrollView(
                     child: Padding(
-                      padding: EdgeInsets.all(16.w),
+                      padding: EdgeInsets.all(20.w),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SizedBox(height: 8.h),
-                          Text('Name', style: TextStyle(fontSize: 14.sp)),
-                          TextField(
+                          _buildInfoField(
+                            label: 'Name',
                             controller: _nameController,
                             enabled: false,
-                            style: TextStyle(fontSize: 14.sp),
-                            decoration: InputDecoration(
-                              border: OutlineInputBorder(),
-                              filled: true,
-                              fillColor: Colors.white,
-                            ),
                           ),
-                          SizedBox(height: 16.h),
-                          Text('Email', style: TextStyle(fontSize: 14.sp)),
-                          TextField(
+                          SizedBox(height: 20.h),
+                          _buildInfoField(
+                            label: 'Email',
                             controller: TextEditingController(text: email),
                             enabled: false,
-                            style: TextStyle(fontSize: 14.sp),
-                            decoration: InputDecoration(
-                              border: OutlineInputBorder(),
-                              filled: true,
-                              fillColor: Colors.white,
-                            ),
                           ),
-                          SizedBox(height: 16.h),
+                          SizedBox(height: 20.h),
+                          // 신체 정보 표시
                           Row(
                             children: [
-                              Text('Message', style: TextStyle(fontSize: 14.sp)),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '나이',
+                                      style: TextStyle(
+                                        fontSize: 14.sp,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                    SizedBox(height: 8.h),
+                                    TextField(
+                                      controller: _ageController,
+                                      enabled: isEditing,
+                                      keyboardType: TextInputType.number,
+                                      style: TextStyle(
+                                        fontSize: 14.sp,
+                                        color: Colors.black87,
+                                      ),
+                                      decoration: InputDecoration(
+                                        filled: true,
+                                        fillColor: Colors.grey.shade50,
+                                        suffixText: '세',
+                                        suffixStyle: TextStyle(
+                                          fontSize: 14.sp,
+                                          color: Colors.black54,
+                                        ),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(12.r),
+                                          borderSide: BorderSide(color: Colors.grey.shade300),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(12.r),
+                                          borderSide: BorderSide(color: Colors.grey.shade300),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(12.r),
+                                          borderSide: BorderSide(color: const Color(0xFFB6F5E8), width: 2),
+                                        ),
+                                        contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                                      ),
+                                    ),
+
+                                  ],
+                                ),
+                              ),
+                              SizedBox(width: 16.w),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '키',
+                                      style: TextStyle(
+                                        fontSize: 14.sp,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                    SizedBox(height: 8.h),
+                                    TextField(
+                                      controller: _heightController,
+                                      enabled: isEditing,
+                                      keyboardType: TextInputType.number,
+                                      style: TextStyle(
+                                        fontSize: 14.sp,
+                                        color: Colors.black87,
+                                      ),
+                                      decoration: InputDecoration(
+                                        filled: true,
+                                        fillColor: Colors.grey.shade50,
+                                        suffixText: 'cm',
+                                        suffixStyle: TextStyle(
+                                          fontSize: 14.sp,
+                                          color: Colors.black54,
+                                        ),
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12.r),
+                                          borderSide: BorderSide(
+                                              color: Colors.grey.shade300),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12.r),
+                                          borderSide: BorderSide(
+                                              color: Colors.grey.shade300),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12.r),
+                                          borderSide: BorderSide(
+                                              color: const Color(0xFFB6F5E8),
+                                              width: 2),
+                                        ),
+                                        contentPadding: EdgeInsets.symmetric(
+                                            horizontal: 16.w, vertical: 12.h),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(width: 16.w),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '몸무게',
+                                      style: TextStyle(
+                                        fontSize: 14.sp,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                    SizedBox(height: 8.h),
+                                    TextField(
+                                      controller: _weightController,
+                                      enabled: isEditing,
+                                      keyboardType: TextInputType.number,
+                                      style: TextStyle(
+                                        fontSize: 14.sp,
+                                        color: Colors.black87,
+                                      ),
+                                      decoration: InputDecoration(
+                                        filled: true,
+                                        fillColor: Colors.grey.shade50,
+                                        suffixText: 'kg',
+                                        suffixStyle: TextStyle(
+                                          fontSize: 14.sp,
+                                          color: Colors.black54,
+                                        ),
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12.r),
+                                          borderSide: BorderSide(
+                                              color: Colors.grey.shade300),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12.r),
+                                          borderSide: BorderSide(
+                                              color: Colors.grey.shade300),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12.r),
+                                          borderSide: BorderSide(
+                                              color: const Color(0xFFB6F5E8),
+                                              width: 2),
+                                        ),
+                                        contentPadding: EdgeInsets.symmetric(
+                                            horizontal: 16.w, vertical: 12.h),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 20.h),
+                          Row(
+                            children: [
+                              Text(
+                                'Message',
+                                style: TextStyle(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
                               if (isEditing)
                                 IconButton(
-                                  icon: Icon(Icons.edit, size: 17.sp),
+                                  icon: Icon(Icons.edit,
+                                      size: 17.sp, color: Colors.black54),
                                   onPressed: () {
                                     setState(() {
                                       isEditingMessage = true;
                                     });
                                   },
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
                                 ),
                             ],
                           ),
+                          SizedBox(height: 8.h),
                           TextField(
                             controller: _messageController,
                             enabled: isEditing,
                             maxLines: 2,
-                            style: TextStyle(fontSize: 14.sp),
-                            decoration: InputDecoration(
-                              border: OutlineInputBorder(),
-                              hintText: '상태 메시지를 입력하세요',
-                              helperText: '부적절한 단어는 사용할 수 없습니다.',
-                              helperStyle: TextStyle(fontSize: 12.sp, color: Colors.grey),
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              color: Colors.black87,
+                              height: 1.5,
                             ),
-                            onChanged: (value) {
-                              if (isEditing && _containsInappropriateWords(value)) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('부적절한 단어가 포함되어 있습니다.'),
-                                    duration: Duration(seconds: 2),
-                                  ),
-                                );
-                              }
-                            },
-                          ),
-                          SizedBox(height: 24.h),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: isEditing ? Colors.black : const Color(0xFFD8F9FF),
-                                foregroundColor: isEditing ? Colors.white : Colors.black,
-                                padding: EdgeInsets.symmetric(vertical: 12.h),
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: Colors.grey.shade50,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12.r),
+                                borderSide:
+                                    BorderSide(color: Colors.grey.shade300),
                               ),
-                              onPressed: isUploading ? null : () {
-                                if (isEditing) {
-                                  _saveProfile();
-                                } else {
-                                  setState(() {
-                                    isEditing = true;
-                                  });
-                                }
-                              },
-                              child: Text(
-                                isEditing ? '수정완료' : '수정하기',
-                                style: TextStyle(fontSize: 16.sp),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12.r),
+                                borderSide:
+                                    BorderSide(color: Colors.grey.shade300),
                               ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12.r),
+                                borderSide: BorderSide(
+                                    color: const Color(0xFFB6F5E8), width: 2),
+                              ),
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 16.w, vertical: 12.h),
                             ),
                           ),
                         ],
@@ -449,193 +674,108 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Container(
                   color: Colors.white,
                   child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                    padding: EdgeInsets.all(20.w),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              showPosts = !showPosts;
-                            });
-                          },
-                          child: Container(
-                            padding: EdgeInsets.symmetric(vertical: 8.h),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  showPosts ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_right,
-                                  color: Colors.black87,
-                                  size: 28.sp,
+                        _buildPostListHeader(),
+                        if (showPosts) _buildPostList(),
+                        SizedBox(height: 20.h),
+                        if (!isEditing)
+                          Center(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                setState(() {
+                                  isEditing = true;
+                                });
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFD8F9FF),
+                                foregroundColor: Colors.black87,
+                                elevation: 2,
+                                shadowColor: Colors.black12,
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 24.w, vertical: 12.h),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12.r),
                                 ),
-                                SizedBox(width: 4.w),
-                                Text(
-                                  '내 게시글',
-                                  style: TextStyle(
-                                    fontSize: 18.sp,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                              ),
+                              child: Text(
+                                '수정하기',
+                                style: TextStyle(
+                                  fontSize: 15.sp,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.3,
                                 ),
-                                SizedBox(width: 6.w),
-                                Text(
-                                  '(${myPosts.length})',
-                                  style: TextStyle(
-                                    fontSize: 14.sp,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
-                        ),
-                        if (showPosts)
-                          Column(
-                            children: myPosts.isEmpty
-                                ? [
-                                    Padding(
-                                      padding: EdgeInsets.symmetric(vertical: 16.h),
-                                      child: Text(
-                                        '등록된 게시글이 없습니다.',
-                                        style: TextStyle(
-                                          color: Colors.grey,
-                                          fontSize: 14.sp,
-                                        ),
-                                      ),
-                                    ),
-                                  ]
-                                : myPosts.map((post) {
-                                    return GestureDetector(
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => PostCreatePage(
-                                              postData: post,
-                                              postId: post['id'],
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                      child: Container(
-                                        margin: EdgeInsets.symmetric(vertical: 4.h),
-                                        padding: EdgeInsets.all(8.w),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(12.r),
-                                          border: Border.all(color: Colors.purple.shade100),
-                                        ),
-                                        child: Stack(
-                                          children: [
-                                            Row(
-                                              children: [
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      Text(
-                                                        post['title'] ?? '',
-                                                        style: TextStyle(
-                                                          fontWeight: FontWeight.bold,
-                                                          fontSize: 15.sp,
-                                                        ),
-                                                      ),
-                                                      SizedBox(height: 3.h),
-                                                      Row(
-                                                        children: [
-                                                          Text(
-                                                            '코스 ${post['distance']?.toStringAsFixed(1) ?? '-'}km',
-                                                            style: TextStyle(fontSize: 13.sp),
-                                                          ),
-                                                          SizedBox(width: 6.w),
-                                                          Icon(Icons.favorite, size: 14.sp, color: Colors.purple),
-                                                          Text(
-                                                            ' ${post['likes'] ?? 0}',
-                                                            style: TextStyle(fontSize: 13.sp),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                      SizedBox(height: 3.h),
-                                                      if (post['tags'] != null && (post['tags'] as List).isNotEmpty)
-                                                        Wrap(
-                                                          spacing: 3.w,
-                                                          children: (post['tags'] as List).map<Widget>((tag) =>
-                                                            Container(
-                                                              padding: EdgeInsets.symmetric(
-                                                                horizontal: 6.w,
-                                                                vertical: 2.h,
-                                                              ),
-                                                              decoration: BoxDecoration(
-                                                                color: Colors.yellow.shade200,
-                                                                borderRadius: BorderRadius.circular(8.r),
-                                                              ),
-                                                              child: Text(
-                                                                tag.toString(),
-                                                                style: TextStyle(fontSize: 12.sp),
-                                                              ),
-                                                            )
-                                                          ).toList(),
-                                                        ),
-                                                      if (post['createdAt'] != null)
-                                                        Padding(
-                                                          padding: EdgeInsets.only(top: 3.h),
-                                                          child: Text(
-                                                            '작성일: ${(post['createdAt'] as Timestamp).toDate().toString().split('.')[0]}',
-                                                            style: TextStyle(
-                                                              fontSize: 12.sp,
-                                                              color: Colors.grey,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                    ],
-                                                  ),
-                                                ),
-                                                if ((post['imageUrls'] ?? []).isNotEmpty)
-                                                  ClipRRect(
-                                                    borderRadius: BorderRadius.circular(8.r),
-                                                    child: Image.network(
-                                                      post['imageUrls'][0],
-                                                      width: 80.w,
-                                                      height: 80.h,
-                                                      fit: BoxFit.cover,
-                                                    ),
-                                                  ),
-                                              ],
-                                            ),
-                                            if (isEditing)
-                                              Positioned(
-                                                top: 0,
-                                                right: 0,
-                                                child: IconButton(
-                                                  icon: Icon(Icons.delete, color: Colors.red, size: 17.sp),
-                                                  onPressed: () {
-                                                    showDialog(
-                                                      context: context,
-                                                      builder: (context) => AlertDialog(
-                                                        title: Text('게시글 삭제', style: TextStyle(fontSize: 17.sp)),
-                                                        content: Text('이 게시글을 삭제하시겠습니까?', style: TextStyle(fontSize: 14.sp)),
-                                                        actions: [
-                                                          TextButton(
-                                                            onPressed: () => Navigator.pop(context),
-                                                            child: Text('취소', style: TextStyle(fontSize: 14.sp)),
-                                                          ),
-                                                          TextButton(
-                                                            onPressed: () {
-                                                              Navigator.pop(context);
-                                                              _deletePost(post['id']);
-                                                            },
-                                                            child: Text('삭제', style: TextStyle(fontSize: 14.sp, color: Colors.red)),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    );
-                                                  },
-                                                ),
-                                              ),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  }).toList(),
+                        if (isEditing)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              ElevatedButton(
+                                onPressed: () async {
+                                  await _saveProfile();
+                                  if (mounted) {
+                                    setState(() {
+                                      isEditing = false;
+                                      isEditingMessage = false;
+                                    });
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFD8F9FF),
+                                  foregroundColor: Colors.black87,
+                                  elevation: 2,
+                                  shadowColor: Colors.black12,
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 24.w, vertical: 12.h),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                  ),
+                                ),
+                                child: Text(
+                                  '저장',
+                                  style: TextStyle(
+                                    fontSize: 15.sp,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: 16.w),
+                              ElevatedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    isEditing = false;
+                                    isEditingMessage = false;
+                                    _nameController.text = name;
+                                    _messageController.text = message;
+                                    _imageFile = null;
+                                  });
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.grey.shade100,
+                                  foregroundColor: Colors.black87,
+                                  elevation: 1,
+                                  shadowColor: Colors.black.withOpacity(0.08),
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 24.w, vertical: 12.h),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                  ),
+                                ),
+                                child: Text(
+                                  '취소',
+                                  style: TextStyle(
+                                    fontSize: 15.sp,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                       ],
                     ),
@@ -656,27 +796,321 @@ class _ProfileScreenState extends State<ProfileScreen> {
       bottomNavigationBar: BottomBar(
         selectedIndex: _selectedIndex,
         onTabSelected: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-          if (index == 0) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const WorkoutScreen()),
-            );
-          } else if (index == 1) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const ScreenHome()),
-            );
-          } else if (index == 2) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const ProfileScreen()),
-            );
-          }
+          setState(() => _selectedIndex = index);
         },
       ),
     );
   }
-} 
+
+  Widget _buildInfoField({
+    required String label,
+    required TextEditingController controller,
+    required bool enabled,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
+        SizedBox(height: 8.h),
+        TextField(
+          controller: controller,
+          enabled: enabled,
+          style: TextStyle(
+            fontSize: 14.sp,
+            color: Colors.black87,
+            height: 1.5,
+          ),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.grey.shade50,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide(color: const Color(0xFFB6F5E8), width: 2),
+            ),
+            contentPadding:
+                EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPostListHeader() {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          showPosts = !showPosts;
+        });
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 12.h),
+        child: Row(
+          children: [
+            Icon(
+              showPosts
+                  ? Icons.keyboard_arrow_down
+                  : Icons.keyboard_arrow_right,
+              color: Colors.black87,
+              size: 28.sp,
+            ),
+            SizedBox(width: 8.w),
+            Text(
+              '내 게시글',
+              style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+                letterSpacing: -0.3,
+              ),
+            ),
+            SizedBox(width: 8.w),
+            Text(
+              '(${myPosts.length})',
+              style: TextStyle(
+                fontSize: 14.sp,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPostList() {
+    if (myPosts.isEmpty) {
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: 20.h),
+        child: Center(
+          child: Text(
+            '등록된 게시글이 없습니다.',
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 14.sp,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: myPosts.map((post) {
+        return Container(
+          margin: EdgeInsets.only(bottom: 12.h),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(color: Colors.purple.shade100),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PostCreatePage(
+                      postData: post,
+                      postId: post['id'],
+                    ),
+                  ),
+                );
+              },
+              borderRadius: BorderRadius.circular(12.r),
+              child: Padding(
+                padding: EdgeInsets.all(16.w),
+                child: Stack(
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                post['title'] ?? '',
+                                style: TextStyle(
+                                  fontSize: 15.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                  height: 1.4,
+                                ),
+                              ),
+                              SizedBox(height: 8.h),
+                              Row(
+                                children: [
+                                  Text(
+                                    '코스 ${post['distance']?.toStringAsFixed(1) ?? '-'}km',
+                                    style: TextStyle(
+                                      fontSize: 13.sp,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  SizedBox(width: 8.w),
+                                  Icon(Icons.favorite,
+                                      size: 14.sp, color: Colors.purple),
+                                  Text(
+                                    ' ${post['likes'] ?? 0}',
+                                    style: TextStyle(
+                                      fontSize: 13.sp,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (post['tags'] != null &&
+                                  (post['tags'] as List).isNotEmpty) ...[
+                                SizedBox(height: 8.h),
+                                Wrap(
+                                  spacing: 6.w,
+                                  runSpacing: 6.h,
+                                  children: (post['tags'] as List)
+                                      .map<Widget>((tag) => Container(
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: 8.w,
+                                              vertical: 4.h,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.yellow.shade100,
+                                              borderRadius:
+                                                  BorderRadius.circular(6.r),
+                                            ),
+                                            child: Text(
+                                              tag.toString(),
+                                              style: TextStyle(
+                                                fontSize: 12.sp,
+                                                color: Colors.black87,
+                                              ),
+                                            ),
+                                          ))
+                                      .toList(),
+                                ),
+                              ],
+                              if (post['createdAt'] != null) ...[
+                                SizedBox(height: 8.h),
+                                Text(
+                                  '작성일: ${(post['createdAt'] as Timestamp).toDate().toString().split('.')[0]}',
+                                  style: TextStyle(
+                                    fontSize: 12.sp,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        if ((post['imageUrls'] ?? []).isNotEmpty) ...[
+                          SizedBox(width: 12.w),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8.r),
+                            child: Image.network(
+                              post['imageUrls'][0],
+                              width: 80.w,
+                              height: 80.h,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    if (isEditing)
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: IconButton(
+                          icon: Icon(Icons.delete,
+                              color: Colors.red.shade400, size: 20.sp),
+                          onPressed: () => _showDeleteDialog(post['id']),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  void _showDeleteDialog(String postId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          '게시글 삭제',
+          style: TextStyle(
+            fontSize: 17.sp,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
+        content: Text(
+          '이 게시글을 삭제하시겠습니까?',
+          style: TextStyle(
+            fontSize: 14.sp,
+            color: Colors.black87,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              '취소',
+              style: TextStyle(
+                fontSize: 14.sp,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deletePost(postId);
+            },
+            child: Text(
+              '삭제',
+              style: TextStyle(
+                fontSize: 14.sp,
+                color: Colors.red.shade400,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          if (isUploading)
+            Container(
+              color: Colors.black.withOpacity(0.5),
+              child: const Center(
+                child: CircularProgressIndicator(),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}

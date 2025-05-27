@@ -30,8 +30,14 @@ class _RankingScreenState extends State<RankingScreen> {
 
   Future<void> _loadRankingData() async {
     try {
-      final usersSnapshot = await FirebaseFirestore.instance.collection('users').get();
+      setState(() {
+        _isLoading = true;
+      });
+
+      final usersSnapshot =
+          await FirebaseFirestore.instance.collection('users').get();
       List<Map<String, dynamic>> userData = [];
+      String? currentUserId = _auth.currentUser?.uid;
 
       for (var userDoc in usersSnapshot.docs) {
         try {
@@ -47,11 +53,19 @@ class _RankingScreenState extends State<RankingScreen> {
           for (var workoutDoc in workoutSnapshot.docs) {
             final workoutData = workoutDoc.data();
             final date = (workoutData['date'] as Timestamp).toDate();
-            final dateKey = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+            final dateKey =
+                '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
             final distance = (workoutData['distance'] as num).toDouble();
-            
+
             totalDistance += distance;
             dailyDistances[dateKey] = (dailyDistances[dateKey] ?? 0) + distance;
+          }
+
+          String level = '초급자';
+          if (totalDistance >= 60) {
+            level = '상급자';
+          } else if (totalDistance >= 30) {
+            level = '중급자';
           }
 
           userData.add({
@@ -59,23 +73,81 @@ class _RankingScreenState extends State<RankingScreen> {
             'nickname': userDoc.data()['nickname'] ?? '알 수 없음',
             'totalDistance': totalDistance,
             'dailyDistances': dailyDistances,
+            'level': level,
           });
         } catch (e) {
           print('사용자 ${userDoc.id}의 데이터 로드 중 오류: $e');
         }
       }
 
+      // 거리순으로 정렬
+      userData.sort((a, b) => (b['totalDistance'] as double)
+          .compareTo(a['totalDistance'] as double));
+
+      // RankingData 객체로 변환
+      List<RankingData> rankingData = userData.asMap().entries.map((entry) {
+        final index = entry.key;
+        final data = entry.value;
+        return RankingData(
+          userId: data['userId'],
+          name: data['nickname'],
+          totalDistance: data['totalDistance'],
+          rank: index + 1,
+          level: data['level'],
+          monthlyMedals: {},
+        );
+      }).toList();
+
       setState(() {
-        _userData = userData;
-        _sortUserData();
+        _rankingData = rankingData;
+        _currentUser = rankingData.firstWhere(
+          (data) => data.userId == currentUserId,
+          orElse: () => rankingData.first,
+        );
+        _isLoading = false;
       });
     } catch (e) {
       print('랭킹 데이터 로드 중 오류 발생: $e');
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
   void _sortUserData() {
-    // Implementation of _sortUserData method
+    if (_userData.isEmpty) return;
+
+    // 거리순으로 정렬
+    _userData.sort((a, b) =>
+        (b['totalDistance'] as double).compareTo(a['totalDistance'] as double));
+
+    // RankingData 객체로 변환
+    _rankingData = _userData.asMap().entries.map((entry) {
+      final index = entry.key;
+      final data = entry.value;
+      String level = '초급자';
+      if (data['totalDistance'] >= 60) {
+        level = '상급자';
+      } else if (data['totalDistance'] >= 30) {
+        level = '중급자';
+      }
+
+      return RankingData(
+        userId: data['userId'],
+        name: data['nickname'],
+        totalDistance: data['totalDistance'],
+        rank: index + 1,
+        level: level,
+        monthlyMedals: {},
+      );
+    }).toList();
+
+    // 현재 사용자 정보 업데이트
+    String? currentUserId = _auth.currentUser?.uid;
+    _currentUser = _rankingData.firstWhere(
+      (data) => data.userId == currentUserId,
+      orElse: () => _rankingData.first,
+    );
   }
 
   @override
