@@ -56,12 +56,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
     try {
       print('현재 사용자 ID: ${user.uid}');
       
+      // 현재 사용자 ID 즉시 설정
+      setState(() {
+        _currentUserId = user.uid;
+      });
+      
       // 현재 사용자 정보 가져오기
       final userDoc = await _firestore.collection('users').doc(user.uid).get();
       if (userDoc.exists) {
         print('현재 사용자 닉네임: ${userDoc.data()?['nickname']}');
         setState(() {
-          _currentUserId = user.uid;
           _currentUserNickname = userDoc.data()?['nickname'] ?? '나';
         });
       }
@@ -131,6 +135,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     if (userId != null) {
       try {
+        print('운동 데이터 로드 시작 - 사용자 ID: $userId');
         final snapshot = await _firestore
             .collection('users')
             .doc(userId)
@@ -138,6 +143,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
             .orderBy('date', descending: true)
             .get();
 
+        print('운동 데이터 문서 수: ${snapshot.docs.length}');
+        
         records.addAll(snapshot.docs.map((doc) {
           final data = doc.data();
           final List<Map<String, double>> routePoints =
@@ -161,10 +168,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
             duration: Duration(seconds: data['duration'] as int),
             pace: pace,
             cadence: 0,
-            calories: data['calories'] as int,
+            calories: (data['calories'] as num).toInt(),
             routePoints: routePoints,
           );
         }).toList());
+        
+        print('로드된 운동 기록 수: ${records.length}');
       } catch (e) {
         print('운동 데이터 로드 중 오류 발생: $e');
       }
@@ -174,6 +183,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
       _workoutRecords = records;
       _updateSelectedRecords();
     });
+  }
+
+  // Duration을 'mm:ss' 형식으로 포맷하는 헬퍼 함수
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    String minutes = twoDigits(duration.inMinutes.remainder(60));
+    String seconds = twoDigits(duration.inSeconds.remainder(60));
+    return '$minutes분 $seconds초';
   }
 
   void _updateSelectedRecords() {
@@ -363,7 +380,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             child: Text('•', style: TextStyle(color: Colors.grey)),
                           ),
                           Text(
-                            '${record.duration.inMinutes}분',
+                            _formatDuration(record.duration),
                             style: TextStyle(
                               color: AppTheme.darkTextColor,
                               fontSize: 16.sp,
@@ -375,7 +392,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             child: Text('•', style: TextStyle(color: Colors.grey)),
                           ),
                           Text(
-                            '${record.pace.toStringAsFixed(2)}분/km',
+                            '${record.pace.toStringAsFixed(2)} /km',
                             style: TextStyle(
                               color: AppTheme.darkTextColor,
                               fontSize: 16.sp,

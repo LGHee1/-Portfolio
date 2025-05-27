@@ -8,6 +8,7 @@ import '../Running/workout_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class PostViewPage extends StatefulWidget {
   final Map<String, dynamic> postData;
@@ -317,6 +318,24 @@ class _PostViewPageState extends State<PostViewPage> {
                       ),
               ),
             ),
+            if (widget.postData['routePoints'] != null && (widget.postData['routePoints'] as List).isNotEmpty)
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    final startPoint = (widget.postData['routePoints'] as List).first;
+                    final url = 'https://www.google.com/maps/dir/?api=1&destination=${startPoint['latitude']},${startPoint['longitude']}';
+                    launchUrl(Uri.parse(url));
+                  },
+                  icon: const Icon(Icons.directions),
+                  label: const Text('시작점으로 길찾기'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF764BA2),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 45),
+                  ),
+                ),
+              ),
             Padding(
               padding: EdgeInsets.all(16.w),
               child: Column(

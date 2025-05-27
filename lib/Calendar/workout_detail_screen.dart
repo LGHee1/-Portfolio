@@ -87,6 +87,14 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
     );
   }
 
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    String hours = twoDigits(duration.inHours);
+    String minutes = twoDigits(duration.inMinutes.remainder(60));
+    String seconds = twoDigits(duration.inSeconds.remainder(60));
+    return '$hours:$minutes:$seconds';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -101,6 +109,26 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
             padding: EdgeInsets.only(right: 16.w),
             child: ElevatedButton(
               onPressed: () {
+                if (widget.record.routePoints.isEmpty) {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      content: const Text('운동 경로가 없어 게시글을 작성할 수 없습니다.'),
+                      actions: [
+                        Align(
+                          alignment: Alignment.bottomRight,
+                          child: TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            child: const Text('확인'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                  return;
+                }
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -108,6 +136,8 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                       workoutData: {
                         'routePoints': widget.record.routePoints,
                         'date': widget.record.date,
+                        'distance': widget.record.distance,
+                        'duration': widget.record.duration.inSeconds,
                       },
                     ),
                   ),
@@ -237,7 +267,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
           crossAxisSpacing: 16.w,
           children: [
             _buildStatItem('거리', '${widget.record.distance.toStringAsFixed(2)} km'),
-            _buildStatItem('시간', '${widget.record.duration.inMinutes} 분'),
+            _buildStatItem('시간', _formatDuration(widget.record.duration)),
             _buildStatItem('케이던스', '${widget.record.cadence} spm'),
             _buildStatItem('평균 페이스', '${widget.record.pace.toStringAsFixed(2)} /km'),
             _buildStatItem('칼로리', '${widget.record.calories} kcal'),
