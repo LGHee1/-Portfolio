@@ -56,7 +56,7 @@ class MyApp extends StatelessWidget {
             useMaterial3: true,
             scaffoldBackgroundColor: Colors.white,
           ),
-          home: const AuthWrapper(), // StartScreen 대신 AuthWrapper 사용
+          home: const StartScreen(), // StartScreen 대신 AuthWrapper 사용
           debugShowCheckedModeBanner: false,
         );
       },
@@ -76,7 +76,7 @@ class AuthWrapper extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        
+
         if (snapshot.hasData) {
           // 로그인된 상태에서 사용자 데이터 초기화
           final userProvider = Provider.of<UserProvider>(context, listen: false);
@@ -85,7 +85,7 @@ class AuthWrapper extends StatelessWidget {
           }
           return const ScreenHome();
         }
-        
+
         // 로그인되지 않은 상태
         return const StartScreen();
       },
