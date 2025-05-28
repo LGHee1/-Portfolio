@@ -28,6 +28,7 @@ dependencies:
   flutter_screenutil: ^5.9.0
   profanity_filter: ^2.0.0
   url_launcher: ^6.2.5
+  firebase_database: ^10.5.7
   
 dev_dependencies:
   flutter_test:
@@ -41,21 +42,3 @@ flutter:
     - assets/img/now_position.png
     - assets/img/runner_background.png
     - assets/img/runner_home.png
-    - assets/data/서울특별시.json
-    - assets/data/부산광역시.json
-    - assets/data/대구광역시.json
-    - assets/data/인천광역시.json
-    - assets/data/광주광역시.json
-    - assets/data/대전광역시.json
-    - assets/data/울산광역시.json
-    - assets/data/세종특별자치시.json
-    - assets/data/경기도.json
-    - assets/data/강원특별자치도.json
-    - assets/data/충청북도.json
-    - assets/data/충청남도.json
-    - assets/data/전북특별자치도.json
-    - assets/data/전라남도.json
-    - assets/data/경상북도.json
-    - assets/data/경상남도.json
-    - assets/data/제주특별자치도.json
-

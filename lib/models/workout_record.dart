@@ -7,6 +7,7 @@ class WorkoutRecord {
   final int calories;
   final List<Map<String, double>>
   routePoints; // List of {latitude, longitude} points
+  final List<Map<String, double>> pausedRoutePoints; // 일시정지 구간 포인트 추가
   final String userId; // 사용자 구분을 위한 ID 추가
 
   WorkoutRecord({
@@ -17,6 +18,7 @@ class WorkoutRecord {
     required this.cadence,
     required this.calories,
     required this.routePoints,
+    required this.pausedRoutePoints, // 일시정지 구간 추가
     required this.userId,
   });
 }
@@ -38,6 +40,7 @@ final Map<String, List<WorkoutRecord>> userWorkoutRecords = {
         {'latitude': 37.5675, 'longitude': 126.9795},
         {'latitude': 37.5680, 'longitude': 126.9800},
       ],
+      pausedRoutePoints: [],
     ),
     WorkoutRecord(
       userId: '나',
@@ -53,6 +56,7 @@ final Map<String, List<WorkoutRecord>> userWorkoutRecords = {
         {'latitude': 37.5671, 'longitude': 126.9790},
         {'latitude': 37.5675, 'longitude': 126.9795},
       ],
+      pausedRoutePoints: [],
     ),
   ],
   '친구1': [
@@ -68,6 +72,7 @@ final Map<String, List<WorkoutRecord>> userWorkoutRecords = {
         {'latitude': 37.5665, 'longitude': 126.9780},
         {'latitude': 37.5675, 'longitude': 126.9795},
       ],
+      pausedRoutePoints: [],
     ),
     WorkoutRecord(
       userId: '친구1',
@@ -81,6 +86,7 @@ final Map<String, List<WorkoutRecord>> userWorkoutRecords = {
         {'latitude': 37.5665, 'longitude': 126.9780},
         {'latitude': 37.5675, 'longitude': 126.9795},
       ],
+      pausedRoutePoints: [],
     ),
   ],
   '친구2': [
@@ -96,6 +102,7 @@ final Map<String, List<WorkoutRecord>> userWorkoutRecords = {
         {'latitude': 37.5665, 'longitude': 126.9780},
         {'latitude': 37.5675, 'longitude': 126.9795},
       ],
+      pausedRoutePoints: [],
     ),
     WorkoutRecord(
       userId: '친구2',
@@ -109,6 +116,7 @@ final Map<String, List<WorkoutRecord>> userWorkoutRecords = {
         {'latitude': 37.5665, 'longitude': 126.9780},
         {'latitude': 37.5675, 'longitude': 126.9795},
       ],
+      pausedRoutePoints: [],
     ),
   ],
   '친구3': [
@@ -124,6 +132,7 @@ final Map<String, List<WorkoutRecord>> userWorkoutRecords = {
         {'latitude': 37.5665, 'longitude': 126.9780},
         {'latitude': 37.5675, 'longitude': 126.9795},
       ],
+      pausedRoutePoints: [],
     ),
     WorkoutRecord(
       userId: '친구3',
@@ -137,6 +146,7 @@ final Map<String, List<WorkoutRecord>> userWorkoutRecords = {
         {'latitude': 37.5665, 'longitude': 126.9780},
         {'latitude': 37.5675, 'longitude': 126.9795},
       ],
+      pausedRoutePoints: [],
     ),
   ],
 };

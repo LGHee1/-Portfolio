@@ -18,6 +18,7 @@ class WorkoutSummaryScreen extends StatefulWidget {
   final int cadence;
   final int calories;
   final List<LatLng> routePoints;
+  final List<LatLng> pausedRoutePoints;
   final bool isRecommendedCourse;
   final List<LatLng> recommendedRoutePoints;
   final String recommendedCourseName;
@@ -30,6 +31,7 @@ class WorkoutSummaryScreen extends StatefulWidget {
     required this.cadence,
     required this.calories,
     required this.routePoints,
+    required this.pausedRoutePoints,
     this.isRecommendedCourse = false,
     required this.recommendedRoutePoints,
     required this.recommendedCourseName,
@@ -76,7 +78,7 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
         Polyline(
           polylineId: const PolylineId('route'),
           points: widget.routePoints,
-          color: Colors.blue,
+          color: const Color(0xFF764BA2),
           width: 5,
           startCap: Cap.roundCap,
           endCap: Cap.roundCap,
@@ -268,12 +270,20 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
                           ),
                           onMapCreated: _onMapCreated,
                           polylines: {
-                            // 실제 달린 경로 (파란색)
+                            // 실제 달린 경로 (보라색)
                             if (widget.routePoints.isNotEmpty)
                               Polyline(
                                 polylineId: const PolylineId('route'),
                                 points: widget.routePoints,
-                                color: Colors.blue,
+                                color: const Color(0xFF764BA2),
+                                width: 5,
+                              ),
+                            // 일시정지 구간 (회색)
+                            if (widget.pausedRoutePoints.isNotEmpty)
+                              Polyline(
+                                polylineId: const PolylineId('pausedRoute'),
+                                points: widget.pausedRoutePoints,
+                                color: Colors.grey,
                                 width: 5,
                               ),
                             // 추천 코스 (초록색)

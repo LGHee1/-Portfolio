@@ -152,6 +152,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
               .map((point) => Map<String, double>.from(point))
               .toList();
 
+          // 일시정지 구간 데이터 가져오기
+          final List<Map<String, double>> pausedRoutePoints =
+          (data['pausedRoutePoints'] as List? ?? [])
+              .map((point) => Map<String, double>.from(point))
+              .toList();
+
           String paceStr = data['pace'] as String;
           double pace = 0.0;
           if (paceStr.contains("'")) {
@@ -170,6 +176,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             cadence: 0,
             calories: (data['calories'] as num).toInt(),
             routePoints: routePoints,
+            pausedRoutePoints: pausedRoutePoints,
           );
         }).toList());
         

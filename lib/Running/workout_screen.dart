@@ -218,6 +218,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                         cadence: _cadence,
                         calories: _calories,
                         routePoints: _routePoints,
+                        pausedRoutePoints: [], // 일시정지 구간 추가 (이 화면에서는 일시정지 기능이 없으므로 빈 리스트)
                         isRecommendedCourse: _isRecommendedCourse,
                         recommendedRoutePoints: _recommendedRoutePoints,
                         recommendedCourseName: _recommendedCourseName,

@@ -80,6 +80,26 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
         ),
       );
 
+      // 일시정지 구간이 있는 경우 추가
+      if (widget.record.pausedRoutePoints.isNotEmpty) {
+        final List<LatLng> pausedPoints = widget.record.pausedRoutePoints
+            .map((point) => LatLng(point['latitude']!, point['longitude']!))
+            .toList();
+
+        _polylines.add(
+          Polyline(
+            polylineId: const PolylineId('pausedRoute'),
+            points: pausedPoints,
+            color: Colors.grey,
+            width: 8,
+            patterns: [PatternItem.dash(30), PatternItem.gap(10)],
+            startCap: Cap.roundCap,
+            endCap: Cap.roundCap,
+            jointType: JointType.round,
+          ),
+        );
+      }
+
       // Set initial position to the first point of the route
       _initialPosition = points.first;
     }
