@@ -9,6 +9,8 @@ import '../Running/workout_screen.dart';
 import '../home_screen.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../Widgets/bottom_bar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class WorkoutDetailScreen extends StatefulWidget {
   final WorkoutRecord record;
@@ -24,11 +26,39 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
   final Set<Polyline> _polylines = {};
   LatLng? _initialPosition;
   int _selectedIndex = 1;
+  bool _hasExistingPost = false;
 
   @override
   void initState() {
     super.initState();
     _initializePolylines();
+    _checkExistingPost();
+  }
+
+  Future<void> _checkExistingPost() async {
+    if (widget.record.routePoints.isEmpty) return;
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      // 운동 데이터의 고유 식별자를 생성
+      final workoutId = '${widget.record.distance}_${widget.record.duration.inSeconds}_${widget.record.routePoints.first['latitude']}_${widget.record.routePoints.first['longitude']}';
+
+      // 사용자 하위 컬렉션에서 게시글 확인
+      final postDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('Post_Data')
+          .where('workoutId', isEqualTo: workoutId)
+          .get();
+
+      setState(() {
+        _hasExistingPost = postDoc.docs.isNotEmpty;
+      });
+    } catch (e) {
+      print('게시글 존재 여부 확인 중 오류 발생: $e');
+    }
   }
 
   void _initializePolylines() {
@@ -108,43 +138,48 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
           Padding(
             padding: EdgeInsets.only(right: 16.w),
             child: ElevatedButton(
-              onPressed: () {
-                if (widget.record.routePoints.isEmpty) {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      content: const Text('운동 경로가 없어 게시글을 작성할 수 없습니다.'),
-                      actions: [
-                        Align(
-                          alignment: Alignment.bottomRight,
-                          child: TextButton(
-                            onPressed: () {
-                              Navigator.of(context).pop();
+              onPressed: _hasExistingPost
+                  ? null
+                  : () {
+                      if (widget.record.routePoints.isEmpty) {
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            content: const Text('운동 경로가 없어 게시글을 작성할 수 없습니다.'),
+                            actions: [
+                              Align(
+                                alignment: Alignment.bottomRight,
+                                child: TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop();
+                                  },
+                                  child: const Text('확인'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                        return;
+                      }
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PostCreatePage(
+                            workoutData: {
+                              'routePoints': widget.record.routePoints,
+                              'date': widget.record.date,
+                              'distance': widget.record.distance,
+                              'duration': widget.record.duration.inSeconds,
+                              'workoutId': '${widget.record.distance}_${widget.record.duration.inSeconds}_${widget.record.routePoints.first['latitude']}_${widget.record.routePoints.first['longitude']}',
                             },
-                            child: const Text('확인'),
                           ),
                         ),
-                      ],
-                    ),
-                  );
-                  return;
-                }
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => PostCreatePage(
-                      workoutData: {
-                        'routePoints': widget.record.routePoints,
-                        'date': widget.record.date,
-                        'distance': widget.record.distance,
-                        'duration': widget.record.duration.inSeconds,
-                      },
-                    ),
-                  ),
-                );
-              },
+                      ).then((_) {
+                        _checkExistingPost(); // 게시글 작성 후 상태 업데이트
+                      });
+                    },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF9800),
+                backgroundColor: _hasExistingPost ? Colors.grey : const Color(0xFFFF9800),
                 foregroundColor: Colors.white,
                 padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
                 shape: RoundedRectangleBorder(
@@ -152,7 +187,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                 ),
               ),
               child: Text(
-                '게시글 작성',
+                _hasExistingPost ? '이미 게시글을 작성했습니다' : '게시글 작성',
                 style: TextStyle(
                   fontSize: 14.sp,
                   fontWeight: FontWeight.bold,

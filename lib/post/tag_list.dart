@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 class TagListPage extends StatefulWidget {
   final Function(List<Tag>) onTagsSelected;
   final List<Tag> initialSelectedTags;
-  
+
   const TagListPage({
     super.key,
     required this.onTagsSelected,
@@ -25,7 +25,7 @@ class _TagListPageState extends State<TagListPage> {
     TagCategory.surrounding: true,
     TagCategory.etc: true,
   };
-  
+
   // 지역 선택 관련 상태
   RegionTag? selectedLevel1;  // 시/도
   RegionTag? selectedLevel2;  // 시/군/구
@@ -45,15 +45,45 @@ class _TagListPageState extends State<TagListPage> {
   Future<void> _loadRegionData() async {
     try {
       print('지역 데이터 로드 시작');
-      final String jsonString = await rootBundle.loadString('assets/data/region_hierarchy.json');
-      print('JSON 문자열 로드 완료: ${jsonString.substring(0, 100)}...'); // 처음 100자만 출력
-      
-      final List<dynamic> regionsJson = json.decode(jsonString);
-      print('파싱된 지역 데이터 수: ${regionsJson.length}');
-      
+      List<RegionTag> allRegions = [];
+
+      // 17개 시도 파일 목록
+      final regionFiles = [
+        '서울특별시.json',
+        '부산광역시.json',
+        '대구광역시.json',
+        '인천광역시.json',
+        '광주광역시.json',
+        '대전광역시.json',
+        '울산광역시.json',
+        '세종특별자치시.json',
+        '경기도.json',
+        '강원특별자치도.json',
+        '충청북도.json',
+        '충청남도.json',
+        '전북특별자치도.json',
+        '전라남도.json',
+        '경상북도.json',
+        '경상남도.json',
+        '제주특별자치도.json',
+      ];
+
+      // 각 시도 파일에서 데이터 로드
+      for (final file in regionFiles) {
+        try {
+          final String jsonString = await rootBundle.loadString('assets/data/$file');
+          final Map<String, dynamic> jsonData = json.decode(jsonString);
+          final RegionTag region = RegionTag.fromJson(jsonData);
+          allRegions.add(region);
+          print('$file 로드 완료: ${region.name}');
+        } catch (e) {
+          print('$file 로드 실패: $e');
+        }
+      }
+
       setState(() {
-        level1Regions = regionsJson.map((json) => RegionTag.fromJson(json as Map<String, dynamic>)).toList();
-        print('시/도 목록 생성 완료: ${level1Regions!.length}개');
+        level1Regions = allRegions;
+        print('전체 시/도 목록 생성 완료: ${level1Regions!.length}개');
       });
     } catch (e, stackTrace) {
       print('지역 데이터 로드 실패: $e');
@@ -71,24 +101,42 @@ class _TagListPageState extends State<TagListPage> {
       selectedLevel3 = null;
       level2Regions = region.subRegions;
       level3Regions = null;
+      // 1단계 지역이 바뀌면 지역 태그 초기화
+      selectedTags.removeWhere((tag) => tag.category == TagCategory.location);
     });
   }
 
   void _selectLevel2(RegionTag region) {
     setState(() {
-      selectedLevel2 = region;
-      selectedLevel3 = null;
-      level3Regions = region.subRegions;
+      if (selectedLevel1?.name == '세종특별자치시') {
+        // 여러 개 동을 동시에 선택/해제(토글)
+        if (selectedTags.contains(region)) {
+          selectedTags.remove(region);
+        } else {
+          selectedTags.add(region);
+        }
+        // 세종시 2단계에서는 selectedLevel2, level3Regions 사용하지 않음
+        selectedLevel2 = null;
+        selectedLevel3 = null;
+        level3Regions = null;
+      } else {
+        selectedLevel2 = region;
+        selectedLevel3 = null;
+        level3Regions = region.subRegions;
+      }
     });
   }
 
   void _selectLevel3(RegionTag region) {
     setState(() {
-      selectedLevel3 = region;
-      // 선택된 지역을 태그로 추가
-      if (!selectedTags.contains(region)) {
+      // 여러 개 읍/면/동을 동시에 선택/해제(토글)
+      if (selectedTags.contains(region)) {
+        selectedTags.remove(region);
+      } else {
         selectedTags.add(region);
       }
+      // 3단계에서는 selectedLevel3 사용하지 않음
+      selectedLevel3 = null;
     });
   }
 
@@ -148,7 +196,9 @@ class _TagListPageState extends State<TagListPage> {
               itemCount: level2Regions!.length,
               itemBuilder: (context, index) {
                 final region = level2Regions![index];
-                final isSelected = selectedLevel2?.code == region.code;
+                final isSelected = (selectedLevel1?.name == '세종특별자치시')
+                    ? selectedTags.contains(region)
+                    : selectedLevel2?.code == region.code;
                 return GestureDetector(
                   onTap: () => _selectLevel2(region),
                   child: Container(
@@ -189,7 +239,7 @@ class _TagListPageState extends State<TagListPage> {
               itemCount: level3Regions!.length,
               itemBuilder: (context, index) {
                 final region = level3Regions![index];
-                final isSelected = selectedLevel3?.code == region.code;
+                final isSelected = selectedTags.contains(region);
                 return GestureDetector(
                   onTap: () => _selectLevel3(region),
                   child: Container(

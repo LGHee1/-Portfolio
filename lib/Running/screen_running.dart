@@ -249,9 +249,12 @@ class _RunningScreenState extends State<RunningScreen> {
       final userData = userDoc.data();
       if (userData == null) return 0.0;
 
-      final weight = userData['weight'] as double;
-      final gender = userData['gender'] as String;
-      final age = userData['age'] as int;
+      print('calculateCalories: Fetched user data: $userData');
+
+      final weight = userData['weight'] as double?; // double?로 변경하여 null 허용
+      // 성별은 남성으로 고정
+      final String gender = 'male'; // String?에서 String으로 변경하고 'male'로 초기화
+      final age = userData['age'] as int; // int?에서 int로 변경
 
       // MET 값 계산 (속도 기반)
       double speed = _distance / (_seconds / 3600); // km/h
@@ -269,13 +272,8 @@ class _RunningScreenState extends State<RunningScreen> {
 
       // 칼로리 계산
       double hours = _seconds / 3600;
-      double calories = met * weight * hours;
+      double calories = met * weight! * hours;
 
-      // 성별과 나이에 따른 보정
-      if (gender == 'female') {
-        calories *= 0.9; // 여성은 남성보다 약 10% 적은 칼로리 소모
-      }
-      
       // 나이에 따른 보정 (20대 기준)
       if (age > 30) {
         calories *= 0.95; // 30대 이상은 약 5% 감소

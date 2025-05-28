@@ -38,13 +38,14 @@ class RegionTag extends Tag {
   factory RegionTag.fromJson(Map<String, dynamic> json) {
     return RegionTag(
       name: json['name'] as String,
-      level: json['level'] as int,
+      level: json['code'].toString().length == 2 ? 1 :
+      json['code'].toString().length == 5 ? 2 : 3,
       code: json['code'] as String,
-      parentRegion: json['parent'] as String?,
-      subRegions: json['subRegions'] != null
-          ? (json['subRegions'] as List)
-              .map((e) => RegionTag.fromJson(e as Map<String, dynamic>))
-              .toList()
+      parentRegion: null,  // 상위 지역 정보는 나중에 설정
+      subRegions: json['children'] != null
+          ? (json['children'] as List)
+          .map((e) => RegionTag.fromJson(e as Map<String, dynamic>))
+          .toList()
           : null,
     );
   }
@@ -58,6 +59,11 @@ class RegionTag extends Tag {
       'parentRegion': parentRegion,
       'subRegions': subRegions?.map((e) => e.toJson()).toList(),
     };
+  }
+
+  // 여러 지역 데이터를 한번에 파싱하는 팩토리 메서드
+  static List<RegionTag> fromJsonList(List<dynamic> jsonList) {
+    return jsonList.map((json) => RegionTag.fromJson(json as Map<String, dynamic>)).toList();
   }
 }
 

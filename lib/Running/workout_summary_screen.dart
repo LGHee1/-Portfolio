@@ -48,6 +48,7 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
   LatLng? _initialPosition;
   bool _isLoading = true;
   String _userNickname = '';
+  bool _hasExistingPost = false;
 
   @override
   void initState() {
@@ -59,6 +60,7 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
     if (widget.isRecommendedCourse) {
       _loadLikeCount();
     }
+    _checkExistingPost();
   }
 
   void _loadUserData() {
@@ -205,6 +207,32 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
     }
   }
 
+  Future<void> _checkExistingPost() async {
+    if (widget.routePoints.isEmpty) return;
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      // 운동 데이터의 고유 식별자를 생성
+      final workoutId = '${widget.distance}_${widget.duration.inSeconds}_${widget.routePoints.first.latitude}_${widget.routePoints.first.longitude}';
+
+      // 사용자 하위 컬렉션에서 게시글 확인
+      final postDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('Post_Data')
+          .where('workoutId', isEqualTo: workoutId)
+          .get();
+
+      setState(() {
+        _hasExistingPost = postDoc.docs.isNotEmpty;
+      });
+    } catch (e) {
+      print('게시글 존재 여부 확인 중 오류 발생: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -291,52 +319,57 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
                                 child: Align(
                                   alignment: Alignment.bottomCenter,
                                   child: ElevatedButton(
-                                    onPressed: () {
-                                      if (widget.routePoints.isEmpty) {
-                                        showDialog(
-                                          context: context,
-                                          builder: (context) => AlertDialog(
-                                            content: const Text('운동 경로가 없어 작성할 수 없습니다.'),
-                                            actions: [
-                                              Align(
-                                                alignment: Alignment.bottomRight,
-                                                child: TextButton(
-                                                  onPressed: () {
-                                                    Navigator.of(context).pop();
-                                                  },
-                                                  child: const Text('확인'),
+                                    onPressed: _hasExistingPost
+                                        ? null
+                                        : () {
+                                            if (widget.routePoints.isEmpty) {
+                                              showDialog(
+                                                context: context,
+                                                builder: (context) => AlertDialog(
+                                                  content: const Text('운동 경로가 없어 작성할 수 없습니다.'),
+                                                  actions: [
+                                                    Align(
+                                                      alignment: Alignment.bottomRight,
+                                                      child: TextButton(
+                                                        onPressed: () {
+                                                          Navigator.of(context).pop();
+                                                        },
+                                                        child: const Text('확인'),
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                      } else {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => PostCreatePage(
-                                              workoutData: {
-                                                'routePoints': widget.routePoints.map((point) => {
-                                                  'latitude': point.latitude,
-                                                  'longitude': point.longitude,
-                                                }).toList(),
-                                                'distance': widget.distance,
-                                                'duration': widget.duration.inSeconds,
-                                              },
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    },
+                                              );
+                                            } else {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) => PostCreatePage(
+                                                    workoutData: {
+                                                      'routePoints': widget.routePoints.map((point) => {
+                                                        'latitude': point.latitude,
+                                                        'longitude': point.longitude,
+                                                      }).toList(),
+                                                      'distance': widget.distance,
+                                                      'duration': widget.duration.inSeconds,
+                                                      'workoutId': '${widget.distance}_${widget.duration.inSeconds}_${widget.routePoints.first.latitude}_${widget.routePoints.first.longitude}',
+                                                    },
+                                                  ),
+                                                ),
+                                              ).then((_) {
+                                                _checkExistingPost(); // 게시글 작성 후 상태 업데이트
+                                              });
+                                            }
+                                          },
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF764BA2),
+                                      backgroundColor: _hasExistingPost ? Colors.grey : const Color(0xFF764BA2),
                                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(20),
                                       ),
                                     ),
-                                    child: const Text(
-                                      '현재 운동코스 게시글 작성',
+                                    child: Text(
+                                      _hasExistingPost ? '이미 게시글을 작성했습니다' : '현재 운동코스 게시글 작성',
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontSize: 16,

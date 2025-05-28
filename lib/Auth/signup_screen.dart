@@ -12,7 +12,8 @@ class SignUpScreen extends StatefulWidget {
   State<SignUpScreen> createState() => _SignUpScreenState();
 }
 
-class _SignUpScreenState extends State<SignUpScreen> {
+class _SignUpScreenState extends State<SignUpScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -27,16 +28,46 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _isPrivacyChecked = false; // 개인정보 수집 동의 체크 여부
   bool _isEmailVerified = false; // 이메일 인증 상태 추가
   bool _isEmailSent = false;
+  String? _selectedGender; // 성별 선택을 위한 변수 추가
   Timer? _verificationTimer;
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
 
   @override
   void initState() {
     super.initState();
     _initializeFirebaseState();
+
+    // 애니메이션 컨트롤러 초기화
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeIn,
+      ),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.1),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeOut,
+      ),
+    );
+
+    _animationController.forward();
   }
 
   @override
   void dispose() {
+    _animationController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _nameController.dispose();
@@ -66,29 +97,30 @@ class _SignUpScreenState extends State<SignUpScreen> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        _verificationTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
-          try {
-            await user.reload();
-            final updatedUser = FirebaseAuth.instance.currentUser;
-            if (updatedUser != null && updatedUser.emailVerified) {
-              setState(() {
-                _isEmailVerified = true;
-              });
-              timer.cancel();
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('이메일 인증이 완료되었습니다!'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
+        _verificationTimer =
+            Timer.periodic(const Duration(seconds: 3), (timer) async {
+              try {
+                await user.reload();
+                final updatedUser = FirebaseAuth.instance.currentUser;
+                if (updatedUser != null && updatedUser.emailVerified) {
+                  setState(() {
+                    _isEmailVerified = true;
+                  });
+                  timer.cancel();
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('이메일 인증이 완료되었습니다!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                debugPrint('이메일 인증 확인 중 오류: $e');
+                timer.cancel();
               }
-            }
-          } catch (e) {
-            debugPrint('이메일 인증 확인 중 오류: $e');
-            timer.cancel();
-          }
-        });
+            });
       }
     } catch (e) {
       debugPrint('이메일 인증 확인 초기화 중 오류: $e');
@@ -197,7 +229,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
   }
 
-
   Future<void> _sendVerificationEmail() async {
     if (_emailController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -220,7 +251,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
       }
 
       // 이메일 중복 체크
-      final methods = await FirebaseAuth.instance.fetchSignInMethodsForEmail(_emailController.text.trim());
+      final methods = await FirebaseAuth.instance
+          .fetchSignInMethodsForEmail(_emailController.text.trim());
       if (methods.isNotEmpty) {
         throw FirebaseAuthException(
           code: 'email-already-in-use',
@@ -229,7 +261,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
       }
 
       // 임시 사용자 생성 및 인증 이메일 발송
-      final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      final userCredential =
+      await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: 'temporaryPassword123!', // 임시 비밀번호
       );
@@ -249,7 +282,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       // 이메일 인증 상태 확인 시작
       _checkEmailVerification();
-
     } on FirebaseAuthException catch (e) {
       String message = '이메일 확인 중 오류가 발생했습니다.';
       if (e.code == 'email-already-in-use') {
@@ -299,6 +331,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return;
     }
 
+    if (_selectedGender == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('성별을 선택해주세요.')),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -335,10 +374,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       debugPrint('Firebase Auth 사용자 UID: ${user.uid}');
 
       // Firestore에 사용자 정보 저장
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .set({
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
         'name': _nameController.text.trim(),
         'nickname': _nicknameController.text.trim(),
         'email': user.email,
@@ -350,6 +386,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         'totalWorkouts': 0,
         'locationAgreed': _isChecked,
         'privacyAgreed': _isPrivacyChecked,
+        'gender': _selectedGender,
       });
 
       debugPrint('Firestore 사용자 정보 저장 성공');
@@ -378,7 +415,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
       }
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -449,277 +485,375 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                     Expanded(
                       child: SingleChildScrollView(
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Email
-                              _buildTextField(
-                                controller: _emailController,
-                                label: 'Email',
-                                keyboardType: TextInputType.emailAddress,
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return '이메일을 입력해주세요';
-                                  }
-                                  if (!value.contains('@')) {
-                                    return '유효한 이메일 주소를 입력해주세요';
-                                  }
-                                  return null;
-                                },
-                                suffixIcon: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (_isEmailVerified)
-                                      Icon(Icons.check_circle, color: Colors.green, size: 20.w)
-                                    else
-                                      IconButton(
-                                        icon: Icon(Icons.send, color: Colors.blue, size: 20.w),
-                                        onPressed: _sendVerificationEmail,
-                                        tooltip: '인증 이메일 발송',
-                                      ),
-                                  ],
-                                ),
-                              ),
-                              if (_isEmailSent && !_isEmailVerified)
-                                Container(
-                                  margin: EdgeInsets.only(top: 8.h),
-                                  padding: EdgeInsets.all(8.w),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(8.r),
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: FadeTransition(
+                          opacity: _fadeAnimation,
+                          child: SlideTransition(
+                            position: _slideAnimation,
+                            child: Form(
+                              key: _formKey,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Title
+                                  Text(
+                                    '회원가입',
+                                    style: TextStyle(
+                                      fontSize: 28.sp,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                      letterSpacing: -0.5,
+                                    ),
                                   ),
-                                  child: Row(
+                                  SizedBox(height: 8.h),
+                                  Text(
+                                    '호다닥과 함께해요',
+                                    style: TextStyle(
+                                      fontSize: 14.sp,
+                                      color: Colors.black54,
+                                      letterSpacing: -0.2,
+                                    ),
+                                  ),
+                                  SizedBox(height: 32.h),
+
+                                  // Email
+                                  _buildTextField(
+                                    controller: _emailController,
+                                    label: '이메일',
+                                    keyboardType: TextInputType.emailAddress,
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return '이메일을 입력해주세요';
+                                      }
+                                      if (!value.contains('@')) {
+                                        return '유효한 이메일 주소를 입력해주세요';
+                                      }
+                                      return null;
+                                    },
+                                    suffixIcon: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (_isEmailVerified)
+                                          Icon(Icons.check_circle,
+                                              color: Colors.green, size: 20.w)
+                                        else
+                                          IconButton(
+                                            icon: Icon(Icons.send,
+                                                color: Colors.blue, size: 20.w),
+                                            onPressed: _sendVerificationEmail,
+                                            tooltip: '인증 이메일 발송',
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (_isEmailSent && !_isEmailVerified)
+                                    Container(
+                                      margin: EdgeInsets.only(top: 8.h),
+                                      padding: EdgeInsets.all(8.w),
+                                      decoration: BoxDecoration(
+                                        color: Colors.blue.withOpacity(0.1),
+                                        borderRadius:
+                                        BorderRadius.circular(8.r),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.info_outline,
+                                              color: Colors.blue, size: 16.w),
+                                          SizedBox(width: 8.w),
+                                          Expanded(
+                                            child: Text(
+                                              '인증 이메일이 발송되었습니다. 이메일을 확인하고 인증을 완료해주세요.',
+                                              style: TextStyle(
+                                                  color: Colors.blue,
+                                                  fontSize: 12.sp),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  if (_isEmailVerified)
+                                    Container(
+                                      margin: EdgeInsets.only(top: 8.h),
+                                      padding: EdgeInsets.all(8.w),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green.withOpacity(0.1),
+                                        borderRadius:
+                                        BorderRadius.circular(8.r),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.check_circle,
+                                              color: Colors.green, size: 16.w),
+                                          SizedBox(width: 8.w),
+                                          Text(
+                                            '이메일 인증이 완료되었습니다!',
+                                            style: TextStyle(
+                                                color: Colors.green,
+                                                fontSize: 12.sp),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  SizedBox(height: 16.h),
+
+                                  // Password
+                                  _buildTextField(
+                                    controller: _passwordController,
+                                    label: '비밀번호',
+                                    obscureText: true,
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return '비밀번호를 입력해주세요';
+                                      }
+                                      if (value.length < 6) {
+                                        return '비밀번호는 6자 이상이어야 합니다';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                  SizedBox(height: 16.h),
+
+                                  // Name and Nickname Row
+                                  Row(
                                     children: [
-                                      Icon(Icons.info_outline, color: Colors.blue, size: 16.w),
-                                      SizedBox(width: 8.w),
                                       Expanded(
-                                        child: Text(
-                                          '인증 이메일이 발송되었습니다. 이메일을 확인하고 인증을 완료해주세요.',
-                                          style: TextStyle(color: Colors.blue, fontSize: 12.sp),
+                                        child: _buildTextField(
+                                          controller: _nameController,
+                                          label: '이름',
+                                          validator: (value) {
+                                            if (value == null ||
+                                                value.isEmpty) {
+                                              return '이름을 입력해주세요';
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                      ),
+                                      SizedBox(width: 16.w),
+                                      Expanded(
+                                        child: _buildTextField(
+                                          controller: _nicknameController,
+                                          label: '닉네임',
+                                          validator: (value) {
+                                            if (value == null ||
+                                                value.isEmpty) {
+                                              return '닉네임을 입력해주세요';
+                                            }
+                                            if (value.length < 2) {
+                                              return '닉네임은 2자 이상이어야 합니다';
+                                            }
+                                            return null;
+                                          },
                                         ),
                                       ),
                                     ],
                                   ),
-                                ),
-                              if (_isEmailVerified)
-                                Container(
-                                  margin: EdgeInsets.only(top: 8.h),
-                                  padding: EdgeInsets.all(8.w),
-                                  decoration: BoxDecoration(
-                                    color: Colors.green.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(8.r),
+                                  SizedBox(height: 16.h),
+
+                                  // Gender Selection
+                                  Container(
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: 16.w, vertical: 12.h),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade50,
+                                      borderRadius: BorderRadius.circular(12.r),
+                                      border: Border.all(
+                                          color: Colors.grey.shade300),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          '성별',
+                                          style: TextStyle(
+                                            fontSize: 14.sp,
+                                            color: Colors.black54,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        SizedBox(height: 8.h),
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: _buildGenderButton(
+                                                label: '남성',
+                                                value: 'male',
+                                                icon: Icons.male,
+                                              ),
+                                            ),
+                                            SizedBox(width: 12.w),
+                                            Expanded(
+                                              child: _buildGenderButton(
+                                                label: '여성',
+                                                value: 'female',
+                                                icon: Icons.female,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                  child: Row(
+                                  SizedBox(height: 16.h),
+
+                                  // Physical Info Row (Age, Height, Weight)
+                                  Row(
                                     children: [
-                                      Icon(Icons.check_circle, color: Colors.green, size: 16.w),
-                                      SizedBox(width: 8.w),
-                                      Text(
-                                        '이메일 인증이 완료되었습니다!',
-                                        style: TextStyle(color: Colors.green, fontSize: 12.sp),
+                                      Expanded(
+                                        child: _buildTextField(
+                                          controller: _ageController,
+                                          label: '나이',
+                                          keyboardType: TextInputType.number,
+                                          validator: (value) {
+                                            if (value == null ||
+                                                value.isEmpty) {
+                                              return '나이를 입력해주세요';
+                                            }
+                                            final age = int.tryParse(value);
+                                            if (age == null ||
+                                                age < 1 ||
+                                                age > 120) {
+                                              return '유효한 나이를 입력해주세요';
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                      ),
+                                      SizedBox(width: 12.w),
+                                      Expanded(
+                                        child: _buildTextField(
+                                          controller: _heightController,
+                                          label: '키 (cm)',
+                                          keyboardType: TextInputType.number,
+                                          validator: (value) {
+                                            if (value == null ||
+                                                value.isEmpty) {
+                                              return '키를 입력해주세요';
+                                            }
+                                            final height =
+                                            double.tryParse(value);
+                                            if (height == null ||
+                                                height < 50 ||
+                                                height > 250) {
+                                              return '유효한 키를 입력해주세요';
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                      ),
+                                      SizedBox(width: 12.w),
+                                      Expanded(
+                                        child: _buildTextField(
+                                          controller: _weightController,
+                                          label: '몸무게 (kg)',
+                                          keyboardType: TextInputType.number,
+                                          validator: (value) {
+                                            if (value == null ||
+                                                value.isEmpty) {
+                                              return '몸무게를 입력해주세요';
+                                            }
+                                            final weight =
+                                            double.tryParse(value);
+                                            if (weight == null ||
+                                                weight < 20 ||
+                                                weight > 200) {
+                                              return '유효한 몸무게를 입력해주세요';
+                                            }
+                                            return null;
+                                          },
+                                        ),
                                       ),
                                     ],
                                   ),
-                                ),
-                              SizedBox(height: 16.h),
+                                  SizedBox(height: 24.h),
 
-                              // Password
-                              _buildTextField(
-                                controller: _passwordController,
-                                label: 'Password',
-                                obscureText: true,
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return '비밀번호를 입력해주세요';
-                                  }
-                                  if (value.length < 6) {
-                                    return '비밀번호는 6자 이상이어야 합니다';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              SizedBox(height: 16.h),
-
-                              // Name
-                              _buildTextField(
-                                controller: _nameController,
-                                label: 'Name',
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return '이름을 입력해주세요';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              SizedBox(height: 16.h),
-
-                              // Nickname
-                              _buildTextField(
-                                controller: _nicknameController,
-                                label: 'Nickname',
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return '닉네임을 입력해주세요';
-                                  }
-                                  if (value.length < 2) {
-                                    return '닉네임은 2자 이상이어야 합니다';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              SizedBox(height: 16.h),
-
-                              // Age
-                              _buildTextField(
-                                controller: _ageController,
-                                label: 'Age',
-                                keyboardType: TextInputType.number,
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return '나이를 입력해주세요';
-                                  }
-                                  final age = int.tryParse(value);
-                                  if (age == null || age < 1 || age > 120) {
-                                    return '유효한 나이를 입력해주세요';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              SizedBox(height: 16.h),
-
-                              // Height
-                              _buildTextField(
-                                controller: _heightController,
-                                label: 'Height (cm)',
-                                keyboardType: TextInputType.number,
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return '키를 입력해주세요';
-                                  }
-                                  final height = double.tryParse(value);
-                                  if (height == null ||
-                                      height < 50 ||
-                                      height > 250) {
-                                    return '유효한 키를 입력해주세요';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              SizedBox(height: 16.h),
-
-                              // Weight
-                              _buildTextField(
-                                controller: _weightController,
-                                label: 'Weight (kg)',
-                                keyboardType: TextInputType.number,
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return '몸무게를 입력해주세요';
-                                  }
-                                  final weight = double.tryParse(value);
-                                  if (weight == null ||
-                                      weight < 20 ||
-                                      weight > 200) {
-                                    return '유효한 몸무게를 입력해주세요';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              SizedBox(height: 24.h),
-
-                              // 위치 정보 동의 체크박스
-                              Row(
-                                children: [
-                                  Checkbox(
+                                  // Agreement Checkboxes
+                                  _buildAgreementCheckbox(
                                     value: _isChecked,
                                     onChanged: (value) {
                                       setState(() {
                                         _isChecked = value ?? false;
                                       });
                                     },
+                                    label: '위치 정보 수집에 동의합니다.',
                                   ),
-                                  Expanded(
-                                    child: Text(
-                                      '위치 정보 수집에 동의합니다.',
-                                      style: TextStyle(fontSize: 14.sp),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 24.h),
-
-                              // 개인정보 수집 동의 체크박스
-                              Row(
-                                children: [
-                                  Checkbox(
+                                  SizedBox(height: 12.h),
+                                  _buildAgreementCheckbox(
                                     value: _isPrivacyChecked,
                                     onChanged: (value) {
                                       setState(() {
                                         _isPrivacyChecked = value ?? false;
                                       });
                                     },
+                                    label: '개인정보 수집에 동의합니다.',
                                   ),
-                                  Expanded(
-                                    child: Text(
-                                      '개인정보 수집에 동의합니다.',
-                                      style: TextStyle(fontSize: 14.sp),
+                                  SizedBox(height: 32.h),
+
+                                  // Sign Up Button
+                                  SizedBox(
+                                    width: double.infinity,
+                                    height: 52.h,
+                                    child: ElevatedButton(
+                                      onPressed: _isLoading ? null : _signUp,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor:
+                                        const Color(0xFFB6F5E8),
+                                        foregroundColor: Colors.black87,
+                                        elevation: 2,
+                                        shadowColor: Colors.black26,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                          BorderRadius.circular(16.r),
+                                        ),
+                                      ),
+                                      child: _isLoading
+                                          ? SizedBox(
+                                        width: 24.w,
+                                        height: 24.w,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.black87,
+                                          strokeWidth: 2.w,
+                                        ),
+                                      )
+                                          : Text(
+                                        "회원가입",
+                                        style: TextStyle(
+                                          fontSize: 16.sp,
+                                          fontWeight: FontWeight.w600,
+                                          letterSpacing: -0.3,
+                                        ),
+                                      ),
                                     ),
                                   ),
+                                  SizedBox(height: 16.h),
+
+                                  // Login Link
+                                  Center(
+                                    child: TextButton(
+                                      onPressed: () {
+                                        Navigator.pushReplacement(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (context) =>
+                                              const LoginScreen()),
+                                        );
+                                      },
+                                      child: Text(
+                                        "이미 계정이 있으신가요? 로그인",
+                                        style: TextStyle(
+                                          fontSize: 14.sp,
+                                          color: Colors.black54,
+                                          decoration: TextDecoration.underline,
+                                          letterSpacing: -0.2,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(height: 24.h),
                                 ],
                               ),
-                              SizedBox(height: 24.h),
-
-                              // 회원가입 버튼
-                              SizedBox(
-                                width: double.infinity,
-                                height: 48.h,
-                                child: ElevatedButton(
-                                  onPressed: _isLoading ? null : _signUp,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFB6F5E8),
-                                    foregroundColor: Colors.black87,
-                                    elevation: 2,
-                                    shadowColor: Colors.black26,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12.r),
-                                    ),
-                                  ),
-                                  child: _isLoading
-                                      ? CircularProgressIndicator(
-                                      color: Colors.black87,
-                                      strokeWidth: 2.w)
-                                      : Text(
-                                    "Sign Up",
-                                    style: TextStyle(
-                                      fontSize: 16.sp,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(height: 16.h),
-
-                              // 로그인 화면으로 이동
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) =>
-                                        const LoginScreen()),
-                                  );
-                                },
-                                child: Text(
-                                  "Already have an account? Sign In",
-                                  style: TextStyle(
-                                    fontSize: 14.sp,
-                                    color: Colors.black54,
-                                    decoration: TextDecoration.underline,
-                                  ),
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
                         ),
                       ),
@@ -741,33 +875,149 @@ class _SignUpScreenState extends State<SignUpScreen> {
     TextInputType? keyboardType,
     String? Function(String?)? validator,
     Widget? suffixIcon,
+    IconData? prefixIcon,
   }) {
-    return TextFormField(
-      controller: controller,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(fontSize: 14.sp, color: Colors.black54),
-        filled: true,
-        fillColor: Colors.grey.shade50,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.r),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      child: TextFormField(
+        controller: controller,
+        obscureText: obscureText,
+        keyboardType: keyboardType,
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: TextStyle(
+            fontSize: 14.sp,
+            color: Colors.black54,
+            letterSpacing: -0.2,
+          ),
+          prefixIcon: prefixIcon != null
+              ? Icon(prefixIcon, color: Colors.grey.shade600, size: 20.w)
+              : null,
+          filled: true,
+          fillColor: Colors.grey.shade50,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12.r),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12.r),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12.r),
+            borderSide: BorderSide(color: const Color(0xFFB6F5E8), width: 2),
+          ),
+          contentPadding:
+          EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+          suffixIcon: suffixIcon,
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.r),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+        style: TextStyle(
+          fontSize: 14.sp,
+          letterSpacing: -0.2,
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.r),
-          borderSide: BorderSide(color: const Color(0xFFB6F5E8), width: 2),
-        ),
-        contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-        suffixIcon: suffixIcon,
+        validator: validator,
+        onTap: () {
+          // 입력 필드 탭 시 자동으로 확장
+          if (!_isExpanded) {
+            setState(() => _isExpanded = true);
+          }
+        },
       ),
-      style: TextStyle(fontSize: 14.sp),
-      validator: validator,
+    );
+  }
+
+  Widget _buildGenderButton({
+    required String label,
+    required String value,
+    required IconData icon,
+  }) {
+    final isSelected = _selectedGender == value;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _selectedGender = value;
+          });
+          // 성별 선택 시 자동으로 확장
+          if (!_isExpanded) {
+            setState(() => _isExpanded = true);
+          }
+        },
+        borderRadius: BorderRadius.circular(12.r),
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: 12.h),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFFB6F5E8) : Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(
+              color:
+              isSelected ? const Color(0xFFB6F5E8) : Colors.grey.shade300,
+            ),
+            boxShadow: isSelected
+                ? [
+              BoxShadow(
+                color: const Color(0xFFB6F5E8).withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ]
+                : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 18.w,
+                color: isSelected ? Colors.black87 : Colors.grey.shade600,
+              ),
+              SizedBox(width: 8.w),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  color: isSelected ? Colors.black87 : Colors.grey.shade600,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  letterSpacing: -0.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAgreementCheckbox({
+    required bool value,
+    required ValueChanged<bool?> onChanged,
+    required String label,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: CheckboxListTile(
+        value: value,
+        onChanged: onChanged,
+        title: Text(
+          label,
+          style: TextStyle(
+            fontSize: 14.sp,
+            color: Colors.black87,
+            letterSpacing: -0.2,
+          ),
+        ),
+        controlAffinity: ListTileControlAffinity.leading,
+        contentPadding: EdgeInsets.symmetric(horizontal: 12.w),
+        dense: true,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12.r),
+        ),
+      ),
     );
   }
 }

@@ -259,22 +259,17 @@ class _PostCreatePageState extends State<PostCreatePage> {
     return imageUrls;
   }
 
-  Future<void> _createPost() async {
-    // 제목과 내용에 부적절한 단어 체크
-    if (_containsInappropriateWords(_titleController.text) || 
-        _containsInappropriateWords(_contentController.text)) {
+  Future<void> _savePost() async {
+    if (_titleController.text.isEmpty || _contentController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('부적절한 단어가 포함되어 있습니다.'),
-          duration: Duration(seconds: 2),
-        ),
+        const SnackBar(content: Text('제목과 내용을 모두 입력해주세요')),
       );
       return;
     }
 
-    if (_contentController.text.trim().isEmpty) {
+    if (_containsInappropriateWords(_titleController.text) || _containsInappropriateWords(_contentController.text)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('내용을 입력해주세요')),
+        const SnackBar(content: Text('부적절한 단어가 포함되어 있습니다')),
       );
       return;
     }
@@ -287,109 +282,49 @@ class _PostCreatePageState extends State<PostCreatePage> {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
-      // 사용자 닉네임 가져오기
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-      final nickname = userDoc.data()?['nickname'];
+      // 이미지 업로드 및 URL 가져오기
+      List<String> imageUrls = [];
+      for (var image in selectedImages) {
+        final fileName = path.basename(image.path);
+        final storageRef = FirebaseStorage.instance.ref().child('post_images/$fileName');
+        await storageRef.putFile(image);
+        final downloadUrl = await storageRef.getDownloadURL();
+        imageUrls.add(downloadUrl);
+      }
 
-      // 이미지 업로드
-      List<String> imageUrls = await _uploadImages();
-
-      // 운동 경로 데이터 준비
-      List<Map<String, dynamic>> routePoints = _routePoints.map((point) => {
-        'latitude': point.latitude,
-        'longitude': point.longitude,
-      }).toList();
-
-      // Firestore에 게시글 저장
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).collection('Post_Data').add({
+      // 게시글 데이터 생성
+      final postData = {
+        'userId': user.uid,
         'title': _titleController.text,
         'content': _contentController.text,
-        'imageUrls': imageUrls,
-        'createdAt': FieldValue.serverTimestamp(),
-        'userId': user.uid,
-        'nickname': nickname,
-        'likes': 0,
-        'routePoints': routePoints,
-        'distance': widget.workoutData?['distance'] ?? 0.0,
-        'duration': widget.workoutData?['duration'] ?? 0,
+        'images': imageUrls,
         'tags': selectedTags.map((tag) => tag.name).toList(),
-      });
+        'createdAt': Timestamp.now(),
+        'updatedAt': Timestamp.now(),
+        'likes': 0, // 좋아요 초기값 추가
+      };
 
-      if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('게시글이 작성되었습니다')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('오류가 발생했습니다: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
+      // 운동 데이터가 있는 경우 추가
+      if (widget.workoutData != null) {
+        postData.addAll({
+          'routePoints': widget.workoutData!['routePoints'],
+          'distance': widget.workoutData!['distance'],
+          'duration': widget.workoutData!['duration'],
+          'workoutId': widget.workoutData!['workoutId'],
         });
       }
-    }
-  }
 
-  Future<void> _updatePost() async {
-    // 제목과 내용에 부적절한 단어 체크
-    if (_containsInappropriateWords(_titleController.text) || 
-        _containsInappropriateWords(_contentController.text)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('부적절한 단어가 포함되어 있습니다.'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
+      // 게시글 저장 (사용자 하위 컬렉션에 저장)
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).collection('Post_Data').add(postData);
 
-    if (widget.postId == null) return;
-    setState(() {
-      _isLoading = true;
-    });
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
-
-      // 운동 경로 데이터 준비
-      List<Map<String, dynamic>> routePoints = _routePoints.map((point) => {
-        'latitude': point.latitude,
-        'longitude': point.longitude,
-      }).toList();
-
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('Post_Data')
-          .doc(widget.postId)
-          .update({
-        'title': _titleController.text,
-        'content': _contentController.text,
-        'updatedAt': FieldValue.serverTimestamp(),
-        'routePoints': routePoints,
-        'distance': widget.workoutData?['distance'] ?? 0.0,
-        'duration': widget.workoutData?['duration'] ?? 0,
-        'tags': selectedTags.map((tag) => tag.name).toList(),
-      });
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('게시글이 수정되었습니다')),
-        );
       }
     } catch (e) {
+      print('게시글 저장 중 오류 발생: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('수정 오류: $e')),
+          const SnackBar(content: Text('게시글 저장 중 오류가 발생했습니다')),
         );
       }
     } finally {
@@ -421,7 +356,7 @@ class _PostCreatePageState extends State<PostCreatePage> {
         actions: [
           if (isEditMode)
             TextButton(
-              onPressed: _isLoading ? null : _updatePost,
+              onPressed: _isLoading ? null : _savePost,
               child: _isLoading
                   ? SizedBox(
                       width: 20.w,
@@ -432,7 +367,7 @@ class _PostCreatePageState extends State<PostCreatePage> {
             )
           else
             TextButton(
-              onPressed: _isLoading ? null : _createPost,
+              onPressed: _isLoading ? null : _savePost,
               child: _isLoading
                   ? SizedBox(
                       width: 20.w,

@@ -111,7 +111,6 @@ class _LoginScreenState extends State<LoginScreen> {
         context,
         MaterialPageRoute(builder: (context) => const ScreenHome()),
       );
-
     } on FirebaseAuthException catch (e) {
       debugPrint('Firebase Auth 오류 발생: ${e.code} - ${e.message}');
       String message = '로그인 중 오류가 발생했습니다.';
@@ -169,7 +168,7 @@ class _LoginScreenState extends State<LoginScreen> {
           AnimatedPositioned(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
-            bottom: _isExpanded ? 0 : -MediaQuery.of(context).size.height * 0.3,
+            bottom: _isExpanded ? 0 : -MediaQuery.of(context).size.height * 0.1,
             left: 0,
             right: 0,
             child: GestureDetector(
@@ -212,7 +211,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Container(
                       width: 40.w,
                       height: 4.h,
-                      margin: EdgeInsets.only(bottom: 20.h),
+                      margin: EdgeInsets.only(top: 12.h, bottom: 20.h),
                       decoration: BoxDecoration(
                         color: Colors.grey[300],
                         borderRadius: BorderRadius.circular(2.r),
@@ -220,16 +219,39 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     Expanded(
                       child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
                         child: Form(
                           key: _formKey,
                           child: Column(
-                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Title
+                              Text(
+                                '로그인',
+                                style: TextStyle(
+                                  fontSize: 28.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                              SizedBox(height: 8.h),
+                              Text(
+                                '호다닥에 오신 것을 환영합니다',
+                                style: TextStyle(
+                                  fontSize: 14.sp,
+                                  color: Colors.black54,
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                              SizedBox(height: 32.h),
+
                               // Email
                               _buildTextField(
                                 controller: _emailController,
-                                label: 'Email',
+                                label: '이메일',
                                 keyboardType: TextInputType.emailAddress,
+                                prefixIcon: Icons.email_outlined,
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
                                     return '이메일을 입력해주세요';
@@ -245,8 +267,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               // Password
                               _buildTextField(
                                 controller: _passwordController,
-                                label: 'Password',
+                                label: '비밀번호',
                                 obscureText: true,
+                                prefixIcon: Icons.lock_outline,
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
                                     return '비밀번호를 입력해주세요';
@@ -256,10 +279,10 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               SizedBox(height: 24.h),
 
-                              // 로그인 버튼
+                              // Login Button
                               SizedBox(
                                 width: double.infinity,
-                                height: 48.h,
+                                height: 52.h,
                                 child: ElevatedButton(
                                   onPressed: _isLoading ? null : _signIn,
                                   style: ElevatedButton.styleFrom(
@@ -268,69 +291,98 @@ class _LoginScreenState extends State<LoginScreen> {
                                     elevation: 2,
                                     shadowColor: Colors.black26,
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12.r),
+                                      borderRadius: BorderRadius.circular(16.r),
                                     ),
                                   ),
                                   child: _isLoading
-                                      ? CircularProgressIndicator(
-                                          color: Colors.black87,
-                                          strokeWidth: 2.w)
+                                      ? SizedBox(
+                                    width: 24.w,
+                                    height: 24.w,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.black87,
+                                      strokeWidth: 2.w,
+                                    ),
+                                  )
                                       : Text(
-                                          "Sign In",
-                                          style: TextStyle(
-                                            fontSize: 16.sp,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                ),
-                              ),
-                              SizedBox(height: 16.h),
-
-                              // 비밀번호 찾기 버튼
-                              TextButton(
-                                onPressed: _resetPassword,
-                                child: Text(
-                                  "Forgot password?",
-                                  style: TextStyle(
-                                    fontSize: 14.sp,
-                                    color: Colors.black54,
-                                    decoration: TextDecoration.underline,
+                                    "로그인",
+                                    style: TextStyle(
+                                      fontSize: 16.sp,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: -0.3,
+                                    ),
                                   ),
                                 ),
                               ),
                               SizedBox(height: 16.h),
 
-                              // 회원가입 화면으로 이동
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    "Don't have an account? ",
+                              // Forgot Password Button
+                              Center(
+                                child: TextButton(
+                                  onPressed: _resetPassword,
+                                  style: TextButton.styleFrom(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 16.w,
+                                      vertical: 8.h,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    "비밀번호를 잊으셨나요?",
                                     style: TextStyle(
                                       fontSize: 14.sp,
                                       color: Colors.black54,
+                                      decoration: TextDecoration.underline,
+                                      letterSpacing: -0.2,
                                     ),
                                   ),
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.pushReplacement(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (context) =>
-                                                const SignUpScreen()),
-                                      );
-                                    },
-                                    child: Text(
-                                      "Sign Up",
+                                ),
+                              ),
+                              SizedBox(height: 24.h),
+
+                              // Sign Up Link
+                              Container(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      "계정이 없으신가요? ",
                                       style: TextStyle(
                                         fontSize: 14.sp,
-                                        color: const Color(0xFFB6F5E8),
-                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black54,
+                                        letterSpacing: -0.2,
                                       ),
                                     ),
-                                  ),
-                                ],
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.pushReplacement(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (context) =>
+                                              const SignUpScreen()),
+                                        );
+                                      },
+                                      style: TextButton.styleFrom(
+                                        padding: EdgeInsets.zero,
+                                        minimumSize: Size(0, 0),
+                                        tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                      ),
+                                      child: Text(
+                                        "\t회원가입",
+                                        style: TextStyle(
+                                          fontSize: 14.sp,
+                                          color: Colors.cyan,
+                                          fontWeight: FontWeight.w600,
+                                          letterSpacing: -0.2,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
+                              SizedBox(
+                                  height:
+                                  MediaQuery.of(context).viewInsets.bottom +
+                                      24.h),
                             ],
                           ),
                         ),
@@ -352,6 +404,7 @@ class _LoginScreenState extends State<LoginScreen> {
     bool obscureText = false,
     TextInputType? keyboardType,
     String? Function(String?)? validator,
+    IconData? prefixIcon,
   }) {
     return TextFormField(
       controller: controller,
@@ -359,7 +412,14 @@ class _LoginScreenState extends State<LoginScreen> {
       keyboardType: keyboardType,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(fontSize: 14.sp, color: Colors.black54),
+        labelStyle: TextStyle(
+          fontSize: 14.sp,
+          color: Colors.black54,
+          letterSpacing: -0.2,
+        ),
+        prefixIcon: prefixIcon != null
+            ? Icon(prefixIcon, color: Colors.grey.shade600, size: 20.w)
+            : null,
         filled: true,
         fillColor: Colors.grey.shade50,
         border: OutlineInputBorder(
@@ -376,7 +436,10 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
       ),
-      style: TextStyle(fontSize: 14.sp),
+      style: TextStyle(
+        fontSize: 14.sp,
+        letterSpacing: -0.2,
+      ),
       validator: validator,
     );
   }

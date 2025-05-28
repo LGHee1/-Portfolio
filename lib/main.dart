@@ -56,7 +56,7 @@ class MyApp extends StatelessWidget {
             useMaterial3: true,
             scaffoldBackgroundColor: Colors.white,
           ),
-          home: const StartScreen(), // StartScreen 대신 AuthWrapper 사용
+          home: const AuthWrapper(), // StartScreen 대신 AuthWrapper 사용
           debugShowCheckedModeBanner: false,
         );
       },

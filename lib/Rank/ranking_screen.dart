@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import '../Widgets/bottom_bar.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class RankingScreen extends StatefulWidget {
   @override
@@ -35,7 +36,7 @@ class _RankingScreenState extends State<RankingScreen> {
       });
 
       final usersSnapshot =
-          await FirebaseFirestore.instance.collection('users').get();
+      await FirebaseFirestore.instance.collection('users').get();
       List<Map<String, dynamic>> userData = [];
       String? currentUserId = _auth.currentUser?.uid;
 
@@ -101,7 +102,7 @@ class _RankingScreenState extends State<RankingScreen> {
       setState(() {
         _rankingData = rankingData;
         _currentUser = rankingData.firstWhere(
-          (data) => data.userId == currentUserId,
+              (data) => data.userId == currentUserId,
           orElse: () => rankingData.first,
         );
         _isLoading = false;
@@ -145,7 +146,7 @@ class _RankingScreenState extends State<RankingScreen> {
     // 현재 사용자 정보 업데이트
     String? currentUserId = _auth.currentUser?.uid;
     _currentUser = _rankingData.firstWhere(
-      (data) => data.userId == currentUserId,
+          (data) => data.userId == currentUserId,
       orElse: () => _rankingData.first,
     );
   }
@@ -156,10 +157,23 @@ class _RankingScreenState extends State<RankingScreen> {
       return Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
-          title: Text('${DateTime.now().month}월 달 랭킹'),
+          title: Text(
+            '${DateTime.now().month}월 달 랭킹',
+            style: TextStyle(
+              fontSize: 20.sp,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.5,
+            ),
+          ),
           centerTitle: true,
+          elevation: 0,
         ),
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(
+          child: CircularProgressIndicator(
+            color: AppTheme.primaryColor,
+            strokeWidth: 2.w,
+          ),
+        ),
       );
     }
 
@@ -185,78 +199,108 @@ class _RankingScreenState extends State<RankingScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text('${DateTime.now().month}월 달 랭킹'),
+        title: Text(
+          '${DateTime.now().month}월 달 랭킹',
+          style: TextStyle(
+            fontSize: 20.sp,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.5,
+          ),
+        ),
         centerTitle: true,
+        elevation: 0,
       ),
       body: Column(
         children: [
           _buildMyStatus(_currentUser!),
           _buildLevelSelector(),
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   '랭킹',
                   style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w700,
                     color: AppTheme.darkTextColor,
+                    letterSpacing: -0.3,
                   ),
                 ),
-                Row(
-                  children: [
-                    InkWell(
-                      onTap: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            backgroundColor: Color(0xFFCCF6FF),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            title: Text(
-                              '✨ 등급 기준 안내 ✨',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            content: Text(
-                              '초급자 : 0 ~ 30km\n중급자 : 30 ~ 60km\n상급자 : 60km 이상',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            actions: [
-                              TextButton(
-                                style: TextButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  foregroundColor: Colors.black87,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                child: Text('확인'),
-                                onPressed: () => Navigator.pop(context),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                      child: Text(
-                        '등급 기준 보기',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.lightTextColor,
+                TextButton.icon(
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        backgroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20.r),
                         ),
+                        title: Text(
+                          '✨ 등급 기준 안내 ✨',
+                          style: TextStyle(
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black87,
+                            letterSpacing: -0.3,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildLevelInfoRow('초급자', '0 ~ 30km', Colors.blue),
+                            SizedBox(height: 12.h),
+                            _buildLevelInfoRow(
+                                '중급자', '30 ~ 60km', Colors.green),
+                            SizedBox(height: 12.h),
+                            _buildLevelInfoRow('상급자', '60km 이상', Colors.purple),
+                          ],
+                        ),
+                        actions: [
+                          Center(
+                            child: TextButton(
+                              style: TextButton.styleFrom(
+                                backgroundColor: AppTheme.primaryColor,
+                                foregroundColor: Colors.white,
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 24.w,
+                                  vertical: 12.h,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12.r),
+                                ),
+                              ),
+                              child: Text(
+                                '확인',
+                                style: TextStyle(
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: -0.3,
+                                ),
+                              ),
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                          ),
+                        ],
                       ),
+                    );
+                  },
+                  icon: Icon(
+                    Icons.info_outline,
+                    size: 18.w,
+                    color: AppTheme.primaryColor,
+                  ),
+                  label: Text(
+                    '등급 기준 보기',
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.primaryColor,
+                      letterSpacing: -0.2,
                     ),
-                  ],
+                  ),
                 ),
               ],
             ),
@@ -277,13 +321,60 @@ class _RankingScreenState extends State<RankingScreen> {
     );
   }
 
+  Widget _buildLevelInfoRow(String level, String range, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12.r),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            level,
+            style: TextStyle(
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w600,
+              color: color,
+              letterSpacing: -0.2,
+            ),
+          ),
+          Text(
+            range,
+            style: TextStyle(
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w500,
+              color: color.withOpacity(0.8),
+              letterSpacing: -0.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMyStatus(RankingData currentUser) {
     return Container(
-      padding: EdgeInsets.all(20),
-      margin: EdgeInsets.all(16),
+      padding: EdgeInsets.all(20.w),
+      margin: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: AppTheme.primaryColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.primaryColor.withOpacity(0.1),
+            AppTheme.primaryColor.withOpacity(0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20.r),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryColor.withOpacity(0.1),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -294,17 +385,30 @@ class _RankingScreenState extends State<RankingScreen> {
               Text(
                 currentUser.name,
                 style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 24.sp,
+                  fontWeight: FontWeight.w700,
                   color: AppTheme.darkTextColor,
+                  letterSpacing: -0.5,
                 ),
               ),
-              SizedBox(height: 4),
-              Text(
-                '${currentUser.level}',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: AppTheme.lightTextColor,
+              SizedBox(height: 8.h),
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: 12.w,
+                  vertical: 6.h,
+                ),
+                decoration: BoxDecoration(
+                  color: _getLevelColor(currentUser.level).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20.r),
+                ),
+                child: Text(
+                  currentUser.level,
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w600,
+                    color: _getLevelColor(currentUser.level),
+                    letterSpacing: -0.2,
+                  ),
                 ),
               ),
             ],
@@ -313,19 +417,30 @@ class _RankingScreenState extends State<RankingScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '${currentUser.totalDistance.toStringAsFixed(1)}km',
+                '${currentUser.totalDistance.toStringAsFixed(1)}',
                 style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.primaryColor,
+                  fontSize: 32.sp,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0066CC),
+                  letterSpacing: -0.5,
                 ),
               ),
-              SizedBox(height: 4),
+              Text(
+                'km',
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF0066CC).withOpacity(0.9),
+                  letterSpacing: -0.2,
+                ),
+              ),
+              SizedBox(height: 4.h),
               Text(
                 '이번 달',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 14.sp,
                   color: AppTheme.lightTextColor,
+                  letterSpacing: -0.2,
                 ),
               ),
             ],
@@ -336,49 +451,63 @@ class _RankingScreenState extends State<RankingScreen> {
   }
 
   Widget _buildLevelSelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 22),
-          child: Wrap(
-            spacing: 12,
-            runSpacing: 10,
-            children: ['전체', '초급자', '중급자', '상급자'].map((level) {
-              final isSelected = selectedLevel == level;
-              return GestureDetector(
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 8.h),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.symmetric(horizontal: 16.w),
+        child: Row(
+          children: ['전체', '초급자', '중급자', '상급자'].map((level) {
+            final isSelected = selectedLevel == level;
+            return Padding(
+              padding: EdgeInsets.only(right: 8.w),
+              child: GestureDetector(
                 onTap: () {
                   setState(() {
                     selectedLevel = level;
                   });
                 },
                 child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 20.w,
+                    vertical: 10.h,
+                  ),
                   decoration: BoxDecoration(
-                    color:
-                        isSelected ? AppTheme.primaryColor : Colors.transparent,
+                    color: isSelected ? Color(0xFF0066CC) : Colors.transparent,
                     border: Border.all(
                       color: isSelected
-                          ? AppTheme.primaryColor
+                          ? Color(0xFF0066CC)
                           : AppTheme.lightTextColor.withOpacity(0.3),
+                      width: 1.5,
                     ),
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(25.r),
+                    boxShadow: isSelected
+                        ? [
+                      BoxShadow(
+                        color: Color(0xFF0066CC).withOpacity(0.2),
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
+                      ),
+                    ]
+                        : null,
                   ),
                   child: Text(
                     level,
                     style: TextStyle(
-                      color:
-                          isSelected ? Colors.black : AppTheme.lightTextColor,
+                      fontSize: 14.sp,
                       fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.normal,
+                      isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color:
+                      isSelected ? Colors.white : AppTheme.lightTextColor,
+                      letterSpacing: -0.2,
                     ),
                   ),
                 ),
-              );
-            }).toList(),
-          ),
+              ),
+            );
+          }).toList(),
         ),
-      ],
+      ),
     );
   }
 
@@ -409,11 +538,11 @@ class _RankingScreenState extends State<RankingScreen> {
     if (isUserInSelectedLevel) {
       // 현재 사용자의 순위 정보
       final userRankInfo = filteredList.firstWhere(
-        (data) => data.userId == currentUser.userId,
+            (data) => data.userId == currentUser.userId,
         orElse: () => currentUser,
       );
       final isUserInTop10 =
-          displayList.any((data) => data.userId == currentUser.userId);
+      displayList.any((data) => data.userId == currentUser.userId);
 
       // 현재 사용자가 상위 10등 밖이면 구분선과 함께 추가
       if (!isUserInTop10) {
@@ -444,7 +573,7 @@ class _RankingScreenState extends State<RankingScreen> {
     }
 
     return ListView.builder(
-      padding: EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.symmetric(horizontal: 16.w),
       physics: AlwaysScrollableScrollPhysics(),
       itemCount: displayList.length,
       itemBuilder: (context, index) {
@@ -452,29 +581,29 @@ class _RankingScreenState extends State<RankingScreen> {
 
         if (data.userId == 'ellipsis') {
           return Container(
-            margin: EdgeInsets.symmetric(vertical: 12),
+            margin: EdgeInsets.symmetric(vertical: 12.h),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  width: 50,
-                  height: 1,
+                  width: 50.w,
+                  height: 1.h,
                   color: AppTheme.lightTextColor.withOpacity(0.2),
                 ),
                 Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  padding: EdgeInsets.symmetric(horizontal: 16.w),
                   child: Text(
                     '...',
                     style: TextStyle(
-                      fontSize: 20,
+                      fontSize: 20.sp,
                       color: AppTheme.lightTextColor,
                       letterSpacing: 2,
                     ),
                   ),
                 ),
                 Container(
-                  width: 50,
-                  height: 1,
+                  width: 50.w,
+                  height: 1.h,
                   color: AppTheme.lightTextColor.withOpacity(0.2),
                 ),
               ],
@@ -483,6 +612,7 @@ class _RankingScreenState extends State<RankingScreen> {
         }
 
         final isCurrentUser = data.userId == currentUser.userId;
+        final rank = selectedLevel == '전체' ? data.rank : data.levelRank;
 
         return GestureDetector(
           onTap: () {
@@ -499,43 +629,52 @@ class _RankingScreenState extends State<RankingScreen> {
           },
           child: Container(
             margin: EdgeInsets.only(
-                bottom: index == displayList.length - 1 ? 16 : 8),
-            padding: EdgeInsets.all(16),
+              bottom: index == displayList.length - 1 ? 16.h : 8.h,
+            ),
+            padding: EdgeInsets.all(16.w),
             decoration: BoxDecoration(
               color: isCurrentUser
                   ? AppTheme.primaryColor.withOpacity(0.1)
                   : Colors.white,
               border: Border.all(
-                color: AppTheme.lightTextColor.withOpacity(0.1),
+                color: isCurrentUser
+                    ? AppTheme.primaryColor.withOpacity(0.2)
+                    : AppTheme.lightTextColor.withOpacity(0.1),
+                width: isCurrentUser ? 1.5 : 1,
               ),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16.r),
               boxShadow: isCurrentUser
                   ? [
-                      BoxShadow(
-                        color: AppTheme.primaryColor.withOpacity(0.1),
-                        blurRadius: 4,
-                        offset: Offset(0, 2),
-                      ),
-                    ]
+                BoxShadow(
+                  color: AppTheme.primaryColor.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: Offset(0, 4),
+                ),
+              ]
                   : null,
             ),
             child: Row(
               children: [
                 Container(
-                  width: 32,
-                  child: Text(
-                    selectedLevel == '전체'
-                        ? '${data.rank}'
-                        : '${data.levelRank}',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: _getRankColor(
-                          selectedLevel == '전체' ? data.rank : data.levelRank),
+                  width: 40.w,
+                  height: 40.w,
+                  decoration: BoxDecoration(
+                    color: _getRankColor(rank).withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '$rank',
+                      style: TextStyle(
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.w800,
+                        color: _getRankColor(rank),
+                        letterSpacing: -0.5,
+                      ),
                     ),
                   ),
                 ),
-                SizedBox(width: 12),
+                SizedBox(width: 16.w),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -545,29 +684,34 @@ class _RankingScreenState extends State<RankingScreen> {
                           Text(
                             data.name,
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: 16.sp,
                               fontWeight: isCurrentUser
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                              color: AppTheme.darkTextColor,
+                              letterSpacing: -0.2,
                             ),
                           ),
                           if (selectedLevel != '전체' &&
                               data.medal != '도전 중') ...[
-                            SizedBox(width: 8),
+                            SizedBox(width: 8.w),
                             Container(
                               padding: EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 2),
+                                horizontal: 8.w,
+                                vertical: 4.h,
+                              ),
                               decoration: BoxDecoration(
                                 color:
-                                    _getMedalColor(data.medal).withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(10),
+                                _getMedalColor(data.medal).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12.r),
                               ),
                               child: Text(
                                 data.medal,
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.w600,
                                   color: _getMedalColor(data.medal),
-                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: -0.2,
                                 ),
                               ),
                             ),
@@ -575,25 +719,52 @@ class _RankingScreenState extends State<RankingScreen> {
                         ],
                       ),
                       if (selectedLevel == '전체') ...[
-                        SizedBox(height: 4),
-                        Text(
-                          data.level,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppTheme.lightTextColor,
+                        SizedBox(height: 4.h),
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8.w,
+                            vertical: 2.h,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getLevelColor(data.level).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8.r),
+                          ),
+                          child: Text(
+                            data.level,
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w500,
+                              color: _getLevelColor(data.level),
+                              letterSpacing: -0.2,
+                            ),
                           ),
                         ),
                       ],
                     ],
                   ),
                 ),
-                Text(
-                  '${data.totalDistance.toStringAsFixed(1)}km',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryColor,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '${data.totalDistance.toStringAsFixed(1)}',
+                      style: TextStyle(
+                        fontSize: 20.sp,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0066CC),
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    Text(
+                      'km',
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF0066CC).withOpacity(0.9),
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -603,23 +774,36 @@ class _RankingScreenState extends State<RankingScreen> {
     );
   }
 
+  Color _getLevelColor(String level) {
+    switch (level) {
+      case '초급자':
+        return Colors.blue;
+      case '중급자':
+        return Colors.green;
+      case '상급자':
+        return Colors.purple;
+      default:
+        return AppTheme.primaryColor;
+    }
+  }
+
   Color _getRankColor(int rank) {
     switch (rank) {
       case 1:
-        return Colors.amber;
+        return Color(0xFFFFD700);
       case 2:
-        return Colors.grey[400]!;
+        return Color(0xFFA9A9A9);
       case 3:
-        return Colors.brown;
+        return Color(0xFF8B4513);
       default:
         return AppTheme.darkTextColor;
     }
   }
 
   Color _getMedalColor(String medal) {
-    if (medal.contains('금메달')) return Colors.amber;
-    if (medal.contains('은메달')) return Colors.grey[400]!;
-    if (medal.contains('동메달')) return Colors.brown;
+    if (medal.contains('금메달')) return Color(0xFFFFD700);
+    if (medal.contains('은메달')) return Color(0xFFA9A9A9);
+    if (medal.contains('동메달')) return Color(0xFF8B4513);
     return AppTheme.lightTextColor;
   }
 }
