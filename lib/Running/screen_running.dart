@@ -244,7 +244,7 @@ class _RunningScreenState extends State<RunningScreen> {
     if (user == null) return 0.0;
 
     try {
-      // 사용자 정보 가져오기
+      // users 컬렉션에서 사용자 정보 가져오기
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)

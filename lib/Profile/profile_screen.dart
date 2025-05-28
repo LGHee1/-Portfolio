@@ -33,6 +33,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int age = 0;
   double height = 0.0;
   double weight = 0.0;
+  String? gender;
   File? _imageFile;
   List<String> postUids = [];
   int _selectedIndex = 1;
@@ -87,6 +88,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           age = userDoc.data()?['age'] ?? 0;
           height = (userDoc.data()?['height'] ?? 0.0).toDouble();
           weight = (userDoc.data()?['weight'] ?? 0.0).toDouble();
+          gender = userDoc.data()?['gender'];
           _nameController.text = name;
           _heightController.text = height.toString();
           _weightController.text = weight.toString();
@@ -256,6 +258,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'message': _messageController.text,
         'photoUrl': uploadedUrl,
         'postUids': postUids,
+        'gender': gender,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
@@ -264,10 +267,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .collection('users')
           .doc(user.uid)
           .update({
+        'name': _nameController.text,
+        'nickname': nickname,
+        'photoUrl': uploadedUrl,
         'height': double.tryParse(_heightController.text) ?? height,
         'weight': double.tryParse(_weightController.text) ?? weight,
         'age': int.tryParse(_ageController.text) ?? age,
-
+        'gender': gender,
       });
 
       // UserProvider 업데이트
@@ -442,6 +448,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             label: 'Email',
                             controller: TextEditingController(text: email),
                             enabled: false,
+                          ),
+                          SizedBox(height: 20.h),
+                          // 성별 선택
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '성별',
+                                style: TextStyle(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              SizedBox(height: 8.h),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildGenderButton(
+                                      label: '남성',
+                                      value: 'male',
+                                      icon: Icons.male,
+                                    ),
+                                  ),
+                                  SizedBox(width: 12.w),
+                                  Expanded(
+                                    child: _buildGenderButton(
+                                      label: '여성',
+                                      value: 'female',
+                                      icon: Icons.female,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                           SizedBox(height: 20.h),
                           // 신체 정보 표시
@@ -1110,6 +1151,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildGenderButton({
+    required String label,
+    required String value,
+    required IconData icon,
+  }) {
+    final isSelected = gender == value;
+    return InkWell(
+      onTap: isEditing ? () {
+        setState(() {
+          gender = value;
+        });
+      } : null,
+      borderRadius: BorderRadius.circular(12.r),
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 12.h),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFB6F5E8) : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(
+            color: isSelected ? const Color(0xFFB6F5E8) : Colors.grey.shade300,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 18.w,
+              color: isSelected ? Colors.black87 : Colors.grey.shade600,
+            ),
+            SizedBox(width: 8.w),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14.sp,
+                color: isSelected ? Colors.black87 : Colors.grey.shade600,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
