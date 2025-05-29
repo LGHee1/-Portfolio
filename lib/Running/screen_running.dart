@@ -74,6 +74,7 @@ class _RunningScreenState extends State<RunningScreen> {
   // 속도 제한 상수 추가
   static const double MAX_SPEED_KMH = 30.0; // 최대 속도 제한 (km/h)
   static const double MAX_AVG_SPEED_KMH = 20.0; // 최대 평균 속도 제한 (km/h)
+  static const int INITIAL_GRACE_PERIOD = 5; // 초기 5초 동안은 속도 제한 체크하지 않음
   bool _isSpeedValid = true;
 
   String get formattedTime {
@@ -134,12 +135,17 @@ class _RunningScreenState extends State<RunningScreen> {
   }
 
   void _addStartMarker() {
-    _startLocationMarker = Marker(
-      markerId: const MarkerId('startLocation'),
-      position: widget.initialPosition,
-      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-      infoWindow: const InfoWindow(title: '시작점'),
-    );
+    if (widget.initialPosition != null) {
+      setState(() {
+        _startLocationMarker = Marker(
+          markerId: const MarkerId('startLocation'),
+          position: widget.initialPosition,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          infoWindow: const InfoWindow(title: '시작점'),
+          anchor: const Offset(0.5, 1.0),
+        );
+      });
+    }
   }
 
   void _updateCurrentLocationMarker(Position position) {
@@ -174,38 +180,43 @@ class _RunningScreenState extends State<RunningScreen> {
           double currentSpeed = (position.speed ?? 0) * 3.6; // m/s -> km/h 변환
           
           // 평균 속도 계산 (km/h)
-          double avgSpeed = _seconds > 0 ? (_distance / (_seconds / 3600)) : 0;
+          double avgSpeed = 0;
+          if (_seconds > 0 && _distance > 0) {
+            avgSpeed = (_distance / (_seconds / 3600));
+          }
 
-          // 속도 제한 체크
-          if (currentSpeed > MAX_SPEED_KMH || avgSpeed > MAX_AVG_SPEED_KMH) {
-            if (_isSpeedValid) {
-              _isSpeedValid = false;
-              _pauseTimer();
-              
-              if (mounted) {
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (BuildContext context) {
-                    return AlertDialog(
-                      title: Text('속도 제한 초과'),
-                      content: Text('비정상적인 속도가 감지되어 일시정지되었습니다.'),
-                      actions: [
-                        TextButton(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                            _pauseTimer(); // 다이얼로그 닫고 운동 재개
-                          },
-                          child: Text('확인'),
-                        ),
-                      ],
-                    );
-                  },
-                );
+          // 속도 제한 체크 (운동이 시작된 후에만 체크)
+          if (!_isCountingDown && _seconds > INITIAL_GRACE_PERIOD) {  // 초기 5초 동안은 체크하지 않음
+            if (currentSpeed > MAX_SPEED_KMH || avgSpeed > MAX_AVG_SPEED_KMH) {
+              if (_isSpeedValid) {
+                _isSpeedValid = false;
+                _pauseTimer();
+                
+                if (mounted) {
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: Text('속도 제한 초과'),
+                        content: Text('비정상적인 속도가 감지되어 일시정지되었습니다.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              _pauseTimer(); // 다이얼로그 닫고 운동 재개
+                            },
+                            child: Text('확인'),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                }
               }
+            } else {
+              _isSpeedValid = true;
             }
-          } else {
-            _isSpeedValid = true;
           }
         }
         _currentPosition = position;
@@ -218,6 +229,11 @@ class _RunningScreenState extends State<RunningScreen> {
         
         _updateCurrentLocationMarker(position);
         _updatePace();
+        
+        // 시작점 마커가 없으면 다시 추가
+        if (_startLocationMarker == null) {
+          _addStartMarker();
+        }
       });
 
       // 경로가 제대로 업데이트 되는지 디버깅용 코드
