@@ -372,6 +372,7 @@ class _SignUpScreenState extends State<SignUpScreen>
       }
 
       debugPrint('Firebase Auth 사용자 UID: ${user.uid}');
+      await user.updatePassword(_passwordController.text.trim());
 
       // Firestore에 사용자 정보 저장
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
