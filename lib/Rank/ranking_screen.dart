@@ -36,7 +36,7 @@ class _RankingScreenState extends State<RankingScreen> {
       });
 
       final usersSnapshot =
-      await FirebaseFirestore.instance.collection('users').get();
+          await FirebaseFirestore.instance.collection('users').get();
       List<Map<String, dynamic>> userData = [];
       String? currentUserId = _auth.currentUser?.uid;
 
@@ -102,7 +102,7 @@ class _RankingScreenState extends State<RankingScreen> {
       setState(() {
         _rankingData = rankingData;
         _currentUser = rankingData.firstWhere(
-              (data) => data.userId == currentUserId,
+          (data) => data.userId == currentUserId,
           orElse: () => rankingData.first,
         );
         _isLoading = false;
@@ -146,7 +146,7 @@ class _RankingScreenState extends State<RankingScreen> {
     // 현재 사용자 정보 업데이트
     String? currentUserId = _auth.currentUser?.uid;
     _currentUser = _rankingData.firstWhere(
-          (data) => data.userId == currentUserId,
+      (data) => data.userId == currentUserId,
       orElse: () => _rankingData.first,
     );
   }
@@ -160,8 +160,7 @@ class _RankingScreenState extends State<RankingScreen> {
           title: Text(
             '${DateTime.now().month}월 달 랭킹',
             style: TextStyle(
-              fontSize: 20.sp,
-              fontWeight: FontWeight.w600,
+              fontSize: 22.sp,
               letterSpacing: -0.5,
             ),
           ),
@@ -202,7 +201,7 @@ class _RankingScreenState extends State<RankingScreen> {
         title: Text(
           '${DateTime.now().month}월 달 랭킹',
           style: TextStyle(
-            fontSize: 20.sp,
+            fontSize: 22.sp,
             fontWeight: FontWeight.w600,
             letterSpacing: -0.5,
           ),
@@ -290,14 +289,14 @@ class _RankingScreenState extends State<RankingScreen> {
                   icon: Icon(
                     Icons.info_outline,
                     size: 18.w,
-                    color: AppTheme.primaryColor,
+                    color: const Color.fromARGB(255, 143, 234, 255),
                   ),
                   label: Text(
                     '등급 기준 보기',
                     style: TextStyle(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w600,
-                      color: AppTheme.primaryColor,
+                      color: const Color.fromARGB(255, 31, 208, 248),
                       letterSpacing: -0.2,
                     ),
                   ),
@@ -361,8 +360,8 @@ class _RankingScreenState extends State<RankingScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppTheme.primaryColor.withOpacity(0.1),
-            AppTheme.primaryColor.withOpacity(0.05),
+            const Color.fromARGB(255, 126, 205, 237).withOpacity(0.1),
+            const Color.fromARGB(255, 126, 205, 237).withOpacity(0.1),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -483,12 +482,12 @@ class _RankingScreenState extends State<RankingScreen> {
                     borderRadius: BorderRadius.circular(25.r),
                     boxShadow: isSelected
                         ? [
-                      BoxShadow(
-                        color: Color(0xFF0066CC).withOpacity(0.2),
-                        blurRadius: 8,
-                        offset: Offset(0, 2),
-                      ),
-                    ]
+                            BoxShadow(
+                              color: Color(0xFF0066CC).withOpacity(0.2),
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ]
                         : null,
                   ),
                   child: Text(
@@ -496,9 +495,9 @@ class _RankingScreenState extends State<RankingScreen> {
                     style: TextStyle(
                       fontSize: 14.sp,
                       fontWeight:
-                      isSelected ? FontWeight.w700 : FontWeight.w500,
+                          isSelected ? FontWeight.w700 : FontWeight.w500,
                       color:
-                      isSelected ? Colors.white : AppTheme.lightTextColor,
+                          isSelected ? Colors.white : AppTheme.lightTextColor,
                       letterSpacing: -0.2,
                     ),
                   ),
@@ -538,11 +537,11 @@ class _RankingScreenState extends State<RankingScreen> {
     if (isUserInSelectedLevel) {
       // 현재 사용자의 순위 정보
       final userRankInfo = filteredList.firstWhere(
-            (data) => data.userId == currentUser.userId,
+        (data) => data.userId == currentUser.userId,
         orElse: () => currentUser,
       );
       final isUserInTop10 =
-      displayList.any((data) => data.userId == currentUser.userId);
+          displayList.any((data) => data.userId == currentUser.userId);
 
       // 현재 사용자가 상위 10등 밖이면 구분선과 함께 추가
       if (!isUserInTop10) {
@@ -634,23 +633,24 @@ class _RankingScreenState extends State<RankingScreen> {
             padding: EdgeInsets.all(16.w),
             decoration: BoxDecoration(
               color: isCurrentUser
-                  ? AppTheme.primaryColor.withOpacity(0.1)
+                  ? const Color.fromARGB(255, 133, 214, 246).withOpacity(0.1)
                   : Colors.white,
               border: Border.all(
                 color: isCurrentUser
-                    ? AppTheme.primaryColor.withOpacity(0.2)
+                    ? const Color.fromARGB(255, 126, 205, 237).withOpacity(0.1)
                     : AppTheme.lightTextColor.withOpacity(0.1),
                 width: isCurrentUser ? 1.5 : 1,
               ),
               borderRadius: BorderRadius.circular(16.r),
               boxShadow: isCurrentUser
                   ? [
-                BoxShadow(
-                  color: AppTheme.primaryColor.withOpacity(0.1),
-                  blurRadius: 8,
-                  offset: Offset(0, 4),
-                ),
-              ]
+                      BoxShadow(
+                        color: const Color.fromARGB(255, 126, 205, 237)
+                            .withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: Offset(0, 4),
+                      ),
+                    ]
                   : null,
             ),
             child: Row(
@@ -702,7 +702,7 @@ class _RankingScreenState extends State<RankingScreen> {
                               ),
                               decoration: BoxDecoration(
                                 color:
-                                _getMedalColor(data.medal).withOpacity(0.1),
+                                    _getMedalColor(data.medal).withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(12.r),
                               ),
                               child: Text(

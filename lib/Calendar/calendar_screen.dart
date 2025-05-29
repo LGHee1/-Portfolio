@@ -217,7 +217,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
       appBar: AppBar(
         title: Text(
           '캘린더',
-          style: TextStyle(fontSize: 24.sp),
+          style: TextStyle(
+            fontSize: 22.sp,
+            fontWeight: FontWeight.w600,
+            color: Colors.black,
+            letterSpacing: -0.3,
+          ),
         ),
         centerTitle: true,
       ),
@@ -413,10 +418,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       flex: 1,
                       child: TextButton(
                         onPressed: () {
+                          final currentUser = _auth.currentUser;
+                          final isCurrentUser = currentUser != null && record.userId == currentUser.uid;
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => WorkoutDetailScreen(record: record),
+                              builder: (context) => WorkoutDetailScreen(
+                                record: record,
+                                isCurrentUser: isCurrentUser,
+                              ),
                             ),
                           );
                         },

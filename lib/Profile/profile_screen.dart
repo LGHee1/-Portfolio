@@ -89,10 +89,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           height = (userDoc.data()?['height'] ?? 0.0).toDouble();
           weight = (userDoc.data()?['weight'] ?? 0.0).toDouble();
           gender = userDoc.data()?['gender'];
+          message = userDoc.data()?['message'] ?? '';
           _nameController.text = name;
           _heightController.text = height.toString();
           _weightController.text = weight.toString();
           _ageController.text = age.toString();
+          _messageController.text = message;
         });
       }
     } catch (e) {
@@ -274,6 +276,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'weight': double.tryParse(_weightController.text) ?? weight,
         'age': int.tryParse(_ageController.text) ?? age,
         'gender': gender,
+        'message': _messageController.text,
       });
 
       // UserProvider 업데이트
@@ -654,7 +657,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Row(
                             children: [
                               Text(
-                                'Message',
+                                '세부설명',
                                 style: TextStyle(
                                   fontSize: 14.sp,
                                   fontWeight: FontWeight.w600,
@@ -679,32 +682,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           TextField(
                             controller: _messageController,
                             enabled: isEditing,
-                            maxLines: 2,
+                            maxLines: 5,
                             style: TextStyle(
                               fontSize: 14.sp,
                               color: Colors.black87,
-                              height: 1.5,
                             ),
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: Colors.grey.shade50,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12.r),
-                                borderSide:
-                                    BorderSide(color: Colors.grey.shade300),
+                                borderSide: BorderSide(color: Colors.grey.shade300),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12.r),
-                                borderSide:
-                                    BorderSide(color: Colors.grey.shade300),
+                                borderSide: BorderSide(color: Colors.grey.shade300),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12.r),
-                                borderSide: BorderSide(
-                                    color: const Color(0xFFB6F5E8), width: 2),
+                                borderSide: BorderSide(color: const Color(0xFFB6F5E8), width: 2),
                               ),
-                              contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 16.w, vertical: 12.h),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
                             ),
                           ),
                         ],

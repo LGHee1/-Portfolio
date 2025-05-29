@@ -68,10 +68,9 @@ class _PostListPageState extends State<PostListPage> {
       }
 
       Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high
-      );
+          desiredAccuracy: LocationAccuracy.high);
       print('현재 위치: ${position.latitude}, ${position.longitude}');
-      
+
       setState(() {
         _currentPosition = position;
         _markers.clear(); // 기존 마커 제거
@@ -142,15 +141,16 @@ class _PostListPageState extends State<PostListPage> {
         }
 
         _lastDocument = postsSnapshot.docs.last;
-        
+
         List<Map<String, dynamic>> newPosts = [];
         for (var doc in postsSnapshot.docs) {
           try {
-            final Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+            final Map<String, dynamic> data =
+                doc.data() as Map<String, dynamic>;
             data['id'] = doc.id;
             data['userId'] = doc.reference.parent.parent?.id;
             print('게시글 처리 중: ID=${doc.id}, 작성자=${data['userId']}');
-            
+
             if (data['userId'] != null) {
               final userDoc = await FirebaseFirestore.instance
                   .collection('users')
@@ -162,18 +162,19 @@ class _PostListPageState extends State<PostListPage> {
               }
             }
 
-            if (data['routePoints'] != null && (data['routePoints'] as List).isNotEmpty) {
+            if (data['routePoints'] != null &&
+                (data['routePoints'] as List).isNotEmpty) {
               final firstPoint = (data['routePoints'] as List).first;
               data['startLatitude'] = firstPoint['latitude'];
               data['startLongitude'] = firstPoint['longitude'];
             }
-            
+
             newPosts.add(data);
           } catch (e) {
             print('게시글 데이터 처리 중 오류 발생: $e');
           }
         }
-        
+
         print('처리된 게시글 수: ${newPosts.length}');
         setState(() {
           if (isInitial) {
@@ -185,7 +186,8 @@ class _PostListPageState extends State<PostListPage> {
               _filteredPosts.addAll(newPosts);
             }
           }
-          _hasMore = postsSnapshot.docs.length == (isInitial ? _initialLimit : _loadMoreLimit);
+          _hasMore = postsSnapshot.docs.length ==
+              (isInitial ? _initialLimit : _loadMoreLimit);
           _isLoading = false;
         });
 
@@ -208,9 +210,11 @@ class _PostListPageState extends State<PostListPage> {
     }
   }
 
-  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+  double _calculateDistance(
+      double lat1, double lon1, double lat2, double lon2) {
     // 두 지점 간의 거리를 미터 단위로 계산
-    double distanceInMeters = Geolocator.distanceBetween(lat1, lon1, lat2, lon2);
+    double distanceInMeters =
+        Geolocator.distanceBetween(lat1, lon1, lat2, lon2);
     // 미터를 킬로미터로 변환하고 소수점 첫째 자리까지 반올림
     return (distanceInMeters / 1000).roundToDouble();
   }
@@ -232,9 +236,10 @@ class _PostListPageState extends State<PostListPage> {
       List<Map<String, dynamic>> filtered = _posts.where((post) {
         if (post['tags'] == null) return false;
         List<String> postTags = List<String>.from(post['tags']);
-        
+
         // 선택된 모든 태그가 게시글의 태그에 포함되어 있는지 확인
-        return selectedTags.every((selectedTag) => postTags.contains(selectedTag.name));
+        return selectedTags
+            .every((selectedTag) => postTags.contains(selectedTag.name));
       }).toList();
 
       setState(() {
@@ -294,21 +299,16 @@ class _PostListPageState extends State<PostListPage> {
         }
 
         final currentLikes = postDoc.data()?['likes'] ?? 0;
-        
+
         if (_likedPosts.contains(postId)) {
           // 좋아요 취소
-          transaction.update(postRef, {
-            'likes': currentLikes - 1
-          });
+          transaction.update(postRef, {'likes': currentLikes - 1});
           transaction.delete(likedPostRef);
         } else {
           // 좋아요 추가
-          transaction.update(postRef, {
-            'likes': currentLikes + 1
-          });
-          transaction.set(likedPostRef, {
-            'timestamp': FieldValue.serverTimestamp()
-          });
+          transaction.update(postRef, {'likes': currentLikes + 1});
+          transaction
+              .set(likedPostRef, {'timestamp': FieldValue.serverTimestamp()});
         }
       });
 
@@ -353,17 +353,15 @@ class _PostListPageState extends State<PostListPage> {
         _filteredPosts.sort((a, b) {
           if (_currentPosition == null) return 0;
           double distanceA = _calculateDistance(
-            _currentPosition!.latitude,
-            _currentPosition!.longitude,
-            a['startLatitude'] ?? 0,
-            a['startLongitude'] ?? 0
-          );
+              _currentPosition!.latitude,
+              _currentPosition!.longitude,
+              a['startLatitude'] ?? 0,
+              a['startLongitude'] ?? 0);
           double distanceB = _calculateDistance(
-            _currentPosition!.latitude,
-            _currentPosition!.longitude,
-            b['startLatitude'] ?? 0,
-            b['startLongitude'] ?? 0
-          );
+              _currentPosition!.latitude,
+              _currentPosition!.longitude,
+              b['startLatitude'] ?? 0,
+              b['startLongitude'] ?? 0);
           return distanceA.compareTo(distanceB);
         });
       } else {
@@ -385,7 +383,7 @@ class _PostListPageState extends State<PostListPage> {
         backgroundColor: const Color(0xFFCBF6FF),
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, size: 24.sp),
+          icon: Icon(Icons.arrow_back, size: 24.sp, color: Colors.black87),
           onPressed: () {
             Navigator.pushReplacement(
               context,
@@ -393,72 +391,92 @@ class _PostListPageState extends State<PostListPage> {
             );
           },
         ),
+        title: Text(
+          '추천 코스',
+          style: TextStyle(
+            fontSize: 22.sp,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+            letterSpacing: -0.3,
+          ),
+        ),
+        centerTitle: true,
       ),
       body: Column(
         children: [
           Container(
             height: 250.h,
-            child: _currentPosition == null
-                ? Container(
-                    color: Colors.grey[300],
-                    child: Center(
-                      child: Text(
-                        '위치 정보를 가져오는 중...',
-                        style: TextStyle(fontSize: 16.sp),
+            margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20.r),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 12,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20.r),
+              child: _currentPosition == null
+                  ? Container(
+                      color: Colors.grey[200],
+                      child: Center(
+                        child: Text(
+                          '위치 정보를 가져오는 중...',
+                          style: TextStyle(
+                            fontSize: 16.sp,
+                            color: Colors.black54,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
-                    ),
-                  )
-                : GoogleMap(
-                    initialCameraPosition: CameraPosition(
-                      target: LatLng(
-                        _currentPosition!.latitude,
-                        _currentPosition!.longitude,
+                    )
+                  : GoogleMap(
+                      initialCameraPosition: CameraPosition(
+                        target: LatLng(
+                          _currentPosition!.latitude,
+                          _currentPosition!.longitude,
+                        ),
+                        zoom: 15,
                       ),
-                      zoom: 15,
+                      markers: _markers,
+                      onMapCreated: (controller) {
+                        _mapController = controller;
+                      },
+                      myLocationEnabled: true,
+                      myLocationButtonEnabled: true,
                     ),
-                    markers: _markers,
-                    onMapCreated: (controller) {
-                      _mapController = controller;
-                    },
-                    myLocationEnabled: true,
-                    myLocationButtonEnabled: true,
-                  ),
+            ),
           ),
           Padding(
-            padding: EdgeInsets.all(16.w),
+            padding: EdgeInsets.symmetric(horizontal: 16.w),
             child: Column(
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    ElevatedButton(
-                      onPressed: () {
+                    _buildSortButton(
+                      '거리순',
+                      _sortBy == 'distance',
+                      () {
                         setState(() {
                           _sortBy = 'distance';
                         });
                         _sortPosts();
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _sortBy == 'distance' ? const Color(0xFF764BA2) : Colors.grey[300],
-                        foregroundColor: _sortBy == 'distance' ? Colors.white : Colors.black,
-                        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                      ),
-                      child: Text('거리순', style: TextStyle(fontSize: 16.sp)),
                     ),
-                    SizedBox(width: 16.w),
-                    ElevatedButton(
-                      onPressed: () {
+                    SizedBox(width: 12.w),
+                    _buildSortButton(
+                      '좋아요순',
+                      _sortBy == 'likes',
+                      () {
                         setState(() {
                           _sortBy = 'likes';
                         });
                         _sortPosts();
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _sortBy == 'likes' ? const Color(0xFF764BA2) : Colors.grey[300],
-                        foregroundColor: _sortBy == 'likes' ? Colors.white : Colors.black,
-                        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                      ),
-                      child: Text('좋아요순', style: TextStyle(fontSize: 16.sp)),
                     ),
                   ],
                 ),
@@ -467,9 +485,16 @@ class _PostListPageState extends State<PostListPage> {
                   padding: EdgeInsets.symmetric(horizontal: 16.w),
                   height: 48.h,
                   decoration: BoxDecoration(
-                    color: Colors.grey[200],
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(24.r),
-                    border: Border.all(color: Colors.grey[400]!),
+                    border: Border.all(color: Colors.grey[300]!),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Row(
                     children: [
@@ -500,8 +525,9 @@ class _PostListPageState extends State<PostListPage> {
                               ? Text(
                                   '원하는 태그를 추가하세요',
                                   style: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 16.sp,
+                                    color: Colors.grey[600],
+                                    fontSize: 15.sp,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 )
                               : SingleChildScrollView(
@@ -512,19 +538,29 @@ class _PostListPageState extends State<PostListPage> {
                                         padding: EdgeInsets.only(right: 8.w),
                                         child: Container(
                                           padding: EdgeInsets.symmetric(
-                                            horizontal: 8.w,
-                                            vertical: 4.h,
+                                            horizontal: 12.w,
+                                            vertical: 6.h,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: const Color(0xFFE7EFA2),
-                                            borderRadius: BorderRadius.circular(12.r),
+                                            color: Color(0xFFE7EFA2),
+                                            borderRadius:
+                                                BorderRadius.circular(16.r),
+                                            border: Border.all(
+                                              color: Color(0xFFE7EFA2)
+                                                  .withOpacity(0.5),
+                                              width: 1,
+                                            ),
                                           ),
                                           child: Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
                                               Text(
                                                 tag.name,
-                                                style: TextStyle(fontSize: 14.sp),
+                                                style: TextStyle(
+                                                  fontSize: 14.sp,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: Colors.black87,
+                                                ),
                                               ),
                                               SizedBox(width: 4.w),
                                               GestureDetector(
@@ -536,7 +572,8 @@ class _PostListPageState extends State<PostListPage> {
                                                 },
                                                 child: Icon(
                                                   Icons.close,
-                                                  size: 14.sp,
+                                                  size: 16.sp,
+                                                  color: Colors.black54,
                                                 ),
                                               ),
                                             ],
@@ -554,8 +591,8 @@ class _PostListPageState extends State<PostListPage> {
                           padding: EdgeInsets.only(left: 8.w),
                           child: Icon(
                             Icons.search,
-                            color: Colors.grey,
-                            size: 20.sp,
+                            color: Colors.grey[600],
+                            size: 22.sp,
                           ),
                         ),
                       ),
@@ -571,133 +608,181 @@ class _PostListPageState extends State<PostListPage> {
                 Expanded(
                   child: ListView.builder(
                     itemCount: _filteredPosts.length,
-                    padding: EdgeInsets.symmetric(horizontal: 16.w),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                     itemBuilder: (context, index) {
                       final post = _filteredPosts[index];
-                      return Column(
-                        children: [
-                          const Divider(
-                            thickness: 1,
-                            color: Color(0xFFACE3FF),
-                            height: 1,
-                          ),
-                          ListTile(
-                            contentPadding: EdgeInsets.symmetric(vertical: 8.h),
-                            title: Text(
-                              post['title'] ?? '제목 없음',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18.sp,
-                              ),
+                      return Container(
+                        margin: EdgeInsets.only(bottom: 12.h),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16.r),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
                             ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  post['nickname'] ?? '작성자',
-                                  style: TextStyle(
-                                    fontSize: 14.sp,
-                                    color: Colors.grey[600],
-                                  ),
+                          ],
+                        ),
+                        child: ListTile(
+                          contentPadding: EdgeInsets.all(16.w),
+                          title: Text(
+                            post['title'] ?? '제목 없음',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 17.sp,
+                              color: Colors.black87,
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(height: 8.h),
+                              Text(
+                                post['nickname'] ?? '작성자',
+                                style: TextStyle(
+                                  fontSize: 14.sp,
+                                  color: Colors.black54,
+                                  fontWeight: FontWeight.w500,
                                 ),
-                                if (_currentPosition != null && post['startLatitude'] != null && post['startLongitude'] != null)
-                                  Text(
-                                    '시작점까지 거리: ${_calculateDistance(
-                                      _currentPosition!.latitude,
-                                      _currentPosition!.longitude,
-                                      post['startLatitude'],
-                                      post['startLongitude']
-                                    ).toStringAsFixed(1)}km',
+                              ),
+                              if (_currentPosition != null &&
+                                  post['startLatitude'] != null &&
+                                  post['startLongitude'] != null)
+                                Padding(
+                                  padding: EdgeInsets.only(top: 4.h),
+                                  child: Text(
+                                    '시작점까지 거리: ${_calculateDistance(_currentPosition!.latitude, _currentPosition!.longitude, post['startLatitude'], post['startLongitude']).toStringAsFixed(1)}km',
                                     style: TextStyle(
                                       fontSize: 14.sp,
-                                      color: Colors.blue[700],
+                                      color: Color(0xFF0066CC),
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
-                                SizedBox(height: 4.h),
-                                Row(
-                                  children: [
-                                    Icon(Icons.route, size: 14.sp),
-                                    SizedBox(width: 4.w),
-                                    Text(
-                                      '운동 거리: ${(post['distance'] ?? 0).toStringAsFixed(1)}km',
-                                      style: TextStyle(fontSize: 14.sp),
-                                    ),
-                                    SizedBox(width: 16.w),
-                                    Icon(
-                                      Icons.favorite,
-                                      size: 14.sp,
-                                      color: Colors.red,
-                                    ),
-                                    SizedBox(width: 4.w),
-                                    Text(
-                                      '${post['likes'] ?? 0}',
-                                      style: TextStyle(fontSize: 14.sp),
-                                    ),
-                                  ],
                                 ),
-                                SizedBox(height: 4.h),
-                                if (post['tags'] != null && (post['tags'] as List).isNotEmpty)
-                                  Wrap(
-                                    spacing: 4.w,
-                                    children: (post['tags'] as List).map<Widget>((tag) =>
-                                      Container(
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: 8.w,
-                                          vertical: 2.h,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFE7EFA2),
-                                          borderRadius: BorderRadius.circular(12.r),
-                                        ),
-                                        child: Text(
-                                          tag.toString(),
-                                          style: TextStyle(fontSize: 12.sp),
-                                        ),
-                                      )
-                                    ).toList(),
+                              SizedBox(height: 8.h),
+                              Row(
+                                children: [
+                                  Icon(Icons.route,
+                                      size: 16.sp, color: Colors.black54),
+                                  SizedBox(width: 4.w),
+                                  Text(
+                                    '운동 거리: ${(post['distance'] ?? 0).toStringAsFixed(1)}km',
+                                    style: TextStyle(
+                                      fontSize: 14.sp,
+                                      color: Colors.black54,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
+                                  SizedBox(width: 16.w),
+                                  Icon(
+                                    Icons.favorite,
+                                    size: 16.sp,
+                                    color: Colors.red[400],
+                                  ),
+                                  SizedBox(width: 4.w),
+                                  Text(
+                                    '${post['likes'] ?? 0}',
+                                    style: TextStyle(
+                                      fontSize: 14.sp,
+                                      color: Colors.black54,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (post['tags'] != null &&
+                                  (post['tags'] as List).isNotEmpty)
+                                Padding(
+                                  padding: EdgeInsets.only(top: 8.h),
+                                  child: Wrap(
+                                    spacing: 6.w,
+                                    runSpacing: 6.h,
+                                    children: (post['tags'] as List)
+                                        .map<Widget>((tag) => Container(
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: 10.w,
+                                                vertical: 4.h,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Color(0xFFE7EFA2),
+                                                borderRadius:
+                                                    BorderRadius.circular(12.r),
+                                                border: Border.all(
+                                                  color: Color(0xFFE7EFA2)
+                                                      .withOpacity(0.5),
+                                                  width: 1,
+                                                ),
+                                              ),
+                                              child: Text(
+                                                tag.toString(),
+                                                style: TextStyle(
+                                                  fontSize: 12.sp,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: Colors.black87,
+                                                ),
+                                              ),
+                                            ))
+                                        .toList(),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          trailing: Container(
+                            width: 80.w,
+                            height: 80.h,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12.r),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 4,
+                                  offset: Offset(0, 2),
+                                ),
                               ],
                             ),
-                            trailing: Container(
-                              width: 80.w,
-                              height: 80.h,
-                              decoration: BoxDecoration(
-                                color: Colors.grey[300],
-                                borderRadius: BorderRadius.circular(8.r),
-                              ),
-                              child: post['imageUrls'] != null && (post['imageUrls'] as List).isNotEmpty
-                                  ? ClipRRect(
-                                      borderRadius: BorderRadius.circular(8.r),
-                                      child: Image.network(
-                                        post['imageUrls'][0],
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) {
-                                          return Icon(
+                            child: post['imageUrls'] != null &&
+                                    (post['imageUrls'] as List).isNotEmpty
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    child: Image.network(
+                                      post['imageUrls'][0],
+                                      fit: BoxFit.cover,
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                        return Container(
+                                          color: Colors.grey[200],
+                                          child: Icon(
                                             Icons.image,
-                                            color: Colors.grey,
+                                            color: Colors.grey[400],
                                             size: 32.sp,
-                                          );
-                                        },
-                                      ),
-                                    )
-                                  : Icon(
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  )
+                                : Container(
+                                    color: Colors.grey[200],
+                                    child: Icon(
                                       Icons.image,
-                                      color: Colors.grey,
+                                      color: Colors.grey[400],
                                       size: 32.sp,
                                     ),
-                            ),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => PostViewPage(
-                                    postData: post,
                                   ),
-                                ),
-                              );
-                            },
                           ),
-                        ],
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => PostViewPage(
+                                  postData: post,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       );
                     },
                   ),
@@ -706,15 +791,41 @@ class _PostListPageState extends State<PostListPage> {
                   Padding(
                     padding: EdgeInsets.all(16.w),
                     child: ElevatedButton(
-                      onPressed: _isLoading ? null : () => _loadPosts(isInitial: false),
+                      onPressed: _isLoading
+                          ? null
+                          : () => _loadPosts(isInitial: false),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFD8F9FF),
-                        foregroundColor: Colors.black,
+                        backgroundColor: Colors.white,
+                        foregroundColor: Color(0xFF0066CC),
+                        elevation: 2,
+                        shadowColor: Colors.black.withOpacity(0.1),
                         minimumSize: Size(double.infinity, 50.h),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16.r),
+                          side: BorderSide(
+                            color: Color(0xFF0066CC).withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
                       ),
                       child: _isLoading
-                          ? CircularProgressIndicator()
-                          : Text('더보기', style: TextStyle(fontSize: 16.sp)),
+                          ? SizedBox(
+                              width: 24.w,
+                              height: 24.w,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                    Color(0xFF0066CC)),
+                              ),
+                            )
+                          : Text(
+                              '더보기',
+                              style: TextStyle(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
                     ),
                   ),
               ],
@@ -745,6 +856,35 @@ class _PostListPageState extends State<PostListPage> {
             );
           }
         },
+      ),
+    );
+  }
+
+  Widget _buildSortButton(
+      String text, bool isSelected, VoidCallback onPressed) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isSelected ? Color(0xFF0066CC) : Colors.white,
+        foregroundColor: isSelected ? Colors.white : Colors.black87,
+        elevation: isSelected ? 2 : 0,
+        shadowColor: Colors.black.withOpacity(0.1),
+        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20.r),
+          side: BorderSide(
+            color: isSelected ? Color(0xFF0066CC) : Colors.grey[300]!,
+            width: 1,
+          ),
+        ),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 15.sp,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -0.3,
+        ),
       ),
     );
   }
