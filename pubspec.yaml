@@ -29,6 +29,7 @@ dependencies:
   profanity_filter: ^2.0.0
   url_launcher: ^6.2.5
   firebase_database: ^10.5.7
+  http: ^1.1.0
   
 dev_dependencies:
   flutter_test:

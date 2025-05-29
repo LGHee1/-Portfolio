@@ -7,6 +7,8 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../user_provider.dart';
 import '../home_screen.dart';
 import 'workout_summary_screen.dart';
@@ -54,6 +56,12 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   Timer? _timer;
   final List<LatLng> _routePoints = [];
   DateTime? _workoutStartTime;
+
+  final TextEditingController _searchController = TextEditingController();
+  Set<Marker> _searchMarkers = {};
+  LatLng? _searchLocation;
+  List<Map<String, dynamic>> _searchResults = [];
+  bool _isSearching = false;
 
   @override
   void initState() {
@@ -324,7 +332,91 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     }
     _timer?.cancel();
     _positionStream?.cancel();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleSearch(String query) async {
+    if (query.isEmpty) return;
+
+    setState(() {
+      _isSearching = true;
+    });
+
+    try {
+      final response = await http.get(
+        Uri.parse(
+          'https://maps.googleapis.com/maps/api/geocode/json?address=$query&key=AIzaSyAiu9u8Xw5GX3rZMZV16Zko6GVKFKDHxok&language=ko&region=kr',
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'OK') {
+          final results = data['results'] as List;
+          setState(() {
+            _searchResults = results.map((result) {
+              final location = result['geometry']['location'];
+              return {
+                'name': result['formatted_address'],
+                'address': result['formatted_address'],
+                'lat': location['lat'],
+                'lng': location['lng'],
+              };
+            }).toList();
+          });
+
+          if (_searchResults.isNotEmpty) {
+            _selectLocation(_searchResults.first);
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('검색 결과가 없습니다. (${data['status']})')),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      print('장소 검색 중 오류 발생: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('장소 검색 중 오류가 발생했습니다.')),
+        );
+      }
+    } finally {
+      setState(() {
+        _isSearching = false;
+      });
+    }
+  }
+
+  void _selectLocation(Map<String, dynamic> location) {
+    setState(() {
+      _searchLocation = LatLng(location['lat'], location['lng']);
+      _searchMarkers = {
+        Marker(
+          markerId: const MarkerId('searchLocation'),
+          position: _searchLocation!,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+          infoWindow: InfoWindow(
+            title: location['name'],
+            snippet: location['address'],
+          ),
+        ),
+      };
+      _searchResults = [];
+      _searchController.clear();
+    });
+
+    // 검색된 위치로 카메라 이동
+    if (_controller.isCompleted) {
+      _controller.future.then((controller) {
+        controller.animateCamera(
+          CameraUpdate.newLatLngZoom(_searchLocation!, 15),
+        );
+      });
+    }
   }
 
   @override
@@ -352,14 +444,16 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const TextField(
+                child: TextField(
+                  controller: _searchController,
                   decoration: InputDecoration(
-                    hintText: '검색',
+                    hintText: '장소 검색',
                     border: InputBorder.none,
-                    icon: Icon(Icons.search, size: 25),
-                    contentPadding: EdgeInsets.symmetric(vertical: 12),
+                    suffixIcon: const Icon(Icons.search, size: 25),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
                   ),
-                  style: TextStyle(fontSize: 14),
+                  style: const TextStyle(fontSize: 14),
+                  onSubmitted: _handleSearch,
                 ),
               ),
             ),
@@ -401,6 +495,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                   infoWindow: const InfoWindow(title: '추천 코스 종료점'),
                 ),
               ],
+              ..._searchMarkers,
             },
             polylines: {
               // 실제 달린 경로 (파란색)
@@ -490,6 +585,41 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
               child: const Text("운동 시작"),
             ),
           ),
+          if (_isSearching)
+            const Center(
+              child: CircularProgressIndicator(),
+            ),
+          if (_searchResults.isNotEmpty)
+            Positioned(
+              top: 100,
+              left: 16,
+              right: 16,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _searchResults.length,
+                  itemBuilder: (context, index) {
+                    final result = _searchResults[index];
+                    return ListTile(
+                      title: Text(result['name']),
+                      subtitle: Text(result['address']),
+                      onTap: () => _selectLocation(result),
+                    );
+                  },
+                ),
+              ),
+            ),
         ],
       ),
 
