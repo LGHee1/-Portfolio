@@ -219,6 +219,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                         calories: _calories,
                         routePoints: _routePoints,
                         pausedRoutePoints: [], // 일시정지 구간 추가 (이 화면에서는 일시정지 기능이 없으므로 빈 리스트)
+                        activeRoutePoints: _routePoints, // 활성 경로 추가 (이 화면에서는 일시정지 기능이 없으므로 전체 경로를 활성 경로로 설정)
                         isRecommendedCourse: _isRecommendedCourse,
                         recommendedRoutePoints: _recommendedRoutePoints,
                         recommendedCourseName: _recommendedCourseName,

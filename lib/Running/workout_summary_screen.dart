@@ -19,6 +19,7 @@ class WorkoutSummaryScreen extends StatefulWidget {
   final int calories;
   final List<LatLng> routePoints;
   final List<LatLng> pausedRoutePoints;
+  final List<LatLng> activeRoutePoints;
   final bool isRecommendedCourse;
   final List<LatLng> recommendedRoutePoints;
   final String recommendedCourseName;
@@ -32,6 +33,7 @@ class WorkoutSummaryScreen extends StatefulWidget {
     required this.calories,
     required this.routePoints,
     required this.pausedRoutePoints,
+    required this.activeRoutePoints,
     this.isRecommendedCourse = false,
     required this.recommendedRoutePoints,
     required this.recommendedCourseName,
@@ -74,17 +76,35 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
 
   void _initializePolylines() {
     if (widget.routePoints.isNotEmpty) {
-      _polylines.add(
-        Polyline(
-          polylineId: const PolylineId('route'),
-          points: widget.routePoints,
-          color: const Color(0xFF764BA2),
-          width: 5,
-          startCap: Cap.roundCap,
-          endCap: Cap.roundCap,
-          jointType: JointType.round,
-        ),
-      );
+      // 활성 경로 (보라색)
+      if (widget.activeRoutePoints.isNotEmpty) {
+        _polylines.add(
+          Polyline(
+            polylineId: const PolylineId('activeRoute'),
+            points: widget.activeRoutePoints,
+            color: const Color(0xFF764BA2),
+            width: 5,
+            startCap: Cap.roundCap,
+            endCap: Cap.roundCap,
+            jointType: JointType.round,
+          ),
+        );
+      }
+
+      // 일시정지 구간 경로 (회색)
+      if (widget.pausedRoutePoints.isNotEmpty) {
+        _polylines.add(
+          Polyline(
+            polylineId: const PolylineId('pausedRoute'),
+            points: widget.pausedRoutePoints,
+            color: Colors.grey,
+            width: 5,
+            startCap: Cap.roundCap,
+            endCap: Cap.roundCap,
+            jointType: JointType.round,
+          ),
+        );
+      }
     }
   }
 
@@ -270,21 +290,27 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
                           ),
                           onMapCreated: _onMapCreated,
                           polylines: {
-                            // 실제 달린 경로 (보라색)
-                            if (widget.routePoints.isNotEmpty)
+                            // 활성 경로 (보라색)
+                            if (widget.activeRoutePoints.isNotEmpty)
                               Polyline(
-                                polylineId: const PolylineId('route'),
-                                points: widget.routePoints,
+                                polylineId: const PolylineId('activeRoute'),
+                                points: widget.activeRoutePoints,
                                 color: const Color(0xFF764BA2),
                                 width: 5,
+                                startCap: Cap.roundCap,
+                                endCap: Cap.roundCap,
+                                jointType: JointType.round,
                               ),
-                            // 일시정지 구간 (회색)
+                            // 일시정지 구간 경로 (회색)
                             if (widget.pausedRoutePoints.isNotEmpty)
                               Polyline(
                                 polylineId: const PolylineId('pausedRoute'),
                                 points: widget.pausedRoutePoints,
                                 color: Colors.grey,
                                 width: 5,
+                                startCap: Cap.roundCap,
+                                endCap: Cap.roundCap,
+                                jointType: JointType.round,
                               ),
                             // 추천 코스 (초록색)
                             if (widget.isRecommendedCourse && widget.recommendedRoutePoints.isNotEmpty)
@@ -293,6 +319,9 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
                                 points: widget.recommendedRoutePoints,
                                 color: Colors.green,
                                 width: 5,
+                                startCap: Cap.roundCap,
+                                endCap: Cap.roundCap,
+                                jointType: JointType.round,
                               ),
                           },
                           markers: _markers,
