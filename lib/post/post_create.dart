@@ -588,7 +588,7 @@ class _PostCreatePageState extends State<PostCreatePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '내용',
+                    '세부설명',
                     style: TextStyle(
                       fontSize: 18.sp,
                       fontWeight: FontWeight.bold,
@@ -605,7 +605,7 @@ class _PostCreatePageState extends State<PostCreatePage> {
                     child: TextField(
                       controller: _contentController,
                       decoration: InputDecoration(
-                        hintText: '내용을 입력하세요',
+                        hintText: '세부설명을 입력하세요',
                         border: InputBorder.none,
                         hintStyle: TextStyle(fontSize: 16.sp),
                         helperText: '부적절한 단어는 사용할 수 없습니다.',

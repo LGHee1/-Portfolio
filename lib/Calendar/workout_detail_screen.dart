@@ -171,7 +171,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
             Padding(
               padding: EdgeInsets.only(right: 16.w),
               child: ElevatedButton(
-                onPressed: () {
+                onPressed: _hasExistingPost ? null : () {
                   if (widget.record.routePoints.isEmpty) {
                     showDialog(
                       context: context,
@@ -218,30 +218,30 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                           'distance': widget.record.distance,
                           'duration': widget.record.duration.inSeconds,
                           'workoutId': '${widget.record.distance}_${widget.record.duration.inSeconds}_${widget.record.routePoints.first['latitude']}_${widget.record.routePoints.first['longitude']}',
-                            },
-                          ),
-                        ),
-                      ).then((_) {
-                        _checkExistingPost(); // 게시글 작성 후 상태 업데이트
-                      });
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _hasExistingPost ? Colors.grey : const Color(0xFFFF9800),
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.r),
+                        },
+                      ),
+                    ),
+                  ).then((_) {
+                    _checkExistingPost();
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _hasExistingPost ? Colors.grey : const Color(0xFFFF9800),
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
                 ),
-              ),
-              child: Text(
-                _hasExistingPost ? '이미 게시글을 작성했습니다' : '게시글 작성',
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.bold,
+                child: Text(
+                  _hasExistingPost ? '이미 게시글을 작성했습니다' : '게시글 작성',
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
-          ),
         ],
       ),
       body: Column(

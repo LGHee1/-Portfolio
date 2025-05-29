@@ -397,64 +397,62 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen> {
                                 child: Align(
                                   alignment: Alignment.bottomCenter,
                                   child: ElevatedButton(
-                                    onPressed: _hasExistingPost
-                                        ? null
-                                        : () {
-                                            if (widget.routePoints.isEmpty) {
-                                              showDialog(
-                                                context: context,
-                                                builder: (context) => AlertDialog(
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius: BorderRadius.circular(20.r),
-                                                  ),
-                                                  content: Text(
-                                                    '운동 경로가 없어 작성할 수 없습니다.',
+                                    onPressed: _hasExistingPost ? null : () {
+                                      if (widget.routePoints.isEmpty) {
+                                        showDialog(
+                                          context: context,
+                                          builder: (context) => AlertDialog(
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(20.r),
+                                            ),
+                                            content: Text(
+                                              '운동 경로가 없어 작성할 수 없습니다.',
+                                              style: TextStyle(
+                                                fontSize: 16.sp,
+                                                color: Color(0xFF0066CC),
+                                                letterSpacing: -0.2,
+                                              ),
+                                            ),
+                                            actions: [
+                                              Align(
+                                                alignment: Alignment.bottomRight,
+                                                child: TextButton(
+                                                  onPressed: () => Navigator.of(context).pop(),
+                                                  child: Text(
+                                                    '확인',
                                                     style: TextStyle(
                                                       fontSize: 16.sp,
+                                                      fontWeight: FontWeight.w600,
                                                       color: Color(0xFF0066CC),
                                                       letterSpacing: -0.2,
                                                     ),
                                                   ),
-                                                  actions: [
-                                                    Align(
-                                                      alignment: Alignment.bottomRight,
-                                                      child: TextButton(
-                                                        onPressed: () => Navigator.of(context).pop(),
-                                                        child: Text(
-                                                          '확인',
-                                                          style: TextStyle(
-                                                            fontSize: 16.sp,
-                                                            fontWeight: FontWeight.w600,
-                                                            color: Color(0xFF0066CC),
-                                                            letterSpacing: -0.2,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
                                                 ),
-                                              );
-                                            } else {
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) => PostCreatePage(
-                                                    workoutData: {
-                                                      'routePoints': widget.routePoints.map((point) => {
-                                                        'latitude': point.latitude,
-                                                        'longitude': point.longitude,
-                                                      }).toList(),
-                                                      'distance': widget.distance,
-                                                      'duration': widget.duration.inSeconds,
-                                                      'workoutId': '${widget.distance}_${widget.duration.inSeconds}_${widget.routePoints.first.latitude}_${widget.routePoints.first.longitude}',
-                                                    },
-                                                  ),
-                                                ),
-                                              ).then((_) {
-                                                _checkExistingPost(); // 게시글 작성 후 상태 업데이트
-                                              });
-                                            }
-                                          },
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      } else {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => PostCreatePage(
+                                              workoutData: {
+                                                'routePoints': widget.routePoints.map((point) => {
+                                                  'latitude': point.latitude,
+                                                  'longitude': point.longitude,
+                                                }).toList(),
+                                                'distance': widget.distance,
+                                                'duration': widget.duration.inSeconds,
+                                                'workoutId': '${widget.distance}_${widget.duration.inSeconds}_${widget.routePoints.first.latitude}_${widget.routePoints.first.longitude}',
+                                              },
+                                            ),
+                                          ),
+                                        ).then((_) {
+                                          _checkExistingPost(); // 게시글 작성 후 상태 업데이트
+                                        });
+                                      }
+                                    },
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: _hasExistingPost ? Colors.grey : Color(0xFF0066CC),
                                       foregroundColor: Colors.white,

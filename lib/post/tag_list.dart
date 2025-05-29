@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import '../models/tag.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart';
-import 'package:firebase_database/firebase_database.dart'; // Import Firebase Realtime Database
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class TagListPage extends StatefulWidget {
   final Function(List<Tag>) onTagsSelected;
   final List<Tag> initialSelectedTags;
-
+  
   const TagListPage({
     super.key,
     required this.onTagsSelected,
@@ -20,13 +20,14 @@ class TagListPage extends StatefulWidget {
 
 class _TagListPageState extends State<TagListPage> {
   late List<Tag> selectedTags;
+  int _selectedCategoryIndex = 0;
   final Map<TagCategory, bool> categoryExpanded = {
     TagCategory.location: true,
     TagCategory.exercise: true,
     TagCategory.surrounding: true,
     TagCategory.etc: true,
   };
-
+  
   // 지역 선택 관련 상태
   RegionTag? selectedLevel1;  // 시/도
   RegionTag? selectedLevel2;  // 시/군/구
@@ -45,85 +46,54 @@ class _TagListPageState extends State<TagListPage> {
 
   Future<void> _loadRegionData() async {
     try {
-      print('Firebase Realtime Database에서 지역 데이터 로드 시작');
-      // Firebase Realtime Database 인스턴스 가져오기
-      final databaseRef = FirebaseDatabase.instance.ref('태그'); // 이미지에서 확인한 '태그' 노드 사용
+      print('지역 데이터 로드 시작');
+      List<RegionTag> allRegions = [];
+      
+      // 17개 시도 파일 목록
+      final regionFiles = [
+        '서울특별시.json',
+        '부산광역시.json',
+        '대구광역시.json',
+        '인천광역시.json',
+        '광주광역시.json',
+        '대전광역시.json',
+        '울산광역시.json',
+        '세종특별자치시.json',
+        '경기도.json',
+        '강원특별자치도.json',
+        '충청북도.json',
+        '충청남도.json',
+        '전북특별자치도.json',
+        '전라남도.json',
+        '경상북도.json',
+        '경상남도.json',
+        '제주특별자치도.json',
+      ];
 
-      final snapshot = await databaseRef.get();
-
-      if (snapshot.exists) {
-        print('Firebase에서 데이터 로드 완료');
-        final Map<dynamic, dynamic>? data = snapshot.value as Map<dynamic, dynamic>?;
-        List<RegionTag> allRegions = [];
-
-        if (data != null) {
-          // Firebase에서 가져온 데이터를 RegionTag 객체 리스트로 변환
-          data.forEach((key, value) {
-            if (value is Map<dynamic, dynamic>) {
-              try {
-                RegionTag region = _parseRegionTagFromFirebase(key.toString(), Map<String, dynamic>.from(value));
-                allRegions.add(region);
-              } catch (e) {
-                print('지역 데이터 파싱 중 오류 발생: $e');
-              }
-            }
-          });
+      // 각 시도 파일에서 데이터 로드
+      for (final file in regionFiles) {
+        try {
+          final String jsonString = await rootBundle.loadString('assets/data/$file');
+          final Map<String, dynamic> jsonData = json.decode(jsonString);
+          final RegionTag region = RegionTag.fromJson(jsonData);
+          allRegions.add(region);
+          print('$file 로드 완료: ${region.name}');
+        } catch (e) {
+          print('$file 로드 실패: $e');
         }
-
-        setState(() {
-          level1Regions = allRegions;
-          print('전체 시/도 목록 생성 완료: ${level1Regions!.length}개');
-        });
-      } else {
-        print('Firebase에 \'태그\' 데이터가 없습니다.');
-        setState(() {
-          level1Regions = [];
-        });
       }
+      
+      setState(() {
+        level1Regions = allRegions;
+        print('전체 시/도 목록 생성 완료: ${level1Regions!.length}개');
+      });
     } catch (e, stackTrace) {
-      print('Firebase 지역 데이터 로드 실패: $e');
+      print('지역 데이터 로드 실패: $e');
       print('스택 트레이스: $stackTrace');
       setState(() {
         level1Regions = [];
       });
     }
-  }
-
-  // Helper function to parse Firebase data into RegionTag
-  RegionTag _parseRegionTagFromFirebase(String name, Map<String, dynamic> data) {
-    List<RegionTag>? subRegions;
-
-    // 'code'와 'name' 필드는 현재 데이터 맵에 직접 있다고 가정
-    String code = data['code']?.toString() ?? '';
-    // level은 코드 길이에 따라 추정
-    int level = code.length == 2 ? 1 : code.length == 5 ? 2 : 3;
-
-    // 'children' 노드가 리스트 형태로 하위 지역들을 담고 있는지 확인
-    if (data['children'] != null && data['children'] is List) {
-      subRegions = (data['children'] as List)
-          .map((item) {
-            // 리스트의 각 항목이 Map 형태인지 확인하고 재귀 호출
-            if (item is Map<dynamic, dynamic>) {
-               // 하위 지역의 이름은 Map 내의 'name' 필드에서 가져옵니다.
-               String subName = item['name']?.toString() ?? '알 수 없음';
-               return _parseRegionTagFromFirebase(subName, Map<String, dynamic>.from(item));
-            }
-            return null; // Map이 아니면 null 반환 (필터링될 것임)
-          })
-          .whereType<RegionTag>() // null이 아닌 RegionTag 객체만 필터링
-          .toList();
-      // 만약 subRegions 리스트가 비어있다면 null로 설정
-      if (subRegions.isEmpty) {
-          subRegions = null;
-      }
-    }
-
-    return RegionTag(
-      name: name,
-      level: level,
-      code: code,
-      subRegions: subRegions,
-    );
   }
 
   void _selectLevel1(RegionTag region) {

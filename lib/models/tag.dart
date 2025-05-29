@@ -15,6 +15,23 @@ class Tag {
     required this.category,
     this.parentRegion,
   });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'category': category.toString().split('.').last,
+    };
+  }
+
+  factory Tag.fromJson(Map<String, dynamic> json) {
+    return Tag(
+      name: json['name'] as String,
+      category: TagCategory.values.firstWhere(
+        (e) => e.toString() == 'TagCategory.${json['category']}',
+        orElse: () => TagCategory.etc,
+      ),
+    );
+  }
 }
 
 class RegionTag extends Tag {
@@ -38,14 +55,14 @@ class RegionTag extends Tag {
   factory RegionTag.fromJson(Map<String, dynamic> json) {
     return RegionTag(
       name: json['name'] as String,
-      level: json['code'].toString().length == 2 ? 1 :
-      json['code'].toString().length == 5 ? 2 : 3,
+      level: json['code'].toString().length == 2 ? 1 : 
+             json['code'].toString().length == 5 ? 2 : 3,
       code: json['code'] as String,
       parentRegion: null,  // 상위 지역 정보는 나중에 설정
       subRegions: json['children'] != null
           ? (json['children'] as List)
-          .map((e) => RegionTag.fromJson(e as Map<String, dynamic>))
-          .toList()
+              .map((e) => RegionTag.fromJson(e as Map<String, dynamic>))
+              .toList()
           : null,
     );
   }

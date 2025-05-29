@@ -436,7 +436,7 @@ class _PostViewPageState extends State<PostViewPage> {
                       borderRadius: BorderRadius.circular(8.r),
                     ),
                     child: Text(
-                      widget.postData['description'] ?? '설명 없음',
+                      widget.postData['content'] ?? '설명 없음',
                       style: TextStyle(fontSize: 16.sp),
                     ),
                   ),

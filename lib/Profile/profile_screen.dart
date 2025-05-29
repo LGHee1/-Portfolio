@@ -75,10 +75,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
+      // users 컬렉션에서 데이터 로드
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .get();
+
+      // MyProfile 서브컬렉션에서 데이터 로드
+      final myProfileDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('MyProfile')
+          .doc(user.uid)
+          .get();
+
       if (userDoc.exists) {
         setState(() {
           nickname = userDoc.data()?['nickname'] ?? '';
@@ -89,7 +99,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           height = (userDoc.data()?['height'] ?? 0.0).toDouble();
           weight = (userDoc.data()?['weight'] ?? 0.0).toDouble();
           gender = userDoc.data()?['gender'];
-          message = userDoc.data()?['message'] ?? '';
+          // MyProfile 서브컬렉션에서 message를 가져오고, 없으면 users 컬렉션에서 가져옴
+          message = myProfileDoc.exists && myProfileDoc.data()?['message'] != null
+              ? myProfileDoc.data()!['message']
+              : userDoc.data()?['message'] ?? '';
           _nameController.text = name;
           _heightController.text = height.toString();
           _weightController.text = weight.toString();
