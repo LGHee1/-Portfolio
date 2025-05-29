@@ -26,7 +26,6 @@ dependencies:
   sensors_plus: ^4.0.2
   firebase_app_check: ^0.2.2+7
   flutter_screenutil: ^5.9.0
-  profanity_filter: ^2.0.0
   url_launcher: ^6.2.5
   firebase_database: ^10.5.7
   http: ^1.1.0
@@ -60,3 +59,6 @@ flutter:
     - assets/data/경상북도.json
     - assets/data/경상남도.json
     - assets/data/제주특별자치도.json
+    - assets/data/english_word_list.json
+    - assets/data/korean_word_list.json
+    

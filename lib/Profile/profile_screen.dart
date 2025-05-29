@@ -5,7 +5,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
-import 'package:profanity_filter/profanity_filter.dart';
+import 'dart:convert';
+import 'package:flutter/services.dart' show rootBundle;
 import '../Widgets/bottom_bar.dart';
 import '../Post/post_create.dart';
 import 'package:provider/provider.dart';
@@ -39,7 +40,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _selectedIndex = 1;
   bool showPosts = false;
   List<Map<String, dynamic>> myPosts = [];
-  List<String> _inappropriateWords = []; // 부적절한 단어 목록
+  List<String> _inappropriateWords = [];
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _messageController = TextEditingController();
@@ -47,16 +48,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final TextEditingController _weightController = TextEditingController();
   final TextEditingController _ageController = TextEditingController();
 
-
-  // 욕설 필터 인스턴스 생성
-  final ProfanityFilter _profanityFilter = ProfanityFilter();
-
   @override
   void initState() {
     super.initState();
     _loadUserData();
     _loadMyPosts();
-    _loadInappropriateWords(); // 부적절한 단어 목록 로드
+    _loadInappropriateWords();
     _ageController.text = age.toString();
   }
 
@@ -190,25 +187,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadInappropriateWords() async {
     try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('system')
-          .doc('inappropriate_words')
-          .get();
-
-      if (snapshot.exists) {
-        setState(() {
-          _inappropriateWords =
-              List<String>.from(snapshot.data()?['words'] ?? []);
-        });
-      }
+      // 영어 부적절한 단어 로드
+      final englishWordsJson = await rootBundle.loadString('assets/data/english_word_list.json');
+      final englishWords = List<String>.from(json.decode(englishWordsJson)['en_words']);
+      
+      // 한국어 부적절한 단어 로드
+      final koreanWordsJson = await rootBundle.loadString('assets/data/korean_word_list.json');
+      final koreanWords = List<String>.from(json.decode(koreanWordsJson)['kr_words']);
+      
+      setState(() {
+        _inappropriateWords = [...englishWords, ...koreanWords];
+      });
     } catch (e) {
       print('부적절한 단어 목록 로드 중 오류 발생: $e');
     }
   }
 
-  // 부적절한 단어 체크 함수
   bool _containsInappropriateWords(String text) {
-    return _profanityFilter.hasProfanity(text);
+    if (text.isEmpty) return false;
+    return _inappropriateWords.any((word) => 
+      text.toLowerCase().contains(word.toLowerCase()) ||
+      text.replaceAll(' ', '').toLowerCase().contains(word.toLowerCase())
+    );
   }
 
   Future<void> _saveProfile() async {
@@ -767,7 +767,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               ElevatedButton(
-                                onPressed: () async {
+                                onPressed: _containsInappropriateWords(_messageController.text) ? null : () async {
                                   await _saveProfile();
                                   if (mounted) {
                                     setState(() {
@@ -793,6 +793,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     fontSize: 15.sp,
                                     fontWeight: FontWeight.w600,
                                     letterSpacing: 0.3,
+                                    color: _containsInappropriateWords(_messageController.text) ? Colors.grey : Colors.black87,
                                   ),
                                 ),
                               ),

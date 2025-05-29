@@ -10,7 +10,8 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../Widgets/bottom_bar.dart';
-import 'package:profanity_filter/profanity_filter.dart';
+import 'dart:convert';
+import 'package:flutter/services.dart' show rootBundle;
 
 class PostCreatePage extends StatefulWidget {
   final Map<String, dynamic>? postData;
@@ -41,29 +42,22 @@ class _PostCreatePageState extends State<PostCreatePage> {
   bool _isMapLoading = true;
   int _selectedIndex = 1;
   bool isEditMode = false;
-
-  // 욕설 필터 인스턴스 생성
-  final ProfanityFilter _profanityFilter = ProfanityFilter();
-
-  // 부적절한 단어 체크 함수
-  bool _containsInappropriateWords(String text) {
-    return _profanityFilter.hasProfanity(text);
-  }
+  List<String> _inappropriateWords = [];
 
   @override
   void initState() {
     super.initState();
+    _loadInappropriateWords();
     if (widget.postData != null) {
       isEditMode = true;
       _titleController.text = widget.postData!['title'] ?? '';
       _contentController.text = widget.postData!['content'] ?? '';
       
-      // 기존 태그 데이터 로드
       if (widget.postData!['tags'] != null) {
         final List<dynamic> tagNames = widget.postData!['tags'];
         selectedTags = tagNames.map((tagName) => Tag(
           name: tagName.toString(),
-          category: TagCategory.etc, // 기본 카테고리 설정
+          category: TagCategory.etc,
         )).toList();
       }
     }
@@ -71,7 +65,6 @@ class _PostCreatePageState extends State<PostCreatePage> {
     if (widget.workoutData != null) {
       _loadWorkoutData();
     } else if (widget.postData != null && widget.postData!['routePoints'] != null) {
-      // 게시글 수정 시 기존 운동 데이터 로드
       final List<dynamic> routePointsData = widget.postData!['routePoints'] ?? [];
       setState(() {
         _routePoints = routePointsData.map((point) => LatLng(
@@ -85,6 +78,32 @@ class _PostCreatePageState extends State<PostCreatePage> {
         _initializeMarkers();
       }
     }
+  }
+
+  Future<void> _loadInappropriateWords() async {
+    try {
+      // 영어 부적절한 단어 로드
+      final englishWordsJson = await rootBundle.loadString('assets/data/english_word_list.json');
+      final englishWords = List<String>.from(json.decode(englishWordsJson)['en_words']);
+      
+      // 한국어 부적절한 단어 로드
+      final koreanWordsJson = await rootBundle.loadString('assets/data/korean_word_list.json');
+      final koreanWords = List<String>.from(json.decode(koreanWordsJson)['kr_words']);
+      
+      setState(() {
+        _inappropriateWords = [...englishWords, ...koreanWords];
+      });
+    } catch (e) {
+      print('부적절한 단어 목록 로드 중 오류 발생: $e');
+    }
+  }
+
+  bool _containsInappropriateWords(String text) {
+    if (text.isEmpty) return false;
+    return _inappropriateWords.any((word) => 
+      text.toLowerCase().contains(word.toLowerCase()) ||
+      text.replaceAll(' ', '').toLowerCase().contains(word.toLowerCase())
+    );
   }
 
   Future<void> _loadLatestWorkoutData() async {
@@ -267,9 +286,23 @@ class _PostCreatePageState extends State<PostCreatePage> {
       return;
     }
 
-    if (_containsInappropriateWords(_titleController.text) || _containsInappropriateWords(_contentController.text)) {
+    // 부적절한 단어 체크
+    if (_containsInappropriateWords(_titleController.text)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('부적절한 단어가 포함되어 있습니다')),
+        const SnackBar(
+          content: Text('제목에 부적절한 단어가 포함되어 있습니다.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    if (_containsInappropriateWords(_contentController.text)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('내용에 부적절한 단어가 포함되어 있습니다.'),
+          duration: Duration(seconds: 2),
+        ),
       );
       return;
     }
@@ -301,7 +334,7 @@ class _PostCreatePageState extends State<PostCreatePage> {
         'tags': selectedTags.map((tag) => tag.name).toList(),
         'createdAt': Timestamp.now(),
         'updatedAt': Timestamp.now(),
-        'likes': 0, // 좋아요 초기값 추가
+        'likes': 0,
       };
 
       // 운동 데이터가 있는 경우 추가
@@ -338,6 +371,10 @@ class _PostCreatePageState extends State<PostCreatePage> {
 
   @override
   Widget build(BuildContext context) {
+    // 부적절한 단어 체크
+    bool hasInappropriateWords = _containsInappropriateWords(_titleController.text) || 
+                                _containsInappropriateWords(_contentController.text);
+
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: true,
@@ -356,25 +393,37 @@ class _PostCreatePageState extends State<PostCreatePage> {
         actions: [
           if (isEditMode)
             TextButton(
-              onPressed: _isLoading ? null : _savePost,
+              onPressed: (_isLoading || hasInappropriateWords) ? null : _savePost,
               child: _isLoading
                   ? SizedBox(
                       width: 20.w,
                       height: 20.h,
                       child: CircularProgressIndicator(strokeWidth: 2.w),
                     )
-                  : Text('수정', style: TextStyle(fontSize: 16.sp)),
+                  : Text(
+                      '수정',
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        color: hasInappropriateWords ? Colors.grey : Colors.black,
+                      ),
+                    ),
             )
           else
             TextButton(
-              onPressed: _isLoading ? null : _savePost,
+              onPressed: (_isLoading || hasInappropriateWords) ? null : _savePost,
               child: _isLoading
                   ? SizedBox(
                       width: 20.w,
                       height: 20.h,
                       child: CircularProgressIndicator(strokeWidth: 2.w),
                     )
-                  : Text('게시', style: TextStyle(fontSize: 16.sp)),
+                  : Text(
+                      '게시',
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        color: hasInappropriateWords ? Colors.grey : Colors.black,
+                      ),
+                    ),
             ),
         ],
       ),
