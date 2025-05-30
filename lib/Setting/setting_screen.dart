@@ -93,7 +93,6 @@ class SettingScreen extends StatefulWidget {
 }
 
 class _SettingScreenState extends State<SettingScreen> {
-  bool _isNotificationEnabled = true;
   int _selectedIndex = 1;
 
   Future<void> _deleteAccount(BuildContext context) async {
@@ -127,7 +126,8 @@ class _SettingScreenState extends State<SettingScreen> {
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: Text('탈퇴', style: TextStyle(fontSize: 16.sp, color: Colors.red)),
+              child: Text('탈퇴',
+                  style: TextStyle(fontSize: 16.sp, color: Colors.red)),
             ),
           ],
         );
@@ -193,7 +193,7 @@ class _SettingScreenState extends State<SettingScreen> {
           if (context.mounted) {
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (context) => const LoginScreen()),
-                  (route) => false,
+              (route) => false,
             );
           }
         }
@@ -201,13 +201,13 @@ class _SettingScreenState extends State<SettingScreen> {
         print('회원 탈퇴 중 오류 발생: $e');
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('회원 탈퇴 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')),
+            const SnackBar(
+                content: Text('회원 탈퇴 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')),
           );
         }
       }
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -235,21 +235,6 @@ class _SettingScreenState extends State<SettingScreen> {
         child: ListView(
           padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
           children: [
-            _buildSection(
-              title: '알림 설정',
-              children: [
-                _buildSwitchTile(
-                  '알림 수신',
-                  _isNotificationEnabled,
-                  (value) {
-                    setState(() {
-                      _isNotificationEnabled = value;
-                    });
-                  },
-                ),
-              ],
-            ),
-            SizedBox(height: 16.h),
             _buildSection(
               title: '계정 관리',
               children: [
@@ -353,16 +338,6 @@ class _SettingScreenState extends State<SettingScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildSwitchTile(String title, bool value, Function(bool) onChanged) {
-    return SwitchListTile(
-      title: Text(title, style: AppStyles.bodyStyle),
-      value: value,
-      onChanged: onChanged,
-      activeColor: const Color(0xFFB6F5E8),
-      contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
     );
   }
 

@@ -19,6 +19,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   late DateTime _firstDay;
   late DateTime _lastDay;
   DateTime? _selectedDay;
+  DateTime? _highlightedDay;
   List<WorkoutRecord> _selectedDayRecords = [];
   int _currentRecordIndex = 0;
   String _currentUserId = '';
@@ -55,12 +56,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     try {
       print('현재 사용자 ID: ${user.uid}');
-      
+
       // 현재 사용자 ID 즉시 설정
       setState(() {
         _currentUserId = user.uid;
       });
-      
+
       // 현재 사용자 정보 가져오기
       final userDoc = await _firestore.collection('users').doc(user.uid).get();
       if (userDoc.exists) {
@@ -76,11 +77,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
           .doc(user.uid)
           .collection('Friends_Data')
           .get();
-      
+
       print('Friends_Data 컬렉션 문서 수: ${friendsSnapshot.docs.length}');
-      
+
       List<Map<String, dynamic>> friendsList = [];
-      
+
       // 현재 사용자 추가
       friendsList.add({
         'uid': user.uid,
@@ -91,13 +92,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
       for (var friendDoc in friendsSnapshot.docs) {
         final friendId = friendDoc.id;
         final friendData = friendDoc.data();
-        
+
         print('친구 ID: $friendId');
         print('친구 데이터: $friendData');
-        
+
         // 친구 상태 확인 -> 상태에 관계 없이 친구로 처리
         print('친구 발견: $friendId');
-        final friendUserDoc = await _firestore.collection('users').doc(friendId).get();
+        final friendUserDoc =
+            await _firestore.collection('users').doc(friendId).get();
         if (friendUserDoc.exists) {
           print('친구 사용자 정보: ${friendUserDoc.data()}');
           friendsList.add({
@@ -108,9 +110,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
           print('친구 사용자 정보가 존재하지 않음: $friendId');
         }
       }
-      
-      print('최종 친구 목록: ${friendsList.map((f) => '${f['nickname']}(${f['uid']})').join(', ')}');
-      
+
+      print(
+          '최종 친구 목록: ${friendsList.map((f) => '${f['nickname']}(${f['uid']})').join(', ')}');
+
       setState(() {
         _friends = friendsList;
       });
@@ -121,16 +124,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
       print('친구 목록 로드 중 오류 발생: $e');
       // 오류 발생 시 현재 사용자만 표시
       setState(() {
-        _friends = [{
-          'uid': user.uid,
-          'nickname': _currentUserNickname,
-        }];
+        _friends = [
+          {
+            'uid': user.uid,
+            'nickname': _currentUserNickname,
+          }
+        ];
       });
     }
   }
 
   Future<void> _loadWorkoutData() async {
-    final userId = _currentUserId.isEmpty ? _auth.currentUser?.uid : _currentUserId;
+    final userId =
+        _currentUserId.isEmpty ? _auth.currentUser?.uid : _currentUserId;
     List<WorkoutRecord> records = [];
 
     if (userId != null) {
@@ -144,19 +150,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
             .get();
 
         print('운동 데이터 문서 수: ${snapshot.docs.length}');
-        
+
         records.addAll(snapshot.docs.map((doc) {
           final data = doc.data();
           final List<Map<String, double>> routePoints =
-          (data['routePoints'] as List)
-              .map((point) => Map<String, double>.from(point))
-              .toList();
+              (data['routePoints'] as List)
+                  .map((point) => Map<String, double>.from(point))
+                  .toList();
 
           // 일시정지 구간 데이터 가져오기
           final List<Map<String, double>> pausedRoutePoints =
-          (data['pausedRoutePoints'] as List? ?? [])
-              .map((point) => Map<String, double>.from(point))
-              .toList();
+              (data['pausedRoutePoints'] as List? ?? [])
+                  .map((point) => Map<String, double>.from(point))
+                  .toList();
 
           String paceStr = data['pace'] as String;
           double pace = 0.0;
@@ -179,17 +185,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
             pausedRoutePoints: pausedRoutePoints,
           );
         }).toList());
-        
+
         print('로드된 운동 기록 수: ${records.length}');
+
+        setState(() {
+          _workoutRecords = records;
+          _selectedDay = DateTime.now(); // Set to current date
+          _highlightedDay = DateTime.now(); // Set to current date
+          _focusedDay = DateTime.now(); // Set to current date
+          _updateSelectedRecords();
+        });
       } catch (e) {
         print('운동 데이터 로드 중 오류 발생: $e');
       }
     }
-
-    setState(() {
-      _workoutRecords = records;
-      _updateSelectedRecords();
-    });
   }
 
   // Duration을 'mm:ss' 형식으로 포맷하는 헬퍼 함수
@@ -284,7 +293,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
               },
               child: Container(
                 decoration: BoxDecoration(
-                  color: isSelected ? AppTheme.primaryColor : Colors.transparent,
+                  color:
+                      isSelected ? AppTheme.primaryColor : Colors.transparent,
                   borderRadius: BorderRadius.circular(20.r),
                   border: Border.all(
                     color: isSelected
@@ -300,7 +310,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       color: isSelected
                           ? AppTheme.darkTextColor
                           : AppTheme.lightTextColor,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.normal,
                       fontSize: 14.sp,
                     ),
                   ),
@@ -389,7 +400,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           ),
                           Padding(
                             padding: EdgeInsets.symmetric(horizontal: 12.w),
-                            child: Text('•', style: TextStyle(color: Colors.grey)),
+                            child:
+                                Text('•', style: TextStyle(color: Colors.grey)),
                           ),
                           Text(
                             _formatDuration(record.duration),
@@ -401,7 +413,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           ),
                           Padding(
                             padding: EdgeInsets.symmetric(horizontal: 12.w),
-                            child: Text('•', style: TextStyle(color: Colors.grey)),
+                            child:
+                                Text('•', style: TextStyle(color: Colors.grey)),
                           ),
                           Text(
                             '${record.pace.toStringAsFixed(2)} /km',
@@ -419,7 +432,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       child: TextButton(
                         onPressed: () {
                           final currentUser = _auth.currentUser;
-                          final isCurrentUser = currentUser != null && record.userId == currentUser.uid;
+                          final isCurrentUser = currentUser != null &&
+                              record.userId == currentUser.uid;
                           Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -559,10 +573,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ),
         calendarBuilders: CalendarBuilders(
           defaultBuilder: (context, day, focusedDay) {
-            final hasWorkout = _workoutRecords.any((record) => isSameDay(record.date, day));
+            final hasWorkout =
+                _workoutRecords.any((record) => isSameDay(record.date, day));
+            final isHighlighted = isSameDay(_highlightedDay, day);
 
+            Widget? child;
             if (hasWorkout) {
-              return Container(
+              child = Container(
                 margin: EdgeInsets.all(0.5.w),
                 decoration: BoxDecoration(
                   color: AppTheme.primaryColor.withOpacity(0.5),
@@ -579,7 +596,28 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 ),
               );
             }
-            return null;
+
+            if (isHighlighted) {
+              child = Container(
+                margin: EdgeInsets.all(0.5.w),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withOpacity(0.3),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    '${day.day}',
+                    style: TextStyle(
+                      color: AppTheme.darkTextColor,
+                      fontSize: 14.4.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            return child;
           },
         ),
         onDaySelected: _onDaySelected,
@@ -596,6 +634,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     setState(() {
       _selectedDay = selectedDay;
       _focusedDay = focusedDay;
+      _highlightedDay = selectedDay;
       _updateSelectedRecords();
     });
   }

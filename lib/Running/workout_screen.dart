@@ -63,6 +63,33 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
   List<Map<String, dynamic>> _searchResults = [];
   bool _isSearching = false;
 
+  // UI Constants
+  static const double _kDefaultPadding = 16.0;
+  static const double _kDefaultBorderRadius = 12.0;
+  static const double _kButtonHeight = 48.0;
+  static const double _kSearchBarHeight = 44.0;
+
+  // Text Styles
+  static const TextStyle _kTitleStyle = TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    color: Colors.black87,
+    letterSpacing: 0.2,
+  );
+
+  static const TextStyle _kSubtitleStyle = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w500,
+    color: Colors.black54,
+    letterSpacing: 0.1,
+  );
+
+  static const TextStyle _kButtonTextStyle = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    letterSpacing: 0.5,
+  );
+
   @override
   void initState() {
     super.initState();
@@ -132,8 +159,9 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       distanceFilter: 10, // 10미터마다 업데이트
     );
 
-    _positionStream = Geolocator.getPositionStream(locationSettings: locationSettings)
-        .listen((Position position) {
+    _positionStream =
+        Geolocator.getPositionStream(locationSettings: locationSettings)
+            .listen((Position position) {
       setState(() {
         if (_currentPosition != null && _isWorkoutStarted) {
           // 거리 계산
@@ -165,7 +193,8 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     controller.animateCamera(
       CameraUpdate.newCameraPosition(
         CameraPosition(
-          target: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+          target:
+              LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
           zoom: 17,
         ),
       ),
@@ -227,7 +256,8 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                         calories: _calories,
                         routePoints: _routePoints,
                         pausedRoutePoints: [], // 일시정지 구간 추가 (이 화면에서는 일시정지 기능이 없으므로 빈 리스트)
-                        activeRoutePoints: _routePoints, // 활성 경로 추가 (이 화면에서는 일시정지 기능이 없으므로 전체 경로를 활성 경로로 설정)
+                        activeRoutePoints:
+                            _routePoints, // 활성 경로 추가 (이 화면에서는 일시정지 기능이 없으므로 전체 경로를 활성 경로로 설정)
                         isRecommendedCourse: _isRecommendedCourse,
                         recommendedRoutePoints: _recommendedRoutePoints,
                         recommendedCourseName: _recommendedCourseName,
@@ -294,10 +324,12 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
         'pace': _pace,
         'cadence': _cadence,
         'calories': _calories,
-        'routePoints': _routePoints.map((point) => {
-          'latitude': point.latitude,
-          'longitude': point.longitude,
-        }).toList(),
+        'routePoints': _routePoints
+            .map((point) => {
+                  'latitude': point.latitude,
+                  'longitude': point.longitude,
+                })
+            .toList(),
         'startTime': _workoutStartTime,
         'endTime': DateTime.now(),
         'nickname': _userNickname,
@@ -310,11 +342,13 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
           .add(workoutData);
 
       // 사용자의 총 운동 거리 업데이트
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({
         'totalDistance': FieldValue.increment(_distance),
         'totalWorkouts': FieldValue.increment(1),
       });
-
     } catch (e) {
       print('운동 데이터 저장 중 오류 발생: $e');
       if (mounted) {
@@ -421,55 +455,73 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.height < 700;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFFE5FBFF),
         elevation: 0,
         automaticallyImplyLeading: false,
         titleSpacing: 0,
-        title: Row(
-          children: [
-            Builder(
-              builder: (context) => IconButton(
-                icon: const Icon(Icons.menu, color: Colors.black),
-                onPressed: () => Scaffold.of(context).openDrawer(),
-              ),
-            ),
-            Expanded(
-              child: Container(
-                height: 36,
-                margin: const EdgeInsets.only(right: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
+        toolbarHeight: _kSearchBarHeight + 16,
+        title: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: _kDefaultPadding),
+          child: Row(
+            children: [
+              Builder(
+                builder: (context) => IconButton(
+                  icon: const Icon(Icons.menu, color: Colors.black87, size: 24),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: '장소 검색',
-                    border: InputBorder.none,
-                    suffixIcon: const Icon(Icons.search, size: 25),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Container(
+                  height: _kSearchBarHeight,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(_kDefaultBorderRadius),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  style: const TextStyle(fontSize: 14),
-                  onSubmitted: _handleSearch,
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: '장소 검색',
+                      hintStyle:
+                          _kSubtitleStyle.copyWith(color: Colors.black38),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      suffixIcon: const Icon(Icons.search,
+                          size: 22, color: Colors.black54),
+                    ),
+                    style: _kSubtitleStyle,
+                    onSubmitted: _handleSearch,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-
       drawer: const Menu(),
-
       body: Stack(
         children: [
           GoogleMap(
             mapType: MapType.normal,
             initialCameraPosition: CameraPosition(
               target: _currentPosition != null
-                  ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
+                  ? LatLng(
+                      _currentPosition!.latitude, _currentPosition!.longitude)
                   : const LatLng(37.5665, 126.9780),
               zoom: 17,
             ),
@@ -479,19 +531,22 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
             myLocationEnabled: true,
             myLocationButtonEnabled: true,
             markers: {
-              if (_isRecommendedCourse && _recommendedRoutePoints.isNotEmpty) ...[
+              if (_isRecommendedCourse &&
+                  _recommendedRoutePoints.isNotEmpty) ...[
                 // 추천 코스 시작점 마커
                 Marker(
                   markerId: const MarkerId('recommendedStart'),
                   position: _recommendedRoutePoints.first,
-                  icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+                  icon: BitmapDescriptor.defaultMarkerWithHue(
+                      BitmapDescriptor.hueGreen),
                   infoWindow: const InfoWindow(title: '추천 코스 시작점'),
                 ),
                 // 추천 코스 종료점 마커
                 Marker(
                   markerId: const MarkerId('recommendedEnd'),
                   position: _recommendedRoutePoints.last,
-                  icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+                  icon: BitmapDescriptor.defaultMarkerWithHue(
+                      BitmapDescriptor.hueRed),
                   infoWindow: const InfoWindow(title: '추천 코스 종료점'),
                 ),
               ],
@@ -515,105 +570,158 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                 ),
             },
           ),
-
           if (_isRecommendedCourse)
             Positioned(
-              top: 16,
-              left: 16,
+              top: _kDefaultPadding,
+              left: _kDefaultPadding,
+              right: _kDefaultPadding,
               child: Container(
-                width: 250,
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(_kDefaultPadding),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(_kDefaultBorderRadius),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 4,
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
                   ],
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.route, color: Colors.blue),
-                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child:
+                          const Icon(Icons.route, color: Colors.blue, size: 20),
+                    ),
+                    const SizedBox(width: 12),
                     Expanded(
-                      child: Text(
-                        '추천 코스: $_recommendedCourseName',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '추천 코스',
+                            style: _kSubtitleStyle.copyWith(color: Colors.blue),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _recommendedCourseName,
+                            style: _kTitleStyle,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
             ),
-
           Positioned(
-            bottom: 32,
-            left: 140,
-            right: 140,
-            child: ElevatedButton(
-              onPressed: () {
-                print("운동 시작 버튼 클릭됨");
-                if (_isRecommendedCourse && !_isWithinRecommendedDistance()) {
-                  _showDistanceWarningDialog();
-                  return;
-                }
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => RunningScreen(
-                      initialPosition: _currentPosition != null 
-                          ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
-                          : const LatLng(37.5665, 126.9780),
-                      isRecommendedCourse: _isRecommendedCourse,
-                      recommendedRoutePoints: _recommendedRoutePoints,
-                      recommendedCourseName: _recommendedCourseName,
-                    ),
+            bottom: isSmallScreen ? 24 : 32,
+            left: screenSize.width * 0.2,
+            right: screenSize.width * 0.2,
+            child: Container(
+              height: _kButtonHeight,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(_kDefaultBorderRadius),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blue.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
                   ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.lightBlueAccent,
-                foregroundColor: Colors.white,
+                ],
               ),
-              child: const Text("운동 시작"),
+              child: ElevatedButton(
+                onPressed: () {
+                  if (_isRecommendedCourse && !_isWithinRecommendedDistance()) {
+                    _showDistanceWarningDialog();
+                    return;
+                  }
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => RunningScreen(
+                        initialPosition: _currentPosition != null
+                            ? LatLng(_currentPosition!.latitude,
+                                _currentPosition!.longitude)
+                            : const LatLng(37.5665, 126.9780),
+                        isRecommendedCourse: _isRecommendedCourse,
+                        recommendedRoutePoints: _recommendedRoutePoints,
+                        recommendedCourseName: _recommendedCourseName,
+                      ),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(_kDefaultBorderRadius),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                ),
+                child: Text(
+                  "운동 시작",
+                  style: _kButtonTextStyle,
+                ),
+              ),
             ),
           ),
           if (_isSearching)
-            const Center(
-              child: CircularProgressIndicator(),
+            Container(
+              color: Colors.black.withOpacity(0.1),
+              child: const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                ),
+              ),
             ),
           if (_searchResults.isNotEmpty)
             Positioned(
-              top: 100,
-              left: 16,
-              right: 16,
+              top: _kSearchBarHeight + 32,
+              left: _kDefaultPadding,
+              right: _kDefaultPadding,
               child: Container(
+                constraints: BoxConstraints(
+                  maxHeight: screenSize.height * 0.4,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(_kDefaultBorderRadius),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.1),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
                 child: ListView.builder(
                   shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
                   itemCount: _searchResults.length,
                   itemBuilder: (context, index) {
                     final result = _searchResults[index];
                     return ListTile(
-                      title: Text(result['name']),
-                      subtitle: Text(result['address']),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: _kDefaultPadding,
+                        vertical: 8,
+                      ),
+                      title: Text(
+                        result['name'],
+                        style: _kTitleStyle.copyWith(fontSize: 15),
+                      ),
+                      subtitle: Text(
+                        result['address'],
+                        style: _kSubtitleStyle,
+                      ),
                       onTap: () => _selectLocation(result),
                     );
                   },
@@ -622,7 +730,6 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
             ),
         ],
       ),
-
       bottomNavigationBar: BottomBar(
         selectedIndex: _selectedIndex,
         onTabSelected: (index) {
@@ -665,7 +772,9 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
 
   // 추천 코스 시작점과의 거리 체크 함수 추가
   bool _isWithinRecommendedDistance() {
-    if (!_isRecommendedCourse || _recommendedRoutePoints.isEmpty || _currentPosition == null) {
+    if (!_isRecommendedCourse ||
+        _recommendedRoutePoints.isEmpty ||
+        _currentPosition == null) {
       return true;
     }
 
@@ -685,14 +794,33 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('거리 경고'),
-          content: const Text('추천 코스 시작점과 현재 위치가 200m 이상 떨어져 있습니다.\n추천 코스 시작점 근처로 이동해주세요.'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(_kDefaultBorderRadius),
+          ),
+          title: Text(
+            '거리 경고',
+            style: _kTitleStyle.copyWith(fontSize: 20),
+          ),
+          content: Text(
+            '추천 코스 시작점과 현재 위치가 200m 이상 떨어져 있습니다.\n추천 코스 시작점 근처로 이동해주세요.',
+            style: _kSubtitleStyle,
+          ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('확인'),
+              onPressed: () => Navigator.of(context).pop(),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: _kDefaultPadding,
+                  vertical: 8,
+                ),
+              ),
+              child: Text(
+                '확인',
+                style: _kButtonTextStyle.copyWith(
+                  color: Colors.blue,
+                  fontSize: 15,
+                ),
+              ),
             ),
           ],
         );

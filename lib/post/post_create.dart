@@ -19,8 +19,8 @@ class PostCreatePage extends StatefulWidget {
   final Map<String, dynamic>? workoutData;
 
   const PostCreatePage({
-    Key? key, 
-    this.postData, 
+    Key? key,
+    this.postData,
     this.postId,
     this.workoutData,
   }) : super(key: key);
@@ -30,6 +30,85 @@ class PostCreatePage extends StatefulWidget {
 }
 
 class _PostCreatePageState extends State<PostCreatePage> {
+  // UI Constants
+  static const double _kDefaultPadding = 16.0;
+  static const double _kDefaultBorderRadius = 12.0;
+  static const double _kButtonHeight = 48.0;
+  static const double _kCardElevation = 2.0;
+  static const double _kInputBorderRadius = 8.0;
+  static const double _kTagBorderRadius = 16.0;
+  static const double _kImageSize = 120.0;
+  static const double _kMapHeight = 240.0;
+  static const double _kIconSize = 20.0;
+  static const double _kSmallIconSize = 16.0;
+
+  // Colors
+  static const Color _kPrimaryColor = Color(0xFFE5FBFF);
+  static const Color _kAccentColor = Color(0xFFB6F5E8);
+  static const Color _kTagColor = Color(0xFFE7EFA2);
+  static const Color _kErrorColor = Color(0xFFFF6B6B);
+  static const Color _kSuccessColor = Color(0xFF4CAF50);
+  static const Color _kTextPrimaryColor = Color(0xFF2C3E50);
+  static const Color _kTextSecondaryColor = Color(0xFF7F8C8D);
+
+  // Animation Durations
+  static const Duration _kAnimationDuration = Duration(milliseconds: 200);
+
+  // Text Styles
+  static const TextStyle _kTitleStyle = TextStyle(
+    fontSize: 22,
+    fontWeight: FontWeight.w600,
+    color: _kTextPrimaryColor,
+    letterSpacing: 0.2,
+  );
+
+  static const TextStyle _kSubtitleStyle = TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    color: _kTextPrimaryColor,
+    letterSpacing: 0.1,
+  );
+
+  static const TextStyle _kInputLabelStyle = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w500,
+    color: _kTextPrimaryColor,
+    letterSpacing: 0.1,
+  );
+
+  static const TextStyle _kInputTextStyle = TextStyle(
+    fontSize: 16,
+    color: _kTextPrimaryColor,
+    letterSpacing: 0.1,
+  );
+
+  static const TextStyle _kHelperTextStyle = TextStyle(
+    fontSize: 12,
+    color: _kTextSecondaryColor,
+    letterSpacing: 0.1,
+  );
+
+  static const TextStyle _kButtonTextStyle = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    color: Colors.white,
+    letterSpacing: 0.2,
+  );
+
+  static const TextStyle _kTagTextStyle = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w500,
+    color: _kTextPrimaryColor,
+    letterSpacing: 0.1,
+  );
+
+  static const TextStyle _kErrorTextStyle = TextStyle(
+    fontSize: 12,
+    color: _kErrorColor,
+    fontWeight: FontWeight.w500,
+    letterSpacing: 0.1,
+  );
+
   List<Tag> selectedTags = [];
   List<File> selectedImages = [];
   final TextEditingController _titleController = TextEditingController();
@@ -44,6 +123,8 @@ class _PostCreatePageState extends State<PostCreatePage> {
   bool isEditMode = false;
   List<String> _inappropriateWords = [];
 
+  bool get isSmallScreen => MediaQuery.of(context).size.height < 600;
+
   @override
   void initState() {
     super.initState();
@@ -52,25 +133,32 @@ class _PostCreatePageState extends State<PostCreatePage> {
       isEditMode = true;
       _titleController.text = widget.postData!['title'] ?? '';
       _contentController.text = widget.postData!['content'] ?? '';
-      
+
+      // 기존 태그 데이터 로드
       if (widget.postData!['tags'] != null) {
         final List<dynamic> tagNames = widget.postData!['tags'];
-        selectedTags = tagNames.map((tagName) => Tag(
-          name: tagName.toString(),
-          category: TagCategory.etc,
-        )).toList();
+        selectedTags = tagNames
+            .map((tagName) => Tag(
+                  name: tagName.toString(),
+                  category: TagCategory.etc,
+                ))
+            .toList();
       }
     }
-    
+
     if (widget.workoutData != null) {
       _loadWorkoutData();
-    } else if (widget.postData != null && widget.postData!['routePoints'] != null) {
-      final List<dynamic> routePointsData = widget.postData!['routePoints'] ?? [];
+    } else if (widget.postData != null &&
+        widget.postData!['routePoints'] != null) {
+      final List<dynamic> routePointsData =
+          widget.postData!['routePoints'] ?? [];
       setState(() {
-        _routePoints = routePointsData.map((point) => LatLng(
-          point['latitude'] as double,
-          point['longitude'] as double,
-        )).toList();
+        _routePoints = routePointsData
+            .map((point) => LatLng(
+                  point['latitude'] as double,
+                  point['longitude'] as double,
+                ))
+            .toList();
         _isMapLoading = false;
       });
       if (_routePoints.isNotEmpty) {
@@ -83,13 +171,17 @@ class _PostCreatePageState extends State<PostCreatePage> {
   Future<void> _loadInappropriateWords() async {
     try {
       // 영어 부적절한 단어 로드
-      final englishWordsJson = await rootBundle.loadString('assets/data/english_word_list.json');
-      final englishWords = List<String>.from(json.decode(englishWordsJson)['en_words']);
-      
+      final englishWordsJson =
+          await rootBundle.loadString('assets/data/english_word_list.json');
+      final englishWords =
+          List<String>.from(json.decode(englishWordsJson)['en_words']);
+
       // 한국어 부적절한 단어 로드
-      final koreanWordsJson = await rootBundle.loadString('assets/data/korean_word_list.json');
-      final koreanWords = List<String>.from(json.decode(koreanWordsJson)['kr_words']);
-      
+      final koreanWordsJson =
+          await rootBundle.loadString('assets/data/korean_word_list.json');
+      final koreanWords =
+          List<String>.from(json.decode(koreanWordsJson)['kr_words']);
+
       setState(() {
         _inappropriateWords = [...englishWords, ...koreanWords];
       });
@@ -100,10 +192,9 @@ class _PostCreatePageState extends State<PostCreatePage> {
 
   bool _containsInappropriateWords(String text) {
     if (text.isEmpty) return false;
-    return _inappropriateWords.any((word) => 
-      text.toLowerCase().contains(word.toLowerCase()) ||
-      text.replaceAll(' ', '').toLowerCase().contains(word.toLowerCase())
-    );
+    return _inappropriateWords.any((word) =>
+        text.toLowerCase().contains(word.toLowerCase()) ||
+        text.replaceAll(' ', '').toLowerCase().contains(word.toLowerCase()));
   }
 
   Future<void> _loadLatestWorkoutData() async {
@@ -122,19 +213,22 @@ class _PostCreatePageState extends State<PostCreatePage> {
       if (querySnapshot.docs.isNotEmpty) {
         final workoutData = querySnapshot.docs.first.data();
         final List<dynamic> routePointsData = workoutData['routePoints'] ?? [];
-        
+
         setState(() {
-          _routePoints = routePointsData.map((point) => LatLng(
-            point['latitude'] as double,
-            point['longitude'] as double,
-          )).toList();
+          _routePoints = routePointsData
+              .map((point) => LatLng(
+                    point['latitude'] as double,
+                    point['longitude'] as double,
+                  ))
+              .toList();
           _isMapLoading = false;
         });
 
         if (_routePoints.isNotEmpty) {
           _initializePolylines();
           _initializeMarkers();
-        } else if (workoutData['routePoints'] != null && workoutData['routePoints'].isNotEmpty) {
+        } else if (workoutData['routePoints'] != null &&
+            workoutData['routePoints'].isNotEmpty) {
           // 경로가 없는 경우 마지막 위치만 마커로 표시
           final lastPoint = workoutData['routePoints'].last;
           final lastPosition = LatLng(
@@ -145,7 +239,8 @@ class _PostCreatePageState extends State<PostCreatePage> {
             Marker(
               markerId: const MarkerId('endLocation'),
               position: lastPosition,
-              icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+              icon: BitmapDescriptor.defaultMarkerWithHue(
+                  BitmapDescriptor.hueRed),
               infoWindow: const InfoWindow(title: '종료'),
             ),
           );
@@ -163,13 +258,16 @@ class _PostCreatePageState extends State<PostCreatePage> {
     try {
       if (widget.workoutData == null) return;
 
-      final List<dynamic> routePointsData = widget.workoutData!['routePoints'] ?? [];
-      
+      final List<dynamic> routePointsData =
+          widget.workoutData!['routePoints'] ?? [];
+
       setState(() {
-        _routePoints = routePointsData.map((point) => LatLng(
-          point['latitude'] as double,
-          point['longitude'] as double,
-        )).toList();
+        _routePoints = routePointsData
+            .map((point) => LatLng(
+                  point['latitude'] as double,
+                  point['longitude'] as double,
+                ))
+            .toList();
         _isMapLoading = false;
       });
 
@@ -208,7 +306,8 @@ class _PostCreatePageState extends State<PostCreatePage> {
         Marker(
           markerId: const MarkerId('startLocation'),
           position: _routePoints.first,
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
           infoWindow: const InfoWindow(title: '시작'),
         ),
       );
@@ -245,8 +344,10 @@ class _PostCreatePageState extends State<PostCreatePage> {
     for (LatLng latLng in list) {
       if (minLat == null || latLng.latitude < minLat) minLat = latLng.latitude;
       if (maxLat == null || latLng.latitude > maxLat) maxLat = latLng.latitude;
-      if (minLng == null || latLng.longitude < minLng) minLng = latLng.longitude;
-      if (maxLng == null || latLng.longitude > maxLng) maxLng = latLng.longitude;
+      if (minLng == null || latLng.longitude < minLng)
+        minLng = latLng.longitude;
+      if (maxLng == null || latLng.longitude > maxLng)
+        maxLng = latLng.longitude;
     }
 
     return LatLngBounds(
@@ -258,7 +359,7 @@ class _PostCreatePageState extends State<PostCreatePage> {
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
     final List<XFile> images = await picker.pickMultiImage();
-    
+
     if (images.isNotEmpty) {
       setState(() {
         selectedImages.addAll(images.map((image) => File(image.path)));
@@ -269,8 +370,10 @@ class _PostCreatePageState extends State<PostCreatePage> {
   Future<List<String>> _uploadImages() async {
     List<String> imageUrls = [];
     for (File image in selectedImages) {
-      String fileName = '${DateTime.now().millisecondsSinceEpoch}_${path.basename(image.path)}';
-      Reference ref = FirebaseStorage.instance.ref().child('post_images/$fileName');
+      String fileName =
+          '${DateTime.now().millisecondsSinceEpoch}_${path.basename(image.path)}';
+      Reference ref =
+          FirebaseStorage.instance.ref().child('post_images/$fileName');
       await ref.putFile(image);
       String downloadUrl = await ref.getDownloadURL();
       imageUrls.add(downloadUrl);
@@ -286,8 +389,8 @@ class _PostCreatePageState extends State<PostCreatePage> {
       return;
     }
 
-    // 부적절한 단어 체크
-    if (_containsInappropriateWords(_titleController.text)) {
+    if (_containsInappropriateWords(_titleController.text) ||
+        _containsInappropriateWords(_contentController.text)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('제목에 부적절한 단어가 포함되어 있습니다.'),
@@ -319,7 +422,8 @@ class _PostCreatePageState extends State<PostCreatePage> {
       List<String> imageUrls = [];
       for (var image in selectedImages) {
         final fileName = path.basename(image.path);
-        final storageRef = FirebaseStorage.instance.ref().child('post_images/$fileName');
+        final storageRef =
+            FirebaseStorage.instance.ref().child('post_images/$fileName');
         await storageRef.putFile(image);
         final downloadUrl = await storageRef.getDownloadURL();
         imageUrls.add(downloadUrl);
@@ -334,7 +438,7 @@ class _PostCreatePageState extends State<PostCreatePage> {
         'tags': selectedTags.map((tag) => tag.name).toList(),
         'createdAt': Timestamp.now(),
         'updatedAt': Timestamp.now(),
-        'likes': 0,
+        'likes': 0, // 좋아요 초기값 추가
       };
 
       // 운동 데이터가 있는 경우 추가
@@ -348,7 +452,11 @@ class _PostCreatePageState extends State<PostCreatePage> {
       }
 
       // 게시글 저장 (사용자 하위 컬렉션에 저장)
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).collection('Post_Data').add(postData);
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('Post_Data')
+          .add(postData);
 
       if (mounted) {
         Navigator.pop(context);
@@ -372,147 +480,147 @@ class _PostCreatePageState extends State<PostCreatePage> {
   @override
   Widget build(BuildContext context) {
     // 부적절한 단어 체크
-    bool hasInappropriateWords = _containsInappropriateWords(_titleController.text) || 
-                                _containsInappropriateWords(_contentController.text);
+    bool hasInappropriateWords =
+        _containsInappropriateWords(_titleController.text) ||
+            _containsInappropriateWords(_contentController.text);
 
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: true,
-        backgroundColor: const Color(0xFFCBF6FF),
+        backgroundColor: _kPrimaryColor,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, size: 24.sp),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          icon: const Icon(Icons.arrow_back,
+              color: _kTextPrimaryColor, size: _kIconSize),
+          onPressed: () => Navigator.pop(context),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
         ),
         title: Text(
           isEditMode ? '게시글 수정' : '게시글 작성',
-          style: TextStyle(fontSize: 24.sp),
+          style: _kTitleStyle,
         ),
+        centerTitle: true,
         actions: [
-          if (isEditMode)
-            TextButton(
-              onPressed: (_isLoading || hasInappropriateWords) ? null : _savePost,
-              child: _isLoading
-                  ? SizedBox(
-                      width: 20.w,
-                      height: 20.h,
-                      child: CircularProgressIndicator(strokeWidth: 2.w),
-                    )
-                  : Text(
-                      '수정',
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        color: hasInappropriateWords ? Colors.grey : Colors.black,
+          Padding(
+            padding: const EdgeInsets.only(right: _kDefaultPadding),
+            child: AnimatedContainer(
+              duration: _kAnimationDuration,
+              child: TextButton(
+                onPressed: _isLoading ? null : _savePost,
+                style: TextButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: _kDefaultPadding),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(_kDefaultBorderRadius),
+                  ),
+                  backgroundColor:
+                      _isLoading ? _kTextSecondaryColor : _kAccentColor,
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : Text(
+                        isEditMode ? '수정' : '저장',
+                        style: _kButtonTextStyle.copyWith(
+                            color: _kTextPrimaryColor),
                       ),
-                    ),
-            )
-          else
-            TextButton(
-              onPressed: (_isLoading || hasInappropriateWords) ? null : _savePost,
-              child: _isLoading
-                  ? SizedBox(
-                      width: 20.w,
-                      height: 20.h,
-                      child: CircularProgressIndicator(strokeWidth: 2.w),
-                    )
-                  : Text(
-                      '게시',
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        color: hasInappropriateWords ? Colors.grey : Colors.black,
-                      ),
-                    ),
+              ),
             ),
+          ),
         ],
       ),
-      backgroundColor: const Color(0xFFCBF6FF),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: EdgeInsets.all(16.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '제목',
-                    style: TextStyle(
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 8.h),
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.symmetric(horizontal: 12.w),
+      backgroundColor: _kPrimaryColor,
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSection(
+                  title: '제목',
+                  child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(8.r),
+                      borderRadius: BorderRadius.circular(_kInputBorderRadius),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: TextField(
                       controller: _titleController,
                       decoration: InputDecoration(
                         hintText: '제목을 입력하세요',
                         border: InputBorder.none,
-                        hintStyle: TextStyle(fontSize: 16.sp),
+                        contentPadding: const EdgeInsets.all(_kDefaultPadding),
+                        hintStyle: _kInputTextStyle.copyWith(
+                            color: _kTextSecondaryColor),
                         helperText: '부적절한 단어는 사용할 수 없습니다.',
-                        helperStyle: TextStyle(fontSize: 12.sp, color: Colors.grey),
+                        helperStyle: _kHelperTextStyle,
                       ),
-                      style: TextStyle(fontSize: 16.sp),
+                      style: _kInputTextStyle,
                       maxLines: 1,
                       onChanged: (value) {
                         if (_containsInappropriateWords(value)) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('부적절한 단어가 포함되어 있습니다.'),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
+                          _showErrorSnackBar('부적절한 단어가 포함되어 있습니다.');
                         }
                       },
                     ),
                   ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '운동 코스',
-                    style: TextStyle(
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 8.h),
-                  Container(
-                    width: double.infinity,
-                    height: 200.h,
+                ),
+                _buildSection(
+                  title: '운동 코스',
+                  child: Container(
+                    height: _kMapHeight,
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(8.r),
-                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(_kInputBorderRadius),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: _isMapLoading
-                        ? Center(child: CircularProgressIndicator())
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(_kAccentColor),
+                            ),
+                          )
                         : _routePoints.isEmpty
                             ? Center(
-                                child: Text(
-                                  '운동 기록이 없습니다',
-                                  style: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 16.sp,
-                                  ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.map,
+                                        size: _kIconSize * 2,
+                                        color: _kTextSecondaryColor),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      '운동 기록이 없습니다',
+                                      style: _kInputTextStyle.copyWith(
+                                          color: _kTextSecondaryColor),
+                                    ),
+                                  ],
                                 ),
                               )
                             : ClipRRect(
-                                borderRadius: BorderRadius.circular(8.r),
+                                borderRadius:
+                                    BorderRadius.circular(_kInputBorderRadius),
                                 child: GoogleMap(
                                   initialCameraPosition: CameraPosition(
                                     target: _routePoints.first,
@@ -528,232 +636,133 @@ class _PostCreatePageState extends State<PostCreatePage> {
                                 ),
                               ),
                   ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '태그',
-                    style: TextStyle(
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.bold,
+                ),
+                _buildSection(
+                  title: '태그',
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Container(
+                      padding: const EdgeInsets.all(_kDefaultPadding),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius:
+                            BorderRadius.circular(_kInputBorderRadius),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (selectedTags.isNotEmpty)
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: selectedTags.map((tag) {
+                                return _buildTagChip(tag);
+                              }).toList(),
+                            ),
+                          const SizedBox(height: 8),
+                          _buildAddTagButton(),
+                        ],
+                      ),
                     ),
                   ),
-                  SizedBox(height: 8.h),
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(8.w),
+                ),
+                _buildSection(
+                  title: '세부설명',
+                  child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (selectedTags.isNotEmpty)
-                          Wrap(
-                            spacing: 8.w,
-                            runSpacing: 8.h,
-                            children: selectedTags.map((tag) {
-                              return Container(
-                                margin: EdgeInsets.only(right: 8.w, bottom: 8.h),
-                                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE7EFA2),
-                                  borderRadius: BorderRadius.circular(12.r),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      tag.name,
-                                      style: TextStyle(fontSize: 16.sp),
-                                    ),
-                                    SizedBox(width: 4.w),
-                                    GestureDetector(
-                                      onTap: () {
-                                        setState(() {
-                                          selectedTags.remove(tag);
-                                        });
-                                      },
-                                      child: Icon(Icons.close, size: 16.sp),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        GestureDetector(
-                          onTap: () async {
-                            final result = await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => TagListPage(
-                                  onTagsSelected: (tags) {
-                                    setState(() {
-                                      final merged = [...selectedTags, ...tags];
-                                      final unique = <Tag>[];
-                                      for (final tag in merged) {
-                                        if (!unique.any((t) => t.name == tag.name)) {
-                                          unique.add(tag);
-                                        }
-                                      }
-                                      selectedTags = unique;
-                                    });
-                                  },
-                                ),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE7EFA2),
-                              borderRadius: BorderRadius.circular(12.r),
-                            ),
-                            child: Text(
-                              '태그 추가',
-                              style: TextStyle(
-                                fontSize: 16.sp,
-                                color: Colors.black,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
+                      borderRadius: BorderRadius.circular(_kInputBorderRadius),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
                         ),
                       ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.all(16.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '세부설명',
-                    style: TextStyle(
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 8.h),
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(12.w),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8.r),
                     ),
                     child: TextField(
                       controller: _contentController,
                       decoration: InputDecoration(
                         hintText: '세부설명을 입력하세요',
                         border: InputBorder.none,
-                        hintStyle: TextStyle(fontSize: 16.sp),
+                        contentPadding: const EdgeInsets.all(_kDefaultPadding),
+                        hintStyle: _kInputTextStyle.copyWith(
+                            color: _kTextSecondaryColor),
                         helperText: '부적절한 단어는 사용할 수 없습니다.',
-                        helperStyle: TextStyle(fontSize: 12.sp, color: Colors.grey),
+                        helperStyle: _kHelperTextStyle,
                       ),
-                      style: TextStyle(fontSize: 16.sp),
+                      style: _kInputTextStyle,
                       maxLines: 5,
                       onChanged: (value) {
                         if (_containsInappropriateWords(value)) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('부적절한 단어가 포함되어 있습니다.'),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
+                          _showErrorSnackBar('부적절한 단어가 포함되어 있습니다.');
                         }
                       },
                     ),
                   ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.all(16.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '이미지',
-                    style: TextStyle(
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 8.h),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _pickImage,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8.r),
+                ),
+                _buildSection(
+                  title: '이미지',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        height: _kButtonHeight,
+                        child: ElevatedButton.icon(
+                          onPressed: _pickImage,
+                          icon: const Icon(Icons.add_photo_alternate,
+                              color: Colors.white),
+                          label: const Text('사진 업로드', style: _kButtonTextStyle),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _kTextPrimaryColor,
+                            foregroundColor: Colors.white,
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(_kDefaultBorderRadius),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: _kDefaultPadding),
+                          ),
                         ),
-                        padding: EdgeInsets.symmetric(vertical: 16.h),
                       ),
-                      child: Text(
-                        '사진 업로드',
-                        style: TextStyle(fontSize: 16.sp),
-                      ),
-                    ),
+                      if (selectedImages.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children:
+                              List.generate(selectedImages.length, (index) {
+                            return _buildImagePreview(
+                                selectedImages[index], index);
+                          }),
+                        ),
+                      ],
+                    ],
                   ),
-                  if (selectedImages.isNotEmpty)
-                    Padding(
-                      padding: EdgeInsets.only(top: 12.h),
-                      child: Wrap(
-                        spacing: 8.w,
-                        runSpacing: 8.h,
-                        children: List.generate(selectedImages.length, (index) {
-                          return Stack(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8.r),
-                                child: Image.file(
-                                  selectedImages[index],
-                                  width: 120.w,
-                                  height: 120.h,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                              Positioned(
-                                top: 0,
-                                right: 0,
-                                child: GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      selectedImages.removeAt(index);
-                                    });
-                                  },
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors.black54,
-                                      borderRadius: BorderRadius.circular(12.r),
-                                    ),
-                                    child: Icon(Icons.close, color: Colors.white, size: 18.sp),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          );
-                        }),
-                      ),
-                    ),
-                ],
+                ),
+                SizedBox(height: isSmallScreen ? 16 : 32),
+              ],
+            ),
+          ),
+          if (_isLoading)
+            Container(
+              color: Colors.black.withOpacity(0.3),
+              child: const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(_kAccentColor),
+                ),
               ),
             ),
-          ],
-        ),
+        ],
       ),
       bottomNavigationBar: BottomBar(
         selectedIndex: _selectedIndex,
@@ -770,4 +779,168 @@ class _PostCreatePageState extends State<PostCreatePage> {
       ),
     );
   }
-} 
+
+  Widget _buildSection({
+    required String title,
+    required Widget child,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.all(_kDefaultPadding),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: _kSubtitleStyle),
+          const SizedBox(height: 8),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTagChip(Tag tag) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: _kTagColor,
+        borderRadius: BorderRadius.circular(_kTagBorderRadius),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(tag.name, style: _kTagTextStyle),
+          const SizedBox(width: 4),
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                selectedTags.remove(tag);
+              });
+            },
+            child: const Icon(
+              Icons.close,
+              size: _kSmallIconSize,
+              color: _kTextSecondaryColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAddTagButton() {
+    return GestureDetector(
+      onTap: () async {
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TagListPage(
+              onTagsSelected: (tags) {
+                setState(() {
+                  final merged = [...selectedTags, ...tags];
+                  final unique = <Tag>[];
+                  for (final tag in merged) {
+                    if (!unique.any((t) => t.name == tag.name)) {
+                      unique.add(tag);
+                    }
+                  }
+                  selectedTags = unique;
+                });
+              },
+            ),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: _kTagColor,
+          borderRadius: BorderRadius.circular(_kTagBorderRadius),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.add,
+                size: _kSmallIconSize, color: _kTextPrimaryColor),
+            const SizedBox(width: 4),
+            Text(
+              '태그 추가',
+              style: _kTagTextStyle.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImagePreview(File image, int index) {
+    return Stack(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(_kInputBorderRadius),
+          child: Image.file(
+            image,
+            width: _kImageSize,
+            height: _kImageSize,
+            fit: BoxFit.cover,
+          ),
+        ),
+        Positioned(
+          top: 4,
+          right: 4,
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                selectedImages.removeAt(index);
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.close,
+                color: Colors.white,
+                size: _kSmallIconSize,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white),
+            const SizedBox(width: 8),
+            Text(message),
+          ],
+        ),
+        backgroundColor: _kErrorColor,
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(_kDefaultBorderRadius),
+        ),
+      ),
+    );
+  }
+}

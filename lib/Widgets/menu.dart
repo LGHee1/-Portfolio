@@ -14,24 +14,79 @@ import '../main.dart';
 class Menu extends StatelessWidget {
   const Menu({super.key});
 
+  // UI Constants
+  static const double _kMenuWidth = 280.0;
+  static const double _kProfileImageSize = 100.0;
+  static const double _kMenuItemHeight = 48.0;
+  static const double _kIconSize = 24.0;
+  static const double _kSmallIconSize = 16.0;
+  static const double _kBorderRadius = 16.0;
+  static const double _kDefaultPadding = 16.0;
+
+  // Colors
+  static const Color _kPrimaryColor = Color(0xFFE5FBFF);
+  static const Color _kAccentColor = Color(0xFFB6F5E8);
+  static const Color _kTextPrimaryColor = Color(0xFF2C3E50);
+  static const Color _kTextSecondaryColor = Color(0xFF7F8C8D);
+  static const Color _kErrorColor = Color(0xFFFF6B6B);
+
+  // Text Styles
+  static const TextStyle _kTitleStyle = TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    color: _kTextPrimaryColor,
+    letterSpacing: 0.2,
+  );
+
+  static const TextStyle _kSubtitleStyle = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w500,
+    color: _kTextSecondaryColor,
+    letterSpacing: 0.1,
+  );
+
+  static const TextStyle _kMenuItemStyle = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w500,
+    color: _kTextPrimaryColor,
+    letterSpacing: 0.1,
+  );
+
+  static const TextStyle _kLogoutStyle = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    color: _kErrorColor,
+    letterSpacing: 0.1,
+  );
+
   Future<void> _signOut(BuildContext context) async {
     final shouldLogout = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('로그아웃'),
-          content: const Text('정말 로그아웃 하시겠습니까?'),
+          title: Text('로그아웃', style: _kTitleStyle),
+          content: Text('정말 로그아웃 하시겠습니까?', style: _kSubtitleStyle),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(_kBorderRadius),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('취소'),
+              style: TextButton.styleFrom(
+                foregroundColor: _kTextSecondaryColor,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: _kDefaultPadding),
+              ),
+              child: Text('취소', style: _kMenuItemStyle),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text(
-                '확인',
-                style: TextStyle(color: Colors.red),
+              style: TextButton.styleFrom(
+                foregroundColor: _kErrorColor,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: _kDefaultPadding),
               ),
+              child: Text('확인', style: _kLogoutStyle),
             ),
           ],
         );
@@ -56,20 +111,21 @@ class Menu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      width: 240.w,
-      backgroundColor: const Color(0xFFE5FBFF),
+      width: _kMenuWidth.w,
+      backgroundColor: _kPrimaryColor,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(height: 16.h),
+          SizedBox(height: MediaQuery.of(context).padding.top + 16.h),
           Padding(
-            padding: EdgeInsets.only(left: 16.w),
+            padding: EdgeInsets.symmetric(horizontal: _kDefaultPadding.w),
             child: IconButton(
-              icon: Icon(Icons.menu, color: Colors.black, size: 24.sp),
+              icon: Icon(Icons.menu,
+                  color: _kTextPrimaryColor, size: _kIconSize.sp),
               onPressed: () => Navigator.of(context).pop(),
             ),
           ),
-          SizedBox(height: 8.h),
+          SizedBox(height: 24.h),
           Center(
             child: GestureDetector(
               onTap: () {
@@ -82,31 +138,41 @@ class Menu extends StatelessWidget {
               child: Column(
                 children: [
                   Container(
-                    width: 100.w,
-                    height: 100.h,
+                    width: _kProfileImageSize.w,
+                    height: _kProfileImageSize.h,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(20.r),
-                      border: Border.all(color: Colors.black26),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(_kBorderRadius.r),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Consumer<UserProvider>(
                       builder: (context, userProvider, child) {
                         return ClipRRect(
-                          borderRadius: BorderRadius.circular(20.r),
+                          borderRadius: BorderRadius.circular(_kBorderRadius.r),
                           child: userProvider.photoUrl != null
                               ? Image.network(
                                   userProvider.photoUrl!,
                                   fit: BoxFit.cover,
                                   errorBuilder: (context, error, stackTrace) {
-                                    return Icon(Icons.account_circle, size: 36.sp, color: Colors.grey);
+                                    return Icon(Icons.account_circle,
+                                        size: _kIconSize * 1.5.sp,
+                                        color: _kTextSecondaryColor);
                                   },
                                 )
-                              : Icon(Icons.account_circle, size: 36.sp, color: Colors.grey),
+                              : Icon(Icons.account_circle,
+                                  size: _kIconSize * 1.5.sp,
+                                  color: _kTextSecondaryColor),
                         );
                       },
                     ),
                   ),
-                  SizedBox(height: 8.h),
+                  SizedBox(height: 12.h),
                   Consumer<UserProvider>(
                     builder: (context, userProvider, child) {
                       return Row(
@@ -114,13 +180,12 @@ class Menu extends StatelessWidget {
                         children: [
                           Text(
                             userProvider.nickname,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16.sp,
-                            ),
+                            style: _kTitleStyle,
                           ),
                           SizedBox(width: 4.w),
-                          Icon(Icons.arrow_forward_ios, size: 12.sp, color: Colors.grey),
+                          Icon(Icons.arrow_forward_ios,
+                              size: _kSmallIconSize.sp,
+                              color: _kTextSecondaryColor),
                         ],
                       );
                     },
@@ -129,10 +194,11 @@ class Menu extends StatelessWidget {
               ),
             ),
           ),
-          SizedBox(height: 20.h),
+          SizedBox(height: 32.h),
           _buildMenuItem(
             context,
             '랭킹',
+            Icons.leaderboard_outlined,
             () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => RankingScreen()),
@@ -141,6 +207,7 @@ class Menu extends StatelessWidget {
           _buildMenuItem(
             context,
             '기록',
+            Icons.calendar_today_outlined,
             () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => CalendarScreen()),
@@ -149,15 +216,22 @@ class Menu extends StatelessWidget {
           _buildMenuItem(
             context,
             '친구관리',
+            Icons.people_outline,
             () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const FriendsScreen()),
             ),
           ),
-          _buildMenuItem(context, '문의', () {}),
+          _buildMenuItem(
+            context,
+            '문의',
+            Icons.help_outline,
+            () {},
+          ),
           _buildMenuItem(
             context,
             '환경 설정',
+            Icons.settings_outlined,
             () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const SettingScreen()),
@@ -165,46 +239,58 @@ class Menu extends StatelessWidget {
           ),
           const Spacer(),
           Padding(
-            padding: EdgeInsets.only(left: 16.w, bottom: 12.h),
+            padding: EdgeInsets.all(_kDefaultPadding.w),
             child: InkWell(
               onTap: () => _signOut(context),
-              child: Row(
-                children: [
-                  Icon(Icons.logout, color: Colors.red, size: 24.sp),
-                  SizedBox(width: 8.w),
-                  Text(
-                    '로그아웃',
-                    style: TextStyle(
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red,
+              borderRadius: BorderRadius.circular(_kBorderRadius.r),
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                child: Row(
+                  children: [
+                    Icon(Icons.logout,
+                        color: _kErrorColor, size: _kIconSize.sp),
+                    SizedBox(width: 12.w),
+                    Text(
+                      '로그아웃',
+                      style: _kLogoutStyle,
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
+          SizedBox(height: MediaQuery.of(context).padding.bottom + 16.h),
         ],
       ),
     );
   }
 
-  Widget _buildMenuItem(BuildContext context, String title, VoidCallback onTap) {
+  Widget _buildMenuItem(
+      BuildContext context, String title, IconData icon, VoidCallback onTap) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 20.w),
+      padding:
+          EdgeInsets.symmetric(horizontal: _kDefaultPadding.w, vertical: 4.h),
       child: InkWell(
         onTap: () {
           Navigator.pop(context);
           onTap();
         },
-        child: Text(
-          title,
-          style: TextStyle(
-            fontSize: 16.sp,
-            fontWeight: FontWeight.bold,
+        borderRadius: BorderRadius.circular(_kBorderRadius.r),
+        child: Container(
+          height: _kMenuItemHeight.h,
+          padding: EdgeInsets.symmetric(horizontal: 16.w),
+          child: Row(
+            children: [
+              Icon(icon, size: _kIconSize.sp, color: _kTextPrimaryColor),
+              SizedBox(width: 12.w),
+              Text(
+                title,
+                style: _kMenuItemStyle,
+              ),
+            ],
           ),
         ),
       ),
     );
   }
-} 
+}

@@ -6,6 +6,27 @@ import '../user_provider.dart';
 import '../Widgets/bottom_bar.dart';
 
 class FriendsScreen extends StatefulWidget {
+  // UI Constants
+  static const double _kDefaultPadding = 16.0;
+  static const double _kDefaultBorderRadius = 12.0;
+  static const double _kButtonHeight = 32.0;
+  static const double _kSearchBarHeight = 40.0;
+
+  // Text Styles
+  static const TextStyle _kTitleStyle = TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    color: Colors.black87,
+    letterSpacing: 0.2,
+  );
+
+  static const TextStyle _kSubtitleStyle = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w500,
+    color: Colors.black54,
+    letterSpacing: 0.1,
+  );
+
   const FriendsScreen({super.key});
 
   @override
@@ -19,28 +40,34 @@ class _FriendsScreenState extends State<FriendsScreen> {
   @override
   Widget build(BuildContext context) {
     final nickname = Provider.of<UserProvider>(context).nickname;
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.height < 700;
+
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFFD8F9FF),
+        backgroundColor: const Color(0xFFE5FBFF),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: Colors.black87, size: 24),
           onPressed: () => Navigator.of(context).pop(),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
         ),
         title: Text(
           nickname.isNotEmpty ? '$nickname님의 친구 목록' : '친구 목록',
-          style: const TextStyle(color: Colors.black),
+          style: FriendsScreen._kTitleStyle,
         ),
+        centerTitle: true,
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 12.0),
+            padding:
+                const EdgeInsets.only(right: FriendsScreen._kDefaultPadding),
             child: CircleAvatar(
-              backgroundColor: Colors.grey.shade300,
-              child: const Icon(Icons.person, color: Colors.black),
+              backgroundColor: Colors.blue.withOpacity(0.1),
+              child: const Icon(Icons.person, color: Colors.blue, size: 20),
             ),
           ),
         ],
-        iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: Stack(
         children: [
@@ -51,86 +78,128 @@ class _FriendsScreenState extends State<FriendsScreen> {
             ),
           ),
           Positioned.fill(
-            child: Container(color: const Color(0xFFE5FBFF).withOpacity(0.5)),
+            child: Container(
+              color: const Color(0xFFE5FBFF).withOpacity(0.7),
+            ),
           ),
           SafeArea(
             child: Column(
               children: [
-                Row(
-                  children: [
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: SizedBox(
-                              height: 28,
-                              width: MediaQuery.of(context).size.width * 0.25,
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _selectedTab = 'friends';
-                                  });
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: _selectedTab == 'friends'
-                                      ? const Color(0xFFB6F5E8)
-                                      : Colors.white,
-                                  foregroundColor: Colors.black,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                Padding(
+                  padding: const EdgeInsets.all(FriendsScreen._kDefaultPadding),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: SizedBox(
+                                height: FriendsScreen._kButtonHeight,
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      _selectedTab = 'friends';
+                                    });
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _selectedTab == 'friends'
+                                        ? const Color(0xFFB6F5E8)
+                                        : Colors.white,
+                                    foregroundColor: Colors.black87,
+                                    elevation:
+                                        _selectedTab == 'friends' ? 2 : 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(
+                                          FriendsScreen._kDefaultBorderRadius),
+                                    ),
+                                    padding: EdgeInsets.zero,
                                   ),
-                                  padding: const EdgeInsets.symmetric(vertical: 0),
+                                  child: Text(
+                                    '친구',
+                                    style:
+                                        FriendsScreen._kSubtitleStyle.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: _selectedTab == 'friends'
+                                          ? Colors.black87
+                                          : Colors.black54,
+                                    ),
+                                  ),
                                 ),
-                                child: const Text('친구',
-                                    style: TextStyle(fontSize: 14)),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: SizedBox(
-                              height: 28,
-                              width: MediaQuery.of(context).size.width * 0.25,
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _selectedTab = 'requests';
-                                  });
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: _selectedTab == 'requests'
-                                      ? const Color(0xFFB6F5E8)
-                                      : Colors.white,
-                                  foregroundColor: Colors.black,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: SizedBox(
+                                height: FriendsScreen._kButtonHeight,
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      _selectedTab = 'requests';
+                                    });
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _selectedTab == 'requests'
+                                        ? const Color(0xFFB6F5E8)
+                                        : Colors.white,
+                                    foregroundColor: Colors.black87,
+                                    elevation:
+                                        _selectedTab == 'requests' ? 2 : 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(
+                                          FriendsScreen._kDefaultBorderRadius),
+                                    ),
+                                    padding: EdgeInsets.zero,
                                   ),
-                                  padding: const EdgeInsets.symmetric(vertical: 0),
+                                  child: Text(
+                                    '신청',
+                                    style:
+                                        FriendsScreen._kSubtitleStyle.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: _selectedTab == 'requests'
+                                          ? Colors.black87
+                                          : Colors.black54,
+                                    ),
+                                  ),
                                 ),
-                                child: const Text('신청',
-                                    style: TextStyle(fontSize: 14)),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    GestureDetector(
-                      onTap: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => const _FriendSearchDialog(),
-                        );
-                      },
-                      child: const Icon(Icons.person_add,
-                          size: 32, color: Colors.black54),
-                    ),
-                    const SizedBox(width: 18),
-                  ],
+                      const SizedBox(width: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(
+                              FriendsScreen._kDefaultBorderRadius),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: IconButton(
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => const _FriendSearchDialog(),
+                            );
+                          },
+                          icon: const Icon(
+                            Icons.person_add,
+                            size: 24,
+                            color: Colors.blue,
+                          ),
+                          padding: const EdgeInsets.all(8),
+                          constraints: const BoxConstraints(),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: isSmallScreen ? 8 : 16),
                 Expanded(
                   child: _selectedTab == 'friends'
                       ? const _FriendsListTab()
@@ -159,7 +228,17 @@ class _FriendsListTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) return const Center(child: Text('로그인이 필요합니다'));
+    if (currentUser == null) {
+      return Center(
+        child: Text(
+          '로그인이 필요합니다',
+          style: FriendsScreen._kSubtitleStyle.copyWith(
+            fontSize: 16,
+            color: Colors.black87,
+          ),
+        ),
+      );
+    }
 
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
@@ -170,11 +249,22 @@ class _FriendsListTab extends StatelessWidget {
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Center(child: Text('오류가 발생했습니다: ${snapshot.error}'));
+          return Center(
+            child: Text(
+              '오류가 발생했습니다: ${snapshot.error}',
+              style: FriendsScreen._kSubtitleStyle.copyWith(
+                color: Colors.red,
+              ),
+            ),
+          );
         }
 
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+            ),
+          );
         }
 
         final friends = snapshot.data?.docs ?? [];
@@ -184,19 +274,25 @@ class _FriendsListTab extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text(
+                Icon(
+                  Icons.people_outline,
+                  size: 64,
+                  color: Colors.black.withOpacity(0.3),
+                ),
+                const SizedBox(height: 16),
+                Text(
                   '등록된 호닥 친구가 없습니다.',
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87),
+                  style: FriendsScreen._kTitleStyle.copyWith(
+                    fontSize: 16,
+                    color: Colors.black87,
+                  ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   '닉네임으로 친구를 추가해보세요!',
-                  style: TextStyle(fontSize: 16, color: Colors.black54),
+                  style: FriendsScreen._kSubtitleStyle,
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 32),
                   child: SizedBox(
@@ -208,13 +304,20 @@ class _FriendsListTab extends StatelessWidget {
                           builder: (context) => const _FriendSearchDialog(),
                         );
                       },
-                      icon: const Icon(Icons.search),
-                      label: const Text('친구 추가하기'),
+                      icon: const Icon(Icons.search, color: Colors.blue),
+                      label: Text(
+                        '친구 추가하기',
+                        style: FriendsScreen._kSubtitleStyle.copyWith(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
+                        elevation: 2,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(
+                              FriendsScreen._kDefaultBorderRadius),
                         ),
                       ),
                     ),
@@ -226,37 +329,96 @@ class _FriendsListTab extends StatelessWidget {
         }
 
         return ListView.builder(
+          padding: const EdgeInsets.symmetric(
+              vertical: FriendsScreen._kDefaultPadding),
           itemCount: friends.length,
           itemBuilder: (context, index) {
             final doc = friends[index];
             final friend = doc.data() as Map<String, dynamic>;
             return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              margin: const EdgeInsets.symmetric(
+                horizontal: FriendsScreen._kDefaultPadding,
+                vertical: 8,
+              ),
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius:
+                    BorderRadius.circular(FriendsScreen._kDefaultBorderRadius),
+              ),
               child: ListTile(
-                leading: const CircleAvatar(
-                  child: Icon(Icons.person),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: FriendsScreen._kDefaultPadding,
+                  vertical: 8,
                 ),
-                title: Text(friend['nickname'] ?? '알 수 없음'),
-                subtitle: Text(friend['addedAt']?.toDate().toString() ?? ''),
+                leading: CircleAvatar(
+                  backgroundColor: Colors.blue.withOpacity(0.1),
+                  child: const Icon(
+                    Icons.person,
+                    color: Colors.blue,
+                  ),
+                ),
+                title: Text(
+                  friend['nickname'] ?? '알 수 없음',
+                  style: FriendsScreen._kTitleStyle.copyWith(fontSize: 16),
+                ),
+                subtitle: Text(
+                  friend['addedAt']?.toDate().toString() ?? '',
+                  style: FriendsScreen._kSubtitleStyle,
+                ),
                 trailing: IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.red,
+                    size: 24,
+                  ),
                   onPressed: () async {
                     final shouldDelete = await showDialog<bool>(
                       context: context,
                       builder: (BuildContext context) {
                         return AlertDialog(
-                          title: const Text('친구 삭제'),
-                          content:
-                          Text('${friend['nickname']}님을 친구 목록에서 삭제하시겠습니까?'),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                                FriendsScreen._kDefaultBorderRadius),
+                          ),
+                          title: Text(
+                            '친구 삭제',
+                            style: FriendsScreen._kTitleStyle,
+                          ),
+                          content: Text(
+                            '${friend['nickname']}님을 친구 목록에서 삭제하시겠습니까?',
+                            style: FriendsScreen._kSubtitleStyle,
+                          ),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.of(context).pop(false),
-                              child: const Text('취소'),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: FriendsScreen._kDefaultPadding,
+                                  vertical: 8,
+                                ),
+                              ),
+                              child: Text(
+                                '취소',
+                                style: FriendsScreen._kSubtitleStyle.copyWith(
+                                  color: Colors.grey,
+                                ),
+                              ),
                             ),
                             TextButton(
                               onPressed: () => Navigator.of(context).pop(true),
-                              child: const Text('삭제',
-                                  style: TextStyle(color: Colors.red)),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: FriendsScreen._kDefaultPadding,
+                                  vertical: 8,
+                                ),
+                              ),
+                              child: Text(
+                                '삭제',
+                                style: FriendsScreen._kSubtitleStyle.copyWith(
+                                  color: Colors.red,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
                           ],
                         );
@@ -273,16 +435,40 @@ class _FriendsListTab extends StatelessWidget {
                             .collection('Friends_Data')
                             .doc(currentUser.uid));
                         await batch.commit();
+
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('친구가 삭제되었습니다.')),
+                            SnackBar(
+                              content: Text(
+                                '친구가 삭제되었습니다.',
+                                style: FriendsScreen._kSubtitleStyle
+                                    .copyWith(color: Colors.white),
+                              ),
+                              backgroundColor: Colors.blue,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                    FriendsScreen._kDefaultBorderRadius),
+                              ),
+                            ),
                           );
                         }
                       } catch (e) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text('친구 삭제 중 오류가 발생했습니다.')),
+                            SnackBar(
+                              content: Text(
+                                '친구 삭제 중 오류가 발생했습니다.',
+                                style: FriendsScreen._kSubtitleStyle
+                                    .copyWith(color: Colors.white),
+                              ),
+                              backgroundColor: Colors.red,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                    FriendsScreen._kDefaultBorderRadius),
+                              ),
+                            ),
                           );
                         }
                       }
@@ -551,25 +737,25 @@ class _SentRequestsTab extends StatelessWidget {
                 subtitle: Text(status == 'pending' ? '대기 중' : '수락됨'),
                 trailing: status == 'pending'
                     ? IconButton(
-                  icon: const Icon(Icons.close, color: Colors.red),
-                  onPressed: () async {
-                    try {
-                      await doc.reference.delete();
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('친구 요청을 취소했습니다.')),
-                        );
-                      }
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text('친구 요청 취소 중 오류가 발생했습니다.')),
-                        );
-                      }
-                    }
-                  },
-                )
+                        icon: const Icon(Icons.close, color: Colors.red),
+                        onPressed: () async {
+                          try {
+                            await doc.reference.delete();
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('친구 요청을 취소했습니다.')),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text('친구 요청 취소 중 오류가 발생했습니다.')),
+                              );
+                            }
+                          }
+                        },
+                      )
                     : null,
               ),
             );
@@ -686,9 +872,9 @@ class _FriendSearchDialogState extends State<_FriendSearchDialog> {
           .set({
         'from': myUid,
         'fromNickname': (await FirebaseFirestore.instance
-            .collection('users')
-            .doc(myUid)
-            .get())
+                .collection('users')
+                .doc(myUid)
+                .get())
             .data()?['nickname'],
         'to': targetUid,
         'createdAt': FieldValue.serverTimestamp(),
@@ -704,7 +890,7 @@ class _FriendSearchDialogState extends State<_FriendSearchDialog> {
           .set({
         'to': targetUid,
         'toNickname':
-        (_searchResult!.data() as Map<String, dynamic>)['nickname'],
+            (_searchResult!.data() as Map<String, dynamic>)['nickname'],
         'from': myUid,
         'createdAt': FieldValue.serverTimestamp(),
         'status': 'pending'
@@ -723,66 +909,118 @@ class _FriendSearchDialogState extends State<_FriendSearchDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: const Color(0xFFF7F3FB),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      backgroundColor: const Color(0xFFE5FBFF),
+      shape: RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.circular(FriendsScreen._kDefaultBorderRadius),
+      ),
       child: Container(
         width: 320,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(FriendsScreen._kDefaultPadding),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Align(
               alignment: Alignment.topLeft,
-              child: Padding(
-                padding: const EdgeInsets.only(left: 8.0, bottom: 4),
-                child: Text('친구 추가',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.deepPurple.shade300)),
+              child: Text(
+                '친구 추가',
+                style: FriendsScreen._kTitleStyle.copyWith(
+                  color: Colors.blue,
+                ),
               ),
             ),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    decoration: const InputDecoration(
-                      hintText: '닉네임 입력',
-                      isDense: true,
-                      border: OutlineInputBorder(),
-                      contentPadding:
-                      EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                    onSubmitted: (_) => _searchNickname(),
+            const SizedBox(height: 16),
+            Container(
+              height: FriendsScreen._kSearchBarHeight,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius:
+                    BorderRadius.circular(FriendsScreen._kDefaultBorderRadius),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.search),
-                  onPressed: _isSearching ? null : _searchNickname,
-                ),
-              ],
+                ],
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      decoration: InputDecoration(
+                        hintText: '닉네임 입력',
+                        hintStyle: FriendsScreen._kSubtitleStyle,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: FriendsScreen._kDefaultPadding,
+                        ),
+                      ),
+                      style: FriendsScreen._kSubtitleStyle,
+                      onSubmitted: (_) => _searchNickname(),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.search,
+                      color: _isSearching ? Colors.grey : Colors.blue,
+                    ),
+                    onPressed: _isSearching ? null : _searchNickname,
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 8),
-            if (_isSearching) const CircularProgressIndicator(),
+            if (_isSearching)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                ),
+              ),
             if (_error.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Text(_error, style: const TextStyle(color: Colors.red)),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  _error,
+                  style: FriendsScreen._kSubtitleStyle.copyWith(
+                    color:
+                        _error.contains('전송되었습니다') ? Colors.green : Colors.red,
+                  ),
+                ),
               ),
             if (_searchResult != null)
               Card(
-                margin: const EdgeInsets.only(top: 8),
+                margin: const EdgeInsets.only(top: 16),
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(
+                      FriendsScreen._kDefaultBorderRadius),
+                ),
                 child: ListTile(
-                  leading: const CircleAvatar(
-                    backgroundImage: AssetImage(
-                        'assets/img/runner_home.png'), // 프로필 이미지 없으면 기본 이미지
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: FriendsScreen._kDefaultPadding,
+                    vertical: 8,
                   ),
-                  title: Text(((_searchResult?.data()
-                  as Map<String, dynamic>?)?['nickname'] ??
-                      '')),
+                  leading: CircleAvatar(
+                    backgroundColor: Colors.blue.withOpacity(0.1),
+                    child: const Icon(
+                      Icons.person,
+                      color: Colors.blue,
+                    ),
+                  ),
+                  title: Text(
+                    ((_searchResult?.data()
+                            as Map<String, dynamic>?)?['nickname'] ??
+                        ''),
+                    style: FriendsScreen._kTitleStyle.copyWith(fontSize: 16),
+                  ),
                   trailing: IconButton(
-                    icon:
-                    const Icon(Icons.add_circle, color: Colors.deepPurple),
+                    icon: const Icon(
+                      Icons.add_circle_outline,
+                      color: Colors.blue,
+                      size: 24,
+                    ),
                     onPressed: _sendFriendRequest,
                   ),
                 ),

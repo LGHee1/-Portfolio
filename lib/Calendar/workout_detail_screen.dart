@@ -226,7 +226,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                   });
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _hasExistingPost ? Colors.grey : const Color(0xFFFF9800),
+                  backgroundColor: _hasExistingPost ? Colors.grey : Colors.blueAccent,
                   foregroundColor: Colors.white,
                   padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
                   shape: RoundedRectangleBorder(
@@ -234,7 +234,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                   ),
                 ),
                 child: Text(
-                  _hasExistingPost ? '이미 게시글을 작성했습니다' : '게시글 작성',
+                  _hasExistingPost ? '작성 완료' : '게시글 작성',
                   style: TextStyle(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.bold,

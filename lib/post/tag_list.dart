@@ -7,7 +7,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 class TagListPage extends StatefulWidget {
   final Function(List<Tag>) onTagsSelected;
   final List<Tag> initialSelectedTags;
-  
+
   const TagListPage({
     super.key,
     required this.onTagsSelected,
@@ -19,6 +19,35 @@ class TagListPage extends StatefulWidget {
 }
 
 class _TagListPageState extends State<TagListPage> {
+  // UI Constants
+  static const double _kDefaultPadding = 16.0;
+  static const double _kDefaultBorderRadius = 12.0;
+  static const double _kButtonHeight = 40.0;
+  static const double _kTagHeight = 32.0;
+  static const double _kCardElevation = 2.0;
+
+  // Text Styles
+  static const TextStyle _kTitleStyle = TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    color: Colors.black87,
+    letterSpacing: 0.2,
+  );
+
+  static const TextStyle _kSubtitleStyle = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w500,
+    color: Colors.black54,
+    letterSpacing: 0.1,
+  );
+
+  static const TextStyle _kTagStyle = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w500,
+    color: Colors.black87,
+    letterSpacing: 0.1,
+  );
+
   late List<Tag> selectedTags;
   int _selectedCategoryIndex = 0;
   final Map<TagCategory, bool> categoryExpanded = {
@@ -27,14 +56,14 @@ class _TagListPageState extends State<TagListPage> {
     TagCategory.surrounding: true,
     TagCategory.etc: true,
   };
-  
+
   // 지역 선택 관련 상태
-  RegionTag? selectedLevel1;  // 시/도
-  RegionTag? selectedLevel2;  // 시/군/구
-  RegionTag? selectedLevel3;  // 읍/면/동
-  List<RegionTag>? level1Regions;  // 시/도 목록
-  List<RegionTag>? level2Regions;  // 시/군/구 목록
-  List<RegionTag>? level3Regions;  // 읍/면/동 목록
+  RegionTag? selectedLevel1; // 시/도
+  RegionTag? selectedLevel2; // 시/군/구
+  RegionTag? selectedLevel3; // 읍/면/동
+  List<RegionTag>? level1Regions; // 시/도 목록
+  List<RegionTag>? level2Regions; // 시/군/구 목록
+  List<RegionTag>? level3Regions; // 읍/면/동 목록
 
   @override
   void initState() {
@@ -48,7 +77,7 @@ class _TagListPageState extends State<TagListPage> {
     try {
       print('지역 데이터 로드 시작');
       List<RegionTag> allRegions = [];
-      
+
       // 17개 시도 파일 목록
       final regionFiles = [
         '서울특별시.json',
@@ -73,7 +102,8 @@ class _TagListPageState extends State<TagListPage> {
       // 각 시도 파일에서 데이터 로드
       for (final file in regionFiles) {
         try {
-          final String jsonString = await rootBundle.loadString('assets/data/$file');
+          final String jsonString =
+              await rootBundle.loadString('assets/data/$file');
           final Map<String, dynamic> jsonData = json.decode(jsonString);
           final RegionTag region = RegionTag.fromJson(jsonData);
           allRegions.add(region);
@@ -82,7 +112,7 @@ class _TagListPageState extends State<TagListPage> {
           print('$file 로드 실패: $e');
         }
       }
-      
+
       setState(() {
         level1Regions = allRegions;
         print('전체 시/도 목록 생성 완료: ${level1Regions!.length}개');
@@ -142,172 +172,50 @@ class _TagListPageState extends State<TagListPage> {
     });
   }
 
-  Widget _buildRegionSelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 시/도 선택
-        const Padding(
-          padding: EdgeInsets.all(8.0),
-        ),
-        Container(
-          height: 50,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: level1Regions?.length ?? 0,
-            itemBuilder: (context, index) {
-              if (level1Regions == null) return Container();
-              final region = level1Regions![index];
-              final isSelected = selectedLevel1?.code == region.code;
-              return GestureDetector(
-                onTap: () => _selectLevel1(region),
-                child: Container(
-                  width: 100,
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFFE7EFA2) : Colors.white,
-                    border: Border.all(
-                      color: isSelected ? const Color(0xFFE7EFA2) : Colors.grey,
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Center(
-                    child: Text(
-                      region.name,
-                      style: TextStyle(
-                        color: isSelected ? Colors.black : Colors.grey,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-
-        // 시/군/구 선택
-        if (level2Regions != null && level2Regions!.isNotEmpty) ...[
-          const Padding(
-            padding: EdgeInsets.all(8.0),
-          ),
-          Container(
-            height: 50,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: level2Regions!.length,
-              itemBuilder: (context, index) {
-                final region = level2Regions![index];
-                final isSelected = (selectedLevel1?.name == '세종특별자치시')
-                    ? selectedTags.contains(region)
-                    : selectedLevel2?.code == region.code;
-                return GestureDetector(
-                  onTap: () => _selectLevel2(region),
-                  child: Container(
-                    width: 100,
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFFE7EFA2) : Colors.white,
-                      border: Border.all(
-                        color: isSelected ? const Color(0xFFE7EFA2) : Colors.grey,
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Center(
-                      child: Text(
-                        region.name,
-                        style: TextStyle(
-                          color: isSelected ? Colors.black : Colors.grey,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-
-        // 읍/면/동 선택
-        if (level3Regions != null && level3Regions!.isNotEmpty) ...[
-          const Padding(
-            padding: EdgeInsets.all(8.0),
-          ),
-          Container(
-            height: 50,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: level3Regions!.length,
-              itemBuilder: (context, index) {
-                final region = level3Regions![index];
-                final isSelected = selectedTags.contains(region);
-                return GestureDetector(
-                  onTap: () => _selectLevel3(region),
-                  child: Container(
-                    width: 100,
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFFE7EFA2) : Colors.white,
-                      border: Border.all(
-                        color: isSelected ? const Color(0xFFE7EFA2) : Colors.grey,
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Center(
-                      child: Text(
-                        region.name,
-                        style: TextStyle(
-                          color: isSelected ? Colors.black : Colors.grey,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.height < 700;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFCBF6FF),
+      backgroundColor: const Color(0xFFE5FBFF),
       appBar: AppBar(
-        automaticallyImplyLeading: true,
-        backgroundColor: const Color(0xFFCBF6FF),
+        backgroundColor: const Color(0xFFE5FBFF),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context, selectedTags);
-          },
+          icon: const Icon(Icons.arrow_back, color: Colors.black87, size: 24),
+          onPressed: () => Navigator.pop(context, selectedTags),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
         ),
+        title: Text(
+          '태그 선택',
+          style: _kTitleStyle,
+        ),
+        centerTitle: true,
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 8.0),
+            padding: const EdgeInsets.only(right: _kDefaultPadding),
             child: ElevatedButton(
               onPressed: () {
                 widget.onTagsSelected(selectedTags);
                 Navigator.pop(context, selectedTags);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF9800),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                backgroundColor: const Color(0xFFB6F5E8),
+                foregroundColor: Colors.black87,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: _kDefaultPadding, vertical: 8),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(_kDefaultBorderRadius),
                 ),
               ),
-              child: const Text(
+              child: Text(
                 '추가하기',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                style: _kSubtitleStyle.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
                 ),
               ),
             ),
@@ -318,16 +226,18 @@ class _TagListPageState extends State<TagListPage> {
         children: [
           // 선택된 태그들을 보여주는 부분
           Container(
-            height: 60,
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+            height: isSmallScreen ? 50 : 60,
+            padding: const EdgeInsets.symmetric(
+                horizontal: _kDefaultPadding, vertical: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFFACE3FF),
-              border: Border(
-                bottom: BorderSide(
-                  color: Colors.grey,
-                  width: 1.0,
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
                 ),
-              ),
+              ],
             ),
             child: Row(
               children: [
@@ -341,15 +251,28 @@ class _TagListPageState extends State<TagListPage> {
                           return Padding(
                             padding: const EdgeInsets.only(right: 8.0),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              height: _kTagHeight,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 4),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFE7EFA2),
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(
+                                    _kDefaultBorderRadius),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 2,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ],
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(tag.name, style: const TextStyle(fontSize: 14)),
+                                  Text(
+                                    tag.name,
+                                    style: _kTagStyle,
+                                  ),
                                   const SizedBox(width: 4),
                                   GestureDetector(
                                     onTap: () {
@@ -357,7 +280,11 @@ class _TagListPageState extends State<TagListPage> {
                                         selectedTags.remove(tag);
                                       });
                                     },
-                                    child: const Icon(Icons.close, size: 16),
+                                    child: const Icon(
+                                      Icons.close,
+                                      size: 16,
+                                      color: Colors.black54,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -373,6 +300,7 @@ class _TagListPageState extends State<TagListPage> {
           ),
           Expanded(
             child: ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: _kDefaultPadding),
               itemCount: TagCategory.values.length,
               itemBuilder: (context, index) {
                 final category = TagCategory.values[index];
@@ -382,8 +310,21 @@ class _TagListPageState extends State<TagListPage> {
 
                 if (category == TagCategory.location) {
                   return Container(
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFACE3FF),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: _kDefaultPadding,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius:
+                          BorderRadius.circular(_kDefaultBorderRadius),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: ExpansionTile(
                       initiallyExpanded: categoryExpanded[category] ?? true,
@@ -394,14 +335,11 @@ class _TagListPageState extends State<TagListPage> {
                       },
                       title: Text(
                         _getCategoryName(category),
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: _kTitleStyle,
                       ),
                       children: [
                         Container(
-                          color: const Color(0xFFCBF6FF),
+                          color: const Color(0xFFE5FBFF),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -416,8 +354,20 @@ class _TagListPageState extends State<TagListPage> {
 
                 // 지역 외 카테고리
                 return Container(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFACE3FF),
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: _kDefaultPadding,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(_kDefaultBorderRadius),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: ExpansionTile(
                     initiallyExpanded: categoryExpanded[category] ?? true,
@@ -428,47 +378,67 @@ class _TagListPageState extends State<TagListPage> {
                     },
                     title: Text(
                       _getCategoryName(category),
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: _kTitleStyle,
                     ),
                     children: [
                       Container(
-                        color: const Color(0xFFCBF6FF),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Wrap(
-                              alignment: WrapAlignment.start,
-                              crossAxisAlignment: WrapCrossAlignment.start,
-                              spacing: 8.0,
-                              runSpacing: 8.0,
-                              children: categoryTags.map((tag) {
-                                final isSelected = selectedTags.contains(tag);
-                                return GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      if (isSelected) {
-                                        selectedTags.remove(tag);
-                                      } else {
-                                        selectedTags.add(tag);
-                                      }
-                                    });
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: isSelected ? const Color(0xFFE7EFA2) : const Color(0xFFE7EFA2),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(tag.name, style: const TextStyle(fontSize: 14)),
+                        color: const Color(0xFFE5FBFF),
+                        padding: const EdgeInsets.all(_kDefaultPadding),
+                        child: Wrap(
+                          spacing: 8.0,
+                          runSpacing: 8.0,
+                          children: categoryTags.map((tag) {
+                            final isSelected = selectedTags.contains(tag);
+                            return GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  if (isSelected) {
+                                    selectedTags.remove(tag);
+                                  } else {
+                                    selectedTags.add(tag);
+                                  }
+                                });
+                              },
+                              child: Container(
+                                height: _kTagHeight,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? const Color(0xFFE7EFA2)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(
+                                      _kDefaultBorderRadius),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? const Color(0xFFE7EFA2)
+                                        : Colors.grey.shade300,
                                   ),
-                                );
-                              }).toList(),
-                            ),
-                          ),
+                                  boxShadow: isSelected
+                                      ? [
+                                          BoxShadow(
+                                            color:
+                                                Colors.black.withOpacity(0.05),
+                                            blurRadius: 2,
+                                            offset: const Offset(0, 1),
+                                          ),
+                                        ]
+                                      : null,
+                                ),
+                                child: Text(
+                                  tag.name,
+                                  style: _kTagStyle.copyWith(
+                                    color: isSelected
+                                        ? Colors.black87
+                                        : Colors.black54,
+                                    fontWeight: isSelected
+                                        ? FontWeight.w600
+                                        : FontWeight.normal,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
                         ),
                       ),
                     ],
@@ -479,6 +449,170 @@ class _TagListPageState extends State<TagListPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildRegionSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 8),
+        Container(
+          height: 50,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: _kDefaultPadding),
+            itemCount: level1Regions?.length ?? 0,
+            itemBuilder: (context, index) {
+              if (level1Regions == null) return Container();
+              final region = level1Regions![index];
+              final isSelected = selectedLevel1?.code == region.code;
+              return GestureDetector(
+                onTap: () => _selectLevel1(region),
+                child: Container(
+                  width: 100,
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    color: isSelected ? const Color(0xFFE7EFA2) : Colors.white,
+                    border: Border.all(
+                      color: isSelected
+                          ? const Color(0xFFE7EFA2)
+                          : Colors.grey.shade300,
+                    ),
+                    borderRadius: BorderRadius.circular(_kDefaultBorderRadius),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 2,
+                              offset: const Offset(0, 1),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Center(
+                    child: Text(
+                      region.name,
+                      style: _kTagStyle.copyWith(
+                        color: isSelected ? Colors.black87 : Colors.black54,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        if (level2Regions != null && level2Regions!.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Container(
+            height: 50,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: _kDefaultPadding),
+              itemCount: level2Regions!.length,
+              itemBuilder: (context, index) {
+                final region = level2Regions![index];
+                final isSelected = (selectedLevel1?.name == '세종특별자치시')
+                    ? selectedTags.contains(region)
+                    : selectedLevel2?.code == region.code;
+                return GestureDetector(
+                  onTap: () => _selectLevel2(region),
+                  child: Container(
+                    width: 100,
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(
+                      color:
+                          isSelected ? const Color(0xFFE7EFA2) : Colors.white,
+                      border: Border.all(
+                        color: isSelected
+                            ? const Color(0xFFE7EFA2)
+                            : Colors.grey.shade300,
+                      ),
+                      borderRadius:
+                          BorderRadius.circular(_kDefaultBorderRadius),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 2,
+                                offset: const Offset(0, 1),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Center(
+                      child: Text(
+                        region.name,
+                        style: _kTagStyle.copyWith(
+                          color: isSelected ? Colors.black87 : Colors.black54,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+        if (level3Regions != null && level3Regions!.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Container(
+            height: 50,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: _kDefaultPadding),
+              itemCount: level3Regions!.length,
+              itemBuilder: (context, index) {
+                final region = level3Regions![index];
+                final isSelected = selectedTags.contains(region);
+                return GestureDetector(
+                  onTap: () => _selectLevel3(region),
+                  child: Container(
+                    width: 100,
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(
+                      color:
+                          isSelected ? const Color(0xFFE7EFA2) : Colors.white,
+                      border: Border.all(
+                        color: isSelected
+                            ? const Color(0xFFE7EFA2)
+                            : Colors.grey.shade300,
+                      ),
+                      borderRadius:
+                          BorderRadius.circular(_kDefaultBorderRadius),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 2,
+                                offset: const Offset(0, 1),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Center(
+                      child: Text(
+                        region.name,
+                        style: _kTagStyle.copyWith(
+                          color: isSelected ? Colors.black87 : Colors.black54,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+        const SizedBox(height: 8),
+      ],
     );
   }
 
@@ -494,4 +628,4 @@ class _TagListPageState extends State<TagListPage> {
         return '기타';
     }
   }
-} 
+}
