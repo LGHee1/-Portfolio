@@ -120,6 +120,12 @@ class _RunningScreenState extends State<RunningScreen> {
   // 속도 제한 상수 추가
   bool _isSpeedValid = true;
 
+  // 마커 관련 변수 추가
+  Marker? _pauseMarker;
+  Marker? _resumeMarker;
+  List<Marker> _pauseMarkers = [];
+  List<Marker> _resumeMarkers = [];
+
   String get formattedTime {
     final duration = Duration(seconds: _seconds);
     final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
@@ -399,23 +405,41 @@ class _RunningScreenState extends State<RunningScreen> {
       setState(() {
         _isPaused = false;
         _isAccelerometerPaused = false;
+        // 재개 시점에 마커 추가
+        if (_currentPosition != null) {
+          _resumeMarker = Marker(
+            markerId: MarkerId('resume_${DateTime.now().millisecondsSinceEpoch}'),
+            position: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
+            infoWindow: const InfoWindow(title: '운동 재개'),
+          );
+          _resumeMarkers.add(_resumeMarker!);
+        }
         // 재개 시점의 경로를 새로운 활성 경로로 시작
         _activeRoutePoints = [];
       });
       _startTimer();
-      _positionStream?.resume();
     } else {
       // 일시정지 상태로 전환
       setState(() {
         _isPaused = true;
         _isAccelerometerPaused = true;
+        // 일시정지 시점에 마커 추가
+        if (_currentPosition != null) {
+          _pauseMarker = Marker(
+            markerId: MarkerId('pause_${DateTime.now().millisecondsSinceEpoch}'),
+            position: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
+            infoWindow: const InfoWindow(title: '일시정지'),
+          );
+          _pauseMarkers.add(_pauseMarker!);
+        }
         // 현재까지의 경로를 활성 경로로 유지
         _activeRoutePoints = List.from(_routePoints);
         // 일시정지 구간 초기화
         _pausedRoutePoints = [];
       });
       _timer?.cancel();
-      _positionStream?.pause();
     }
   }
 
@@ -847,6 +871,8 @@ class _RunningScreenState extends State<RunningScreen> {
                   markers: {
                     if (_startLocationMarker != null) _startLocationMarker!,
                     if (_currentLocationMarker != null) _currentLocationMarker!,
+                    ..._pauseMarkers,
+                    ..._resumeMarkers,
                   },
                 ),
               ),
