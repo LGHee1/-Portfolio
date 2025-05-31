@@ -41,6 +41,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool showPosts = false;
   List<Map<String, dynamic>> myPosts = [];
   List<String> _inappropriateWords = [];
+  List<Map<String, dynamic>> _deletedPosts = [];
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _messageController = TextEditingController();
@@ -260,6 +261,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     try {
+      // 삭제된 게시글들을 실제로 Firebase에서 삭제
+      for (var deletedPost in _deletedPosts) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('Post_Data')
+            .doc(deletedPost['id'])
+            .delete();
+      }
+
       // MyProfile 서브컬렉션에 데이터 저장
       await FirebaseFirestore.instance
           .collection('users')
@@ -306,6 +317,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         isUploading = false;
         height = double.tryParse(_heightController.text) ?? height;
         weight = double.tryParse(_weightController.text) ?? weight;
+        _deletedPosts = []; // 삭제된 게시글 목록 초기화
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -327,13 +339,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
-      // Firebase에서 게시글 삭제
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('Post_Data')
-          .doc(postId)
-          .delete();
+      // 삭제할 게시글 찾기
+      final postToDelete = myPosts.firstWhere((post) => post['id'] == postId);
+      
+      // 삭제된 게시글을 임시 저장
+      setState(() {
+        _deletedPosts.add(postToDelete);
+        myPosts.removeWhere((post) => post['id'] == postId);
+      });
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('게시글이 삭제되었습니다')),
@@ -344,6 +357,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SnackBar(content: Text('게시글 삭제에 실패했습니다')),
       );
     }
+  }
+
+  void _cancelEditing() {
+    setState(() {
+      isEditing = false;
+      isEditingMessage = false;
+      _nameController.text = name;
+      _messageController.text = message;
+      _imageFile = null;
+      // 삭제된 게시글들을 복원
+      myPosts.addAll(_deletedPosts);
+      _deletedPosts = [];
+    });
   }
 
   @override
@@ -800,13 +826,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               SizedBox(width: 16.w),
                               ElevatedButton(
                                 onPressed: () {
-                                  setState(() {
-                                    isEditing = false;
-                                    isEditingMessage = false;
-                                    _nameController.text = name;
-                                    _messageController.text = message;
-                                    _imageFile = null;
-                                  });
+                                  _cancelEditing();
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.grey.shade100,
@@ -980,7 +1000,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: () {
+              onTap: isEditing ? null : () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(

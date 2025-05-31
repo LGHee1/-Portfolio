@@ -109,19 +109,20 @@ class _PostCreatePageState extends State<PostCreatePage> {
     letterSpacing: 0.1,
   );
 
-  List<Tag> selectedTags = [];
-  List<File> selectedImages = [];
+  bool isEditMode = false;
+  bool isViewMode = false;
+  bool _isLoading = false;
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
-  bool _isLoading = false;
-  late GoogleMapController _mapController;
-  final Set<Polyline> _polylines = {};
-  final Set<Marker> _markers = {};
+  List<File> selectedImages = [];
+  List<Tag> selectedTags = [];
+  List<String> _inappropriateWords = [];
+  GoogleMapController? _mapController;
+  Set<Marker> _markers = {};
+  Set<Polyline> _polylines = {};
   List<LatLng> _routePoints = [];
   bool _isMapLoading = true;
   int _selectedIndex = 1;
-  bool isEditMode = false;
-  List<String> _inappropriateWords = [];
 
   bool get isSmallScreen => MediaQuery.of(context).size.height < 600;
 
@@ -130,41 +131,43 @@ class _PostCreatePageState extends State<PostCreatePage> {
     super.initState();
     _loadInappropriateWords();
     if (widget.postData != null) {
-      isEditMode = true;
       _titleController.text = widget.postData!['title'] ?? '';
       _contentController.text = widget.postData!['content'] ?? '';
-
-      // 기존 태그 데이터 로드
-      if (widget.postData!['tags'] != null) {
-        final List<dynamic> tagNames = widget.postData!['tags'];
-        selectedTags = tagNames
-            .map((tagName) => Tag(
-                  name: tagName.toString(),
-                  category: TagCategory.etc,
-                ))
-            .toList();
+      
+      // 태그 데이터 처리
+      final tagsData = widget.postData!['tags'] as List?;
+      if (tagsData != null) {
+        selectedTags = tagsData.map((tagData) {
+          if (tagData is Map<String, dynamic>) {
+            // 지역 태그인 경우
+            if (tagData['code'] != null) {
+              return RegionTag.fromJson(tagData);
+            }
+            // 일반 태그인 경우
+            return Tag.fromJson(tagData);
+          } else {
+            // 문자열로 저장된 태그인 경우 (이전 데이터 호환성)
+            final tagName = tagData.toString();
+            // sampleTags에서 매칭되는 태그 찾기
+            final matchingTag = sampleTags.firstWhere(
+              (tag) => tag.name == tagName,
+              orElse: () => Tag(
+                name: tagName,
+                category: TagCategory.exercise,
+              ),
+            );
+            return matchingTag;
+          }
+        }).toList();
+      } else {
+        selectedTags = [];
       }
+      isViewMode = true;
     }
-
     if (widget.workoutData != null) {
       _loadWorkoutData();
-    } else if (widget.postData != null &&
-        widget.postData!['routePoints'] != null) {
-      final List<dynamic> routePointsData =
-          widget.postData!['routePoints'] ?? [];
-      setState(() {
-        _routePoints = routePointsData
-            .map((point) => LatLng(
-                  point['latitude'] as double,
-                  point['longitude'] as double,
-                ))
-            .toList();
-        _isMapLoading = false;
-      });
-      if (_routePoints.isNotEmpty) {
-        _initializePolylines();
-        _initializeMarkers();
-      }
+    } else {
+      _loadLatestWorkoutData();
     }
   }
 
@@ -215,35 +218,26 @@ class _PostCreatePageState extends State<PostCreatePage> {
         final List<dynamic> routePointsData = workoutData['routePoints'] ?? [];
 
         setState(() {
-          _routePoints = routePointsData
-              .map((point) => LatLng(
-                    point['latitude'] as double,
-                    point['longitude'] as double,
-                  ))
-              .toList();
+          _routePoints = routePointsData.map((point) {
+            if (point is Map<String, dynamic>) {
+              return LatLng(
+                point['latitude'] as double,
+                point['longitude'] as double,
+              );
+            } else if (point is List) {
+              return LatLng(
+                point[0] as double,
+                point[1] as double,
+              );
+            }
+            return null;
+          }).whereType<LatLng>().toList();
           _isMapLoading = false;
         });
 
         if (_routePoints.isNotEmpty) {
           _initializePolylines();
           _initializeMarkers();
-        } else if (workoutData['routePoints'] != null &&
-            workoutData['routePoints'].isNotEmpty) {
-          // 경로가 없는 경우 마지막 위치만 마커로 표시
-          final lastPoint = workoutData['routePoints'].last;
-          final lastPosition = LatLng(
-            lastPoint['latitude'] as double,
-            lastPoint['longitude'] as double,
-          );
-          _markers.add(
-            Marker(
-              markerId: const MarkerId('endLocation'),
-              position: lastPosition,
-              icon: BitmapDescriptor.defaultMarkerWithHue(
-                  BitmapDescriptor.hueRed),
-              infoWindow: const InfoWindow(title: '종료'),
-            ),
-          );
         }
       }
     } catch (e) {
@@ -258,16 +252,23 @@ class _PostCreatePageState extends State<PostCreatePage> {
     try {
       if (widget.workoutData == null) return;
 
-      final List<dynamic> routePointsData =
-          widget.workoutData!['routePoints'] ?? [];
+      final List<dynamic> routePointsData = widget.workoutData!['routePoints'] ?? [];
 
       setState(() {
-        _routePoints = routePointsData
-            .map((point) => LatLng(
-                  point['latitude'] as double,
-                  point['longitude'] as double,
-                ))
-            .toList();
+        _routePoints = routePointsData.map((point) {
+          if (point is Map<String, dynamic>) {
+            return LatLng(
+              point['latitude'] as double,
+              point['longitude'] as double,
+            );
+          } else if (point is List) {
+            return LatLng(
+              point[0] as double,
+              point[1] as double,
+            );
+          }
+          return null;
+        }).whereType<LatLng>().toList();
         _isMapLoading = false;
       });
 
@@ -328,7 +329,7 @@ class _PostCreatePageState extends State<PostCreatePage> {
     _mapController = controller;
     if (_routePoints.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _mapController.animateCamera(
+        _mapController?.animateCamera(
           CameraUpdate.newLatLngBounds(
             _getBoundsFromLatLngList(_routePoints),
             50.0,
@@ -431,35 +432,80 @@ class _PostCreatePageState extends State<PostCreatePage> {
 
       // 게시글 데이터 생성
       final postData = {
-        'userId': user.uid,
         'title': _titleController.text,
         'content': _contentController.text,
-        'images': imageUrls,
         'tags': selectedTags.map((tag) => tag.name).toList(),
-        'createdAt': Timestamp.now(),
         'updatedAt': Timestamp.now(),
-        'likes': 0, // 좋아요 초기값 추가
       };
 
-      // 운동 데이터가 있는 경우 추가
-      if (widget.workoutData != null) {
-        postData.addAll({
-          'routePoints': widget.workoutData!['routePoints'],
-          'distance': widget.workoutData!['distance'],
-          'duration': widget.workoutData!['duration'],
-          'workoutId': widget.workoutData!['workoutId'],
-        });
+      // 새 이미지가 있는 경우에만 이미지 URL 업데이트
+      if (imageUrls.isNotEmpty) {
+        postData['images'] = imageUrls;
       }
 
-      // 게시글 저장 (사용자 하위 컬렉션에 저장)
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('Post_Data')
-          .add(postData);
+      // 운동 데이터가 있는 경우 추가
+      if (_routePoints.isNotEmpty) {
+        postData['routePoints'] = _routePoints.map((point) => {
+          'latitude': point.latitude,
+          'longitude': point.longitude,
+        }).toList();
+      }
 
-      if (mounted) {
-        Navigator.pop(context);
+      if (isViewMode && widget.postId != null) {
+        // 게시글 수정
+        final existingPost = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('Post_Data')
+            .doc(widget.postId)
+            .get();
+
+        // 기존 운동 데이터 유지
+        if (existingPost.exists && existingPost.data()?['routePoints'] != null) {
+          postData['routePoints'] = existingPost.data()!['routePoints'];
+        }
+
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('Post_Data')
+            .doc(widget.postId)
+            .update(postData);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('게시글이 수정되었습니다')),
+        );
+
+        setState(() {
+          isEditMode = false;
+        });
+      } else {
+        // 새 게시글 작성
+        postData.addAll({
+          'userId': user.uid,
+          'createdAt': Timestamp.now(),
+          'likes': 0,
+        });
+
+        // 운동 데이터가 있는 경우 추가
+        if (widget.workoutData != null) {
+          postData.addAll({
+            'routePoints': widget.workoutData!['routePoints'],
+            'distance': widget.workoutData!['distance'],
+            'duration': widget.workoutData!['duration'],
+            'workoutId': widget.workoutData!['workoutId'],
+          });
+        }
+
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('Post_Data')
+            .add(postData);
+
+        if (mounted) {
+          Navigator.pop(context);
+        }
       }
     } catch (e) {
       print('게시글 저장 중 오류 발생: $e');
@@ -486,55 +532,82 @@ class _PostCreatePageState extends State<PostCreatePage> {
 
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: true,
-        backgroundColor: _kPrimaryColor,
-        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back,
-              color: _kTextPrimaryColor, size: _kIconSize),
+          icon: const Icon(Icons.arrow_back, color: _kTextPrimaryColor, size: _kIconSize),
           onPressed: () => Navigator.pop(context),
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(),
         ),
         title: Text(
-          isEditMode ? '게시글 수정' : '게시글 작성',
+          isViewMode ? (isEditMode ? '게시글 수정' : '게시글 보기') : '게시글 작성',
           style: _kTitleStyle,
         ),
         centerTitle: true,
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: _kDefaultPadding),
-            child: AnimatedContainer(
-              duration: _kAnimationDuration,
-              child: TextButton(
-                onPressed: _isLoading ? null : _savePost,
-                style: TextButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: _kDefaultPadding),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(_kDefaultBorderRadius),
+          if (isViewMode)
+            Padding(
+              padding: const EdgeInsets.only(right: _kDefaultPadding),
+              child: AnimatedContainer(
+                duration: _kAnimationDuration,
+                child: TextButton(
+                  onPressed: _isLoading ? null : (isEditMode ? _savePost : () {
+                    setState(() {
+                      isEditMode = true;
+                    });
+                  }),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: _kDefaultPadding),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(_kDefaultBorderRadius),
+                    ),
+                    backgroundColor: _isLoading ? _kTextSecondaryColor : _kAccentColor,
                   ),
-                  backgroundColor:
-                      _isLoading ? _kTextSecondaryColor : _kAccentColor,
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : Text(
+                          isEditMode ? '저장' : '수정',
+                          style: _kButtonTextStyle.copyWith(color: _kTextPrimaryColor),
                         ),
-                      )
-                    : Text(
-                        isEditMode ? '수정' : '저장',
-                        style: _kButtonTextStyle.copyWith(
-                            color: _kTextPrimaryColor),
-                      ),
+                ),
               ),
             ),
-          ),
+          if (!isViewMode)
+            Padding(
+              padding: const EdgeInsets.only(right: _kDefaultPadding),
+              child: AnimatedContainer(
+                duration: _kAnimationDuration,
+                child: TextButton(
+                  onPressed: _isLoading ? null : _savePost,
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: _kDefaultPadding),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(_kDefaultBorderRadius),
+                    ),
+                    backgroundColor: _isLoading ? _kTextSecondaryColor : _kAccentColor,
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : Text(
+                          '게시',
+                          style: _kButtonTextStyle.copyWith(color: _kTextPrimaryColor),
+                        ),
+                ),
+              ),
+            ),
         ],
       ),
       backgroundColor: _kPrimaryColor,
@@ -560,12 +633,12 @@ class _PostCreatePageState extends State<PostCreatePage> {
                     ),
                     child: TextField(
                       controller: _titleController,
+                      enabled: !isViewMode || isEditMode,
                       decoration: InputDecoration(
                         hintText: '제목을 입력하세요',
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.all(_kDefaultPadding),
-                        hintStyle: _kInputTextStyle.copyWith(
-                            color: _kTextSecondaryColor),
+                        hintStyle: _kInputTextStyle.copyWith(color: _kTextSecondaryColor),
                         helperText: '부적절한 단어는 사용할 수 없습니다.',
                         helperStyle: _kHelperTextStyle,
                       ),
@@ -618,22 +691,50 @@ class _PostCreatePageState extends State<PostCreatePage> {
                                   ],
                                 ),
                               )
-                            : ClipRRect(
-                                borderRadius:
-                                    BorderRadius.circular(_kInputBorderRadius),
-                                child: GoogleMap(
-                                  initialCameraPosition: CameraPosition(
-                                    target: _routePoints.first,
-                                    zoom: 15,
+                            : Stack(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius:
+                                        BorderRadius.circular(_kInputBorderRadius),
+                                    child: GoogleMap(
+                                      initialCameraPosition: CameraPosition(
+                                        target: _routePoints.first,
+                                        zoom: 15,
+                                      ),
+                                      onMapCreated: _onMapCreated,
+                                      polylines: _polylines,
+                                      markers: _markers,
+                                      myLocationEnabled: false,
+                                      myLocationButtonEnabled: false,
+                                      zoomControlsEnabled: false,
+                                      mapToolbarEnabled: false,
+                                    ),
                                   ),
-                                  onMapCreated: _onMapCreated,
-                                  polylines: _polylines,
-                                  markers: _markers,
-                                  myLocationEnabled: false,
-                                  myLocationButtonEnabled: false,
-                                  zoomControlsEnabled: false,
-                                  mapToolbarEnabled: false,
-                                ),
+                                  if (isViewMode)
+                                    Positioned.fill(
+                                      child: Container(
+                                        color: Colors.transparent,
+                                        child: Center(
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 16, vertical: 8),
+                                            decoration: BoxDecoration(
+                                              color: Colors.black.withOpacity(0.7),
+                                              borderRadius: BorderRadius.circular(20),
+                                            ),
+                                            child: const Text(
+                                              '운동 코스는 수정할 수 없습니다',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
                   ),
                 ),
@@ -689,14 +790,12 @@ class _PostCreatePageState extends State<PostCreatePage> {
                     ),
                     child: TextField(
                       controller: _contentController,
+                      enabled: !isViewMode || isEditMode,
                       decoration: InputDecoration(
-                        hintText: '세부설명을 입력하세요',
+                        hintText: '내용을 입력하세요',
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.all(_kDefaultPadding),
-                        hintStyle: _kInputTextStyle.copyWith(
-                            color: _kTextSecondaryColor),
-                        helperText: '부적절한 단어는 사용할 수 없습니다.',
-                        helperStyle: _kHelperTextStyle,
+                        hintStyle: _kInputTextStyle.copyWith(color: _kTextSecondaryColor),
                       ),
                       style: _kInputTextStyle,
                       maxLines: 5,
