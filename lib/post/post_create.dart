@@ -131,43 +131,41 @@ class _PostCreatePageState extends State<PostCreatePage> {
     super.initState();
     _loadInappropriateWords();
     if (widget.postData != null) {
+      isEditMode = true;
       _titleController.text = widget.postData!['title'] ?? '';
       _contentController.text = widget.postData!['content'] ?? '';
-      
-      // 태그 데이터 처리
-      final tagsData = widget.postData!['tags'] as List?;
-      if (tagsData != null) {
-        selectedTags = tagsData.map((tagData) {
-          if (tagData is Map<String, dynamic>) {
-            // 지역 태그인 경우
-            if (tagData['code'] != null) {
-              return RegionTag.fromJson(tagData);
-            }
-            // 일반 태그인 경우
-            return Tag.fromJson(tagData);
-          } else {
-            // 문자열로 저장된 태그인 경우 (이전 데이터 호환성)
-            final tagName = tagData.toString();
-            // sampleTags에서 매칭되는 태그 찾기
-            final matchingTag = sampleTags.firstWhere(
-              (tag) => tag.name == tagName,
-              orElse: () => Tag(
-                name: tagName,
-                category: TagCategory.exercise,
-              ),
-            );
-            return matchingTag;
-          }
-        }).toList();
-      } else {
-        selectedTags = [];
+
+      // 기존 태그 데이터 로드
+      if (widget.postData!['tags'] != null) {
+        final List<dynamic> tagNames = widget.postData!['tags'];
+        selectedTags = tagNames
+            .map((tagName) => Tag(
+                  name: tagName.toString(),
+                  category: TagCategory.etc,
+                ))
+            .toList();
       }
-      isViewMode = true;
     }
+
     if (widget.workoutData != null) {
       _loadWorkoutData();
-    } else {
-      _loadLatestWorkoutData();
+    } else if (widget.postData != null &&
+        widget.postData!['routePoints'] != null) {
+      final List<dynamic> routePointsData =
+          widget.postData!['routePoints'] ?? [];
+      setState(() {
+        _routePoints = routePointsData
+            .map((point) => LatLng(
+                  point['latitude'] as double,
+                  point['longitude'] as double,
+                ))
+            .toList();
+        _isMapLoading = false;
+      });
+      if (_routePoints.isNotEmpty) {
+        _initializePolylines();
+        _initializeMarkers();
+      }
     }
   }
 
@@ -432,80 +430,35 @@ class _PostCreatePageState extends State<PostCreatePage> {
 
       // 게시글 데이터 생성
       final postData = {
+        'userId': user.uid,
         'title': _titleController.text,
         'content': _contentController.text,
+        'images': imageUrls,
         'tags': selectedTags.map((tag) => tag.name).toList(),
+        'createdAt': Timestamp.now(),
         'updatedAt': Timestamp.now(),
+        'likes': 0, // 좋아요 초기값 추가
       };
 
-      // 새 이미지가 있는 경우에만 이미지 URL 업데이트
-      if (imageUrls.isNotEmpty) {
-        postData['images'] = imageUrls;
-      }
-
       // 운동 데이터가 있는 경우 추가
-      if (_routePoints.isNotEmpty) {
-        postData['routePoints'] = _routePoints.map((point) => {
-          'latitude': point.latitude,
-          'longitude': point.longitude,
-        }).toList();
+      if (widget.workoutData != null) {
+        postData.addAll({
+          'routePoints': widget.workoutData!['routePoints'],
+          'distance': widget.workoutData!['distance'],
+          'duration': widget.workoutData!['duration'],
+          'workoutId': widget.workoutData!['workoutId'],
+        });
       }
 
-      if (isViewMode && widget.postId != null) {
-        // 게시글 수정
-        final existingPost = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('Post_Data')
-            .doc(widget.postId)
-            .get();
+      // 게시글 저장 (사용자 하위 컬렉션에 저장)
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('Post_Data')
+          .add(postData);
 
-        // 기존 운동 데이터 유지
-        if (existingPost.exists && existingPost.data()?['routePoints'] != null) {
-          postData['routePoints'] = existingPost.data()!['routePoints'];
-        }
-
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('Post_Data')
-            .doc(widget.postId)
-            .update(postData);
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('게시글이 수정되었습니다')),
-        );
-
-        setState(() {
-          isEditMode = false;
-        });
-      } else {
-        // 새 게시글 작성
-        postData.addAll({
-          'userId': user.uid,
-          'createdAt': Timestamp.now(),
-          'likes': 0,
-        });
-
-        // 운동 데이터가 있는 경우 추가
-        if (widget.workoutData != null) {
-          postData.addAll({
-            'routePoints': widget.workoutData!['routePoints'],
-            'distance': widget.workoutData!['distance'],
-            'duration': widget.workoutData!['duration'],
-            'workoutId': widget.workoutData!['workoutId'],
-          });
-        }
-
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('Post_Data')
-            .add(postData);
-
-        if (mounted) {
-          Navigator.pop(context);
-        }
+      if (mounted) {
+        Navigator.pop(context);
       }
     } catch (e) {
       print('게시글 저장 중 오류 발생: $e');

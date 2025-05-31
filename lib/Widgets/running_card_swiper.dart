@@ -52,7 +52,7 @@ class _RunningCardSwiperState extends State<RunningCardSwiper> {
         return {
           '거리': '${(data['distance'] as num).toDouble().toStringAsFixed(1)}km',
           '시간': '${(data['duration'] as int) ~/ 60}분 ${(data['duration'] as int) % 60}초',
-          '칼로리': '${data['calories']} kcal',
+          '칼로리': '${(data['calories'] as num).round()} kcal',
           '메시지': _getMotivationalMessage((data['distance'] as num).toDouble()),
           'date': (data['date'] as Timestamp).toDate(),
         };
