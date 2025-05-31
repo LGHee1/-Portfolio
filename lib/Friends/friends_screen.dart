@@ -27,15 +27,40 @@ class FriendsScreen extends StatefulWidget {
     letterSpacing: 0.1,
   );
 
-  const FriendsScreen({super.key});
+  final String? initialTab;
+  final int? initialSubTab;
+
+  const FriendsScreen({
+    super.key,
+    this.initialTab,
+    this.initialSubTab,
+  });
 
   @override
   State<FriendsScreen> createState() => _FriendsScreenState();
 }
 
-class _FriendsScreenState extends State<FriendsScreen> {
+class _FriendsScreenState extends State<FriendsScreen> with TickerProviderStateMixin {
   int _selectedIndex = 1;
-  String _selectedTab = 'friends'; // 'friends' 또는 'requests'
+  late String _selectedTab;
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedTab = widget.initialTab ?? 'friends';
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: widget.initialSubTab ?? 0,
+    );
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -203,7 +228,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
                 Expanded(
                   child: _selectedTab == 'friends'
                       ? const _FriendsListTab()
-                      : const _RequestsTab(),
+                      : _RequestsTab(initialIndex: widget.initialSubTab ?? 0),
                 ),
               ],
             ),
@@ -365,7 +390,137 @@ class _FriendsListTab extends StatelessWidget {
                   friend['addedAt']?.toDate().toString() ?? '',
                   style: FriendsScreen._kSubtitleStyle,
                 ),
-                trailing: IconButton(
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(
+                        Icons.block,
+                        color: Colors.orange,
+                        size: 24,
+                      ),
+                      onPressed: () async {
+                        final shouldBlock = await showDialog<bool>(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                    FriendsScreen._kDefaultBorderRadius),
+                              ),
+                              title: Text(
+                                '친구 차단',
+                                style: FriendsScreen._kTitleStyle,
+                              ),
+                              content: Text(
+                                '${friend['nickname']}님을 차단하시겠습니까?\n차단된 사용자는 친구 목록에서 숨겨지고, 친구 요청을 보낼 수 없습니다.',
+                                style: FriendsScreen._kSubtitleStyle,
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(false),
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: FriendsScreen._kDefaultPadding,
+                                      vertical: 8,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    '취소',
+                                    style: FriendsScreen._kSubtitleStyle.copyWith(
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(true),
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: FriendsScreen._kDefaultPadding,
+                                      vertical: 8,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    '차단',
+                                    style: FriendsScreen._kSubtitleStyle.copyWith(
+                                      color: Colors.orange,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+
+                        if (shouldBlock == true) {
+                          try {
+                            final batch = FirebaseFirestore.instance.batch();
+                            
+                            // 차단 목록에 추가
+                            final blockRef = FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(currentUser.uid)
+                                .collection('Blocked_Users')
+                                .doc(doc.id);
+                            
+                            batch.set(blockRef, {
+                              'nickname': friend['nickname'],
+                              'blockedAt': FieldValue.serverTimestamp(),
+                            });
+
+                            // 친구 목록에서 삭제
+                            batch.delete(doc.reference);
+                            
+                            // 상대방의 친구 목록에서도 삭제
+                            batch.delete(FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(doc.id)
+                                .collection('Friends_Data')
+                                .doc(currentUser.uid));
+
+                            await batch.commit();
+
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    '친구가 차단되었습니다.',
+                                    style: FriendsScreen._kSubtitleStyle
+                                        .copyWith(color: Colors.white),
+                                  ),
+                                  backgroundColor: Colors.orange,
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                        FriendsScreen._kDefaultBorderRadius),
+                                  ),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    '친구 차단 중 오류가 발생했습니다.',
+                                    style: FriendsScreen._kSubtitleStyle
+                                        .copyWith(color: Colors.white),
+                                  ),
+                                  backgroundColor: Colors.red,
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                        FriendsScreen._kDefaultBorderRadius),
+                                  ),
+                                ),
+                              );
+                            }
+                          }
+                        }
+                      },
+                    ),
+                    IconButton(
                   icon: const Icon(
                     Icons.delete_outline,
                     color: Colors.red,
@@ -474,6 +629,8 @@ class _FriendsListTab extends StatelessWidget {
                       }
                     }
                   },
+                    ),
+                  ],
                 ),
               ),
             );
@@ -485,7 +642,8 @@ class _FriendsListTab extends StatelessWidget {
 }
 
 class _RequestsTab extends StatefulWidget {
-  const _RequestsTab();
+  final int initialIndex;
+  const _RequestsTab({this.initialIndex = 0});
 
   @override
   State<_RequestsTab> createState() => _RequestsTabState();
@@ -498,7 +656,11 @@ class _RequestsTabState extends State<_RequestsTab>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: widget.initialIndex,
+    );
   }
 
   @override
@@ -519,6 +681,7 @@ class _RequestsTabState extends State<_RequestsTab>
           tabs: const [
             Tab(text: '받은 요청'),
             Tab(text: '보낸 요청'),
+            Tab(text: '차단 목록'),
           ],
         ),
         Expanded(
@@ -527,6 +690,7 @@ class _RequestsTabState extends State<_RequestsTab>
             children: const [
               _ReceivedRequestsTab(),
               _SentRequestsTab(),
+              _BlockedUsersTab(),
             ],
           ),
         ),
@@ -766,6 +930,148 @@ class _SentRequestsTab extends StatelessWidget {
   }
 }
 
+class _BlockedUsersTab extends StatelessWidget {
+  const _BlockedUsersTab();
+
+  @override
+  Widget build(BuildContext context) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return const Center(child: Text('로그인이 필요합니다'));
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .collection('Blocked_Users')
+          .orderBy('blockedAt', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text('오류가 발생했습니다: ${snapshot.error}'));
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final blockedUsers = snapshot.data?.docs ?? [];
+
+        if (blockedUsers.isEmpty) {
+          return const Center(
+            child: Text(
+              '차단한 사용자가 없습니다.',
+              style: TextStyle(fontSize: 16, color: Colors.black54),
+            ),
+          );
+        }
+
+        return ListView.builder(
+          itemCount: blockedUsers.length,
+          itemBuilder: (context, index) {
+            final doc = blockedUsers[index];
+            final data = doc.data() as Map<String, dynamic>;
+
+            return Card(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: Colors.orange,
+                  child: Icon(Icons.block, color: Colors.white),
+                ),
+                title: Text(data['nickname'] ?? '알 수 없음'),
+                subtitle: Text(
+                  '차단일: ${(data['blockedAt'] as Timestamp?)?.toDate().toString() ?? '알 수 없음'}',
+                  style: const TextStyle(fontSize: 12),
+                ),
+                trailing: IconButton(
+                  icon: const Icon(Icons.restore, color: Colors.blue),
+                  onPressed: () async {
+                    final shouldUnblock = await showDialog<bool>(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                                FriendsScreen._kDefaultBorderRadius),
+                          ),
+                          title: Text(
+                            '차단 해제',
+                            style: FriendsScreen._kTitleStyle,
+                          ),
+                          content: Text(
+                            '${data['nickname']}님의 차단을 해제하시겠습니까?',
+                            style: FriendsScreen._kSubtitleStyle,
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(false),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: FriendsScreen._kDefaultPadding,
+                                  vertical: 8,
+                                ),
+                              ),
+                              child: Text(
+                                '취소',
+                                style: FriendsScreen._kSubtitleStyle.copyWith(
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(true),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: FriendsScreen._kDefaultPadding,
+                                  vertical: 8,
+                                ),
+                              ),
+                              child: Text(
+                                '차단 해제',
+                                style: FriendsScreen._kSubtitleStyle.copyWith(
+                                  color: Colors.blue,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+
+                    if (shouldUnblock == true) {
+                      try {
+                        await doc.reference.delete();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('차단이 해제되었습니다.'),
+                              backgroundColor: Colors.blue,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('차단 해제 중 오류가 발생했습니다.'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    }
+                  },
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
 class _FriendSearchDialog extends StatefulWidget {
   const _FriendSearchDialog();
 
@@ -833,6 +1139,21 @@ class _FriendSearchDialogState extends State<_FriendSearchDialog> {
     }
 
     try {
+      // 내가 차단한 사용자인지 확인
+      final blockCheck = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(myUid)
+          .collection('Blocked_Users')
+          .doc(targetUid)
+          .get();
+
+      if (blockCheck.exists) {
+        setState(() {
+          _error = '차단한 사용자입니다. 차단을 해제한 후 다시 시도해주세요.';
+        });
+        return;
+      }
+
       // 이미 친구인지 확인
       final friendCheck = await FirebaseFirestore.instance
           .collection('users')

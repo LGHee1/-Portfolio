@@ -8,6 +8,7 @@ import '../post/post_list.dart';
 import '../Running/workout_screen.dart';
 import '../profile/profile_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:app_project/Friends/friends_screen.dart';
 
 // 공통 스타일 정의
 class AppStyles {
@@ -242,7 +243,12 @@ class _SettingScreenState extends State<SettingScreen> {
                   '차단한 사용자 목록',
                   Icons.block,
                   () {
-                    // TODO: 차단한 사용자 목록 화면으로 이동
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const FriendsScreen(initialTab: 'requests', initialSubTab: 2),
+                      ),
+                    );
                   },
                 ),
                 _buildNavigationTile(

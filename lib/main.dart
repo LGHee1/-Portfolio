@@ -12,7 +12,10 @@ import 'home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  
+  // OpenGL ES API 경고 무시 설정
+  await Future.delayed(const Duration(milliseconds: 100));
+  
   try {
     // Firebase 초기화
     await Firebase.initializeApp();
