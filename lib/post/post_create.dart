@@ -123,6 +123,7 @@ class _PostCreatePageState extends State<PostCreatePage> {
   List<LatLng> _routePoints = [];
   bool _isMapLoading = true;
   int _selectedIndex = 1;
+  List<String> _existingImageUrls = [];
 
   bool get isSmallScreen => MediaQuery.of(context).size.height < 600;
 
@@ -144,6 +145,14 @@ class _PostCreatePageState extends State<PostCreatePage> {
                   category: TagCategory.etc,
                 ))
             .toList();
+      }
+
+      // 기존 이미지 URL 로드
+      if (widget.postData!['imageUrls'] != null) {
+        final List<dynamic> imageUrls = widget.postData!['imageUrls'];
+        setState(() {
+          _existingImageUrls = List<String>.from(imageUrls);
+        });
       }
     }
 
@@ -368,16 +377,31 @@ class _PostCreatePageState extends State<PostCreatePage> {
 
   Future<List<String>> _uploadImages() async {
     List<String> imageUrls = [];
-    for (File image in selectedImages) {
-      String fileName =
-          '${DateTime.now().millisecondsSinceEpoch}_${path.basename(image.path)}';
-      Reference ref =
-          FirebaseStorage.instance.ref().child('post_images/$fileName');
-      await ref.putFile(image);
-      String downloadUrl = await ref.getDownloadURL();
-      imageUrls.add(downloadUrl);
+    try {
+      for (File image in selectedImages) {
+        String fileName =
+            '${DateTime.now().millisecondsSinceEpoch}_${path.basename(image.path)}';
+        Reference ref =
+            FirebaseStorage.instance.ref().child('post_images/$fileName');
+        
+        // 이미지 업로드 상태 모니터링
+        UploadTask uploadTask = ref.putFile(image);
+        TaskSnapshot taskSnapshot = await uploadTask;
+        
+        if (taskSnapshot.state == TaskState.success) {
+          String downloadUrl = await ref.getDownloadURL();
+          imageUrls.add(downloadUrl);
+          print('이미지 업로드 성공: $downloadUrl'); // 디버깅용 로그
+        } else {
+          print('이미지 업로드 실패: ${taskSnapshot.state}');
+          throw Exception('이미지 업로드 실패');
+        }
+      }
+      return imageUrls;
+    } catch (e) {
+      print('이미지 업로드 중 오류 발생: $e');
+      throw Exception('이미지 업로드 중 오류가 발생했습니다: $e');
     }
-    return imageUrls;
   }
 
   Future<void> _savePost() async {
@@ -419,25 +443,20 @@ class _PostCreatePageState extends State<PostCreatePage> {
 
       // 이미지 업로드 및 URL 가져오기
       List<String> imageUrls = [];
-      for (var image in selectedImages) {
-        final fileName = path.basename(image.path);
-        final storageRef =
-            FirebaseStorage.instance.ref().child('post_images/$fileName');
-        await storageRef.putFile(image);
-        final downloadUrl = await storageRef.getDownloadURL();
-        imageUrls.add(downloadUrl);
+      if (selectedImages.isNotEmpty) {
+        imageUrls = await _uploadImages();
       }
+      // 기존 이미지 URL 추가
+      imageUrls.addAll(_existingImageUrls);
 
       // 게시글 데이터 생성
       final postData = {
         'userId': user.uid,
         'title': _titleController.text,
         'content': _contentController.text,
-        'images': imageUrls,
+        'imageUrls': imageUrls,
         'tags': selectedTags.map((tag) => tag.name).toList(),
-        'createdAt': Timestamp.now(),
         'updatedAt': Timestamp.now(),
-        'likes': 0, // 좋아요 초기값 추가
       };
 
       // 운동 데이터가 있는 경우 추가
@@ -450,12 +469,49 @@ class _PostCreatePageState extends State<PostCreatePage> {
         });
       }
 
-      // 게시글 저장 (사용자 하위 컬렉션에 저장)
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('Post_Data')
-          .add(postData);
+      // 게시글 저장 또는 업데이트
+      if (widget.postId != null) {
+        // 기존 게시글의 이미지 URL 가져오기
+        final oldPostDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('Post_Data')
+            .doc(widget.postId)
+            .get();
+        
+        if (oldPostDoc.exists) {
+          final oldImageUrls = List<String>.from(oldPostDoc.data()?['imageUrls'] ?? []);
+          // 삭제된 이미지 찾기
+          final deletedImageUrls = oldImageUrls.where((url) => !imageUrls.contains(url)).toList();
+          
+          // 삭제된 이미지를 Firebase Storage에서 삭제
+          for (String imageUrl in deletedImageUrls) {
+            try {
+              final ref = FirebaseStorage.instance.refFromURL(imageUrl);
+              await ref.delete();
+            } catch (e) {
+              print('이미지 삭제 중 오류 발생: $e');
+            }
+          }
+        }
+
+        // 기존 게시글 업데이트
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('Post_Data')
+            .doc(widget.postId)
+            .update(postData);
+      } else {
+        // 새 게시글 생성
+        postData['createdAt'] = Timestamp.now();
+        postData['likes'] = 0;
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('Post_Data')
+            .add(postData);
+      }
 
       if (mounted) {
         Navigator.pop(context);
@@ -555,7 +611,7 @@ class _PostCreatePageState extends State<PostCreatePage> {
                           ),
                         )
                       : Text(
-                          '게시',
+                          widget.postId != null ? '수정' : '게시',
                           style: _kButtonTextStyle.copyWith(color: _kTextPrimaryColor),
                         ),
                 ),
@@ -760,47 +816,7 @@ class _PostCreatePageState extends State<PostCreatePage> {
                     ),
                   ),
                 ),
-                _buildSection(
-                  title: '이미지',
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: double.infinity,
-                        height: _kButtonHeight,
-                        child: ElevatedButton.icon(
-                          onPressed: _pickImage,
-                          icon: const Icon(Icons.add_photo_alternate,
-                              color: Colors.white),
-                          label: const Text('사진 업로드', style: _kButtonTextStyle),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _kTextPrimaryColor,
-                            foregroundColor: Colors.white,
-                            elevation: 2,
-                            shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(_kDefaultBorderRadius),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: _kDefaultPadding),
-                          ),
-                        ),
-                      ),
-                      if (selectedImages.isNotEmpty) ...[
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children:
-                              List.generate(selectedImages.length, (index) {
-                            return _buildImagePreview(
-                                selectedImages[index], index);
-                          }),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+                _buildImageSection(),
                 SizedBox(height: isSmallScreen ? 16 : 32),
               ],
             ),
@@ -937,41 +953,150 @@ class _PostCreatePageState extends State<PostCreatePage> {
     );
   }
 
-  Widget _buildImagePreview(File image, int index) {
-    return Stack(
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(_kInputBorderRadius),
-          child: Image.file(
-            image,
+  Widget _buildImagePreview(dynamic image, int index) {
+    if (image is File) {
+      return Stack(
+        children: [
+          Container(
             width: _kImageSize,
             height: _kImageSize,
-            fit: BoxFit.cover,
-          ),
-        ),
-        Positioned(
-          top: 4,
-          right: 4,
-          child: GestureDetector(
-            onTap: () {
-              setState(() {
-                selectedImages.removeAt(index);
-              });
-            },
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.close,
-                color: Colors.white,
-                size: _kSmallIconSize,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(_kInputBorderRadius),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(_kInputBorderRadius),
+              child: Image.file(
+                image,
+                width: _kImageSize,
+                height: _kImageSize,
+                fit: BoxFit.cover,
               ),
             ),
           ),
+          Positioned(
+            top: 4,
+            right: 4,
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  selectedImages.removeAt(index);
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.close,
+                  color: Colors.white,
+                  size: _kSmallIconSize,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    } else if (image is String) {
+      return Stack(
+        children: [
+          Container(
+            width: _kImageSize,
+            height: _kImageSize,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(_kInputBorderRadius),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(_kInputBorderRadius),
+              child: Image.network(
+                image,
+                width: _kImageSize,
+                height: _kImageSize,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          Positioned(
+            top: 4,
+            right: 4,
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _existingImageUrls.removeAt(index);
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.close,
+                  color: Colors.white,
+                  size: _kSmallIconSize,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildImageSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: double.infinity,
+          height: _kButtonHeight,
+          child: ElevatedButton.icon(
+            onPressed: _pickImage,
+            icon: const Icon(Icons.add_photo_alternate, color: Colors.white),
+            label: const Text('사진 업로드', style: _kButtonTextStyle),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _kTextPrimaryColor,
+              foregroundColor: Colors.white,
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(_kDefaultBorderRadius),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: _kDefaultPadding),
+            ),
+          ),
         ),
+        if (selectedImages.isNotEmpty || _existingImageUrls.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ...selectedImages.asMap().entries.map((entry) {
+                return _buildImagePreview(entry.value, entry.key);
+              }),
+              ..._existingImageUrls.asMap().entries.map((entry) {
+                return _buildImagePreview(entry.value, entry.key);
+              }),
+            ],
+          ),
+        ],
       ],
     );
   }

@@ -263,6 +263,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       // 삭제된 게시글들을 실제로 Firebase에서 삭제
       for (var deletedPost in _deletedPosts) {
+        // Firebase Storage에서 이미지 삭제
+        if (deletedPost['imageUrls'] != null) {
+          final List<dynamic> imageUrls = deletedPost['imageUrls'];
+          for (String imageUrl in imageUrls) {
+            try {
+              final ref = FirebaseStorage.instance.refFromURL(imageUrl);
+              await ref.delete();
+            } catch (e) {
+              print('이미지 삭제 중 오류 발생: $e');
+            }
+          }
+        }
+        
+        // Firestore에서 게시글 삭제
         await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
@@ -336,20 +350,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _deletePost(String postId) async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
-
       // 삭제할 게시글 찾기
       final postToDelete = myPosts.firstWhere((post) => post['id'] == postId);
       
-      // 삭제된 게시글을 임시 저장
+      // 삭제된 게시글을 임시 저장하고 UI에서만 제거
       setState(() {
         _deletedPosts.add(postToDelete);
         myPosts.removeWhere((post) => post['id'] == postId);
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('게시글이 삭제되었습니다')),
+        const SnackBar(content: Text('게시글이 삭제 되었습니다. 저장 버튼을 눌러야 반영 됩니다.')),
       );
     } catch (e) {
       print('게시글 삭제 중 오류 발생: $e');
@@ -1113,12 +1124,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Positioned(
                         top: 0,
                         right: 0,
-                        child: IconButton(
-                          icon: Icon(Icons.delete,
-                              color: Colors.red.shade400, size: 20.sp),
-                          onPressed: () => _showDeleteDialog(post['id']),
+                        child: Container(
                           padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
+                          constraints: BoxConstraints(
+                            minWidth: 20.sp,
+                            minHeight: 20.sp,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.9),
+                            borderRadius: BorderRadius.circular(4.r),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: IconButton(
+                            icon: Icon(Icons.delete,
+                                color: Colors.red.shade400, size: 20.sp),
+                            onPressed: () => _showDeleteDialog(post['id']),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
                         ),
                       ),
                   ],
